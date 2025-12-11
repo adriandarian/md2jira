@@ -2,6 +2,15 @@
 
 A CLI tool for synchronizing markdown documentation with Jira. Sync user stories, subtasks, descriptions, comments, and statuses from markdown files to Jira epics.
 
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [SCHEMA.md](docs/SCHEMA.md) | Complete markdown format specification |
+| [TEMPLATE.md](docs/TEMPLATE.md) | Blank template to start your epic |
+| [EXAMPLE.md](docs/EXAMPLE.md) | Full working example (e-commerce) |
+| [AI_PROMPT.md](docs/AI_PROMPT.md) | Prompts for AI-assisted generation |
+
 ## Features
 
 - 🔒 **Dry-run mode** by default (use `--execute` to make changes)
@@ -215,6 +224,46 @@ python md2jira.py --markdown epic.md --epic PROJ-123 --execute
 
 # 5. Validate sync
 python md2jira.py --markdown epic.md --epic PROJ-123 --validate
+```
+
+## Creating Your Epic Markdown
+
+### Option 1: Use the Template
+
+Copy [docs/TEMPLATE.md](docs/TEMPLATE.md) and fill in your stories.
+
+### Option 2: Use AI Generation
+
+Use the prompts in [docs/AI_PROMPT.md](docs/AI_PROMPT.md) with Claude, ChatGPT, or other AI assistants to generate a complete epic document.
+
+### Option 3: Follow the Schema
+
+Read [docs/SCHEMA.md](docs/SCHEMA.md) for the complete format specification and create your own.
+
+### Quick Format Reference
+
+```markdown
+### 🔧 US-XXX: Story Title       ← Required format
+
+| Field | Value |                 ← Required table
+| **Story Points** | N |
+| **Priority** | 🟡 High |
+| **Status** | 📋 Planned |
+
+#### Description                  ← Required section
+**As a** [role]
+**I want** [feature]
+**So that** [benefit]
+
+#### Acceptance Criteria          ← Optional
+- [ ] Criterion
+
+#### Subtasks                     ← Optional
+| # | Subtask | Description | SP | Status |
+
+#### Related Commits              ← Optional
+| Commit | Message |
+| `hash` | message |
 ```
 
 ## License
