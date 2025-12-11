@@ -1,0 +1,10 @@
+# Ignore sensitive files
+.env
+
+# Ignore exports (may contain sensitive data)
+exports/
+
+# Python cache
+__pycache__/
+*.pyc
+
