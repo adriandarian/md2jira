@@ -1,123 +1,71 @@
 # md2jira
 
-A CLI tool for synchronizing markdown documentation with Jira. Sync user stories, subtasks, descriptions, comments, and statuses from markdown files to Jira epics.
+<div align="center">
 
-## Documentation
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-| Document | Description |
-|----------|-------------|
-| [SCHEMA.md](docs/SCHEMA.md) | Complete markdown format specification |
-| [TEMPLATE.md](docs/TEMPLATE.md) | Blank template to start your epic |
-| [EXAMPLE.md](docs/EXAMPLE.md) | Full working example (e-commerce) |
-| [AI_PROMPT.md](docs/AI_PROMPT.md) | Prompts for AI-assisted generation |
+**A production-grade CLI tool for synchronizing markdown documentation with Jira**
+
+[Features](#features) •
+[Installation](#installation) •
+[Quick Start](#quick-start) •
+[Architecture](#architecture) •
+[Documentation](#documentation)
+
+</div>
+
+---
 
 ## Features
 
-- 🔒 **Dry-run mode** by default (use `--execute` to make changes)
-- ✅ **Confirmation prompts** before each write operation
-- 📋 **Detailed logging** of all actions
-- 💾 **Export current state** for backup before modifications
-- 📝 **Markdown to ADF conversion** with proper formatting (bold, checkboxes, code)
-- 📊 **Subtask management** with descriptions, assignees, and story points
-- 💬 **Commit comments** as formatted tables
-- 🔄 **Status synchronization** based on markdown
+🚀 **Full Epic Sync** - Sync user stories, subtasks, descriptions, and comments from markdown to Jira
+
+📝 **Markdown-Native** - Write your epic documentation in markdown, sync to Jira automatically
+
+🔄 **Smart Matching** - Fuzzy title matching between markdown stories and Jira issues
+
+🛡️ **Safe by Default** - Dry-run mode, confirmations, and detailed previews before any changes
+
+⚡ **Command Pattern** - Undo-capable operations with full audit trail
+
+🔌 **Plugin System** - Extensible architecture for custom parsers, trackers, and formatters
+
+📊 **Rich Output** - Beautiful CLI with progress bars, colored output, and detailed reports
 
 ## Installation
 
+### From PyPI (coming soon)
+
 ```bash
-# Clone the repo
+pip install md2jira
+```
+
+### From Source
+
+```bash
 git clone https://github.com/adriandarian/md2jira.git
 cd md2jira
-
-# Install dependencies
-pip install -r requirements.txt
+pip install -e ".[dev]"
 ```
-
-## Setup
-
-### Configure Jira Credentials
-
-Create a `.env` file in the project directory:
-
-```bash
-JIRA_URL=https://your-company.atlassian.net
-JIRA_EMAIL=your-email@company.com
-JIRA_API_TOKEN=your-api-token
-```
-
-Get your API token from: https://id.atlassian.com/manage-profile/security/api-tokens
 
 ## Quick Start
 
-```bash
-# Analyze differences (dry-run, safe)
-python md2jira.py --markdown /path/to/epic.md --epic PROJ-123
+### 1. Set up environment variables
 
-# Export current Jira state to JSON backup
-python md2jira.py --epic PROJ-123 --export
-
-# Sync with confirmations
-python md2jira.py --markdown epic.md --epic PROJ-123 --execute
-
-# Sync without confirmations
-python md2jira.py --markdown epic.md --epic PROJ-123 --execute --no-confirm
-```
-
-## Usage
-
-### Basic Commands
+Create a `.env` file:
 
 ```bash
-# Analyze only (see what would change)
-python md2jira.py --markdown epic.md --epic PROJ-123 --analyze-only
-
-# Validate sync is correct
-python md2jira.py --markdown epic.md --epic PROJ-123 --validate
-
-# Fix description formatting
-python md2jira.py --markdown epic.md --epic PROJ-123 --fix-descriptions --execute
-
-# Sync subtask statuses
-python md2jira.py --markdown epic.md --epic PROJ-123 --sync-status --execute
-
-# Process only a specific story
-python md2jira.py --markdown epic.md --epic PROJ-123 --story US-001 --execute
+JIRA_URL=https://your-company.atlassian.net
+JIRA_EMAIL=your.email@company.com
+JIRA_API_TOKEN=your-api-token
 ```
 
-### Phased Sync
-
-Run specific phases individually for more control:
-
-```bash
-# Phase 1: Sync descriptions only
-python md2jira.py --markdown epic.md --epic PROJ-123 --execute --phase 1 --no-confirm
-
-# Phase 2: Create subtasks only
-python md2jira.py --markdown epic.md --epic PROJ-123 --execute --phase 2 --no-confirm
-
-# Phase 3: Add commit comments only
-python md2jira.py --markdown epic.md --epic PROJ-123 --execute --phase 3 --no-confirm
-```
-
-### Helper Script
-
-Use `run.sh` for common operations:
-
-```bash
-./run.sh export --epic PROJ-123
-./run.sh analyze --markdown epic.md --epic PROJ-123
-./run.sh sync --markdown epic.md --epic PROJ-123
-./run.sh fix-desc --markdown epic.md --epic PROJ-123
-./run.sh sync-status --markdown epic.md --epic PROJ-123
-./run.sh validate --markdown epic.md --epic PROJ-123
-```
-
-## Expected Markdown Format
-
-The parser expects user stories in this format:
+### 2. Create your markdown epic
 
 ```markdown
-### 🔧 US-001: Story Title
+### ✅ US-001: User Authentication
 
 | Field | Value |
 |-------|-------|
@@ -126,147 +74,211 @@ The parser expects user stories in this format:
 | **Status** | ✅ Done |
 
 #### Description
-**As a** developer
-**I want** feature X
-**So that** I can achieve Y
 
-#### Acceptance Criteria
-- [ ] Criterion 1
-- [ ] Criterion 2
-- [x] Completed criterion
+**As a** user
+**I want** to authenticate securely
+**So that** my data is protected
 
 #### Subtasks
-| # | Subtask | Description | SP | Status |
-|---|---------|-------------|-----|--------|
-| 1 | Setup | Initial setup | 1 | ✅ Done |
-| 2 | Implement | Core implementation | 3 | 🔄 In Progress |
 
-#### Related Commits
-| Commit | Message |
-|--------|---------|
-| `abc1234` | feat: add feature X |
-| `def5678` | fix: resolve issue Y |
+| # | Subtask | Description | SP | Status |
+|---|---------|-------------|----|---------| 
+| 1 | Create login form | Build the login UI | 2 | ✅ Done |
+| 2 | Implement JWT auth | Add JWT token handling | 3 | ✅ Done |
+```
+
+### 3. Sync to Jira
+
+```bash
+# Preview changes (dry-run)
+md2jira --markdown EPIC.md --epic PROJ-123
+
+# Execute sync
+md2jira --markdown EPIC.md --epic PROJ-123 --execute
+
+# Sync specific phase only
+md2jira --markdown EPIC.md --epic PROJ-123 --execute --phase descriptions
+```
+
+## Architecture
+
+md2jira follows a **Clean Architecture** / **Hexagonal Architecture** pattern for maximum flexibility and testability.
+
+```
+src/md2jira/
+├── core/                     # Pure domain logic (no external deps)
+│   ├── domain/               # Entities, value objects, enums
+│   │   ├── entities.py       # Epic, UserStory, Subtask, Comment
+│   │   ├── value_objects.py  # StoryId, IssueKey, Description
+│   │   ├── enums.py          # Status, Priority, IssueType
+│   │   └── events.py         # Domain events for audit trail
+│   └── ports/                # Abstract interfaces
+│       ├── issue_tracker.py  # IssueTrackerPort interface
+│       ├── document_parser.py
+│       └── document_formatter.py
+├── adapters/                 # Infrastructure implementations
+│   ├── jira/                 # Jira API adapter
+│   │   ├── adapter.py        # IssueTrackerPort implementation
+│   │   └── client.py         # Low-level HTTP client
+│   ├── parsers/              # Document parsers
+│   │   └── markdown.py       # Markdown parser
+│   ├── formatters/           # Output formatters
+│   │   └── adf.py            # Atlassian Document Format
+│   └── config/               # Configuration providers
+│       └── environment.py    # Env vars / .env loader
+├── application/              # Use cases / orchestration
+│   ├── commands/             # Command pattern handlers
+│   │   ├── base.py           # Command, CommandResult, CommandBatch
+│   │   └── issue_commands.py # UpdateDescription, CreateSubtask, etc.
+│   └── sync/                 # Sync orchestrator
+│       └── orchestrator.py   # Main sync logic
+├── cli/                      # Command line interface
+│   ├── app.py                # Entry point, argument parsing
+│   └── output.py             # Rich console output
+└── plugins/                  # Extension system
+    ├── base.py               # Plugin base classes
+    ├── hooks.py              # Hook system for extensibility
+    └── registry.py           # Plugin discovery and loading
+```
+
+### Key Patterns
+
+- **Ports & Adapters**: Core logic depends only on abstract interfaces (ports), making it easy to swap implementations
+- **Command Pattern**: All write operations are encapsulated as commands, enabling undo/redo and audit trails
+- **Event-Driven**: Domain events provide loose coupling and enable audit logging
+- **Plugin System**: Extend functionality without modifying core code
+
+### Adding a New Tracker (e.g., GitHub Issues)
+
+```python
+from md2jira.core.ports import IssueTrackerPort
+
+class GitHubAdapter(IssueTrackerPort):
+    @property
+    def name(self) -> str:
+        return "GitHub"
+    
+    def get_epic_children(self, epic_key: str) -> list[IssueData]:
+        # Implement GitHub API calls
+        ...
+```
+
+### Using Hooks
+
+```python
+from md2jira.plugins import HookPoint, get_registry
+
+hook_manager = get_registry().hook_manager
+
+@hook_manager.hook(HookPoint.BEFORE_SYNC)
+def log_sync_start(ctx):
+    print(f"Starting sync for epic: {ctx.data['epic_key']}")
+
+@hook_manager.hook(HookPoint.ON_ERROR)
+def handle_errors(ctx):
+    send_slack_notification(ctx.error)
 ```
 
 ## CLI Reference
 
+```bash
+md2jira --help
+```
+
+### Common Options
+
 | Option | Description |
 |--------|-------------|
-| `--markdown, -m` | Path to markdown file with user stories |
-| `--epic, -e` | Jira epic key (e.g., PROJ-123) |
-| `--project, -p` | Jira project key (defaults to epic prefix) |
-| `--jira-url` | Jira instance URL (or set JIRA_URL env var) |
-| `--export` | Export current Jira state to JSON |
-| `--execute` | Actually make changes (default is dry-run) |
+| `--markdown, -m` | Path to markdown file (required) |
+| `--epic, -e` | Jira epic key (required) |
+| `--execute, -x` | Execute changes (default: dry-run) |
 | `--no-confirm` | Skip confirmation prompts |
-| `--verbose, -v` | Enable verbose logging |
-| `--analyze-only` | Only analyze, don't sync |
-| `--phase N` | Run only phase 1, 2, or 3 |
-| `--validate` | Validate stories are correctly synced |
-| `--fix-descriptions` | Re-sync descriptions with proper formatting |
-| `--sync-status` | Sync subtask statuses from markdown |
-| `--story` | Process only a specific story |
+| `--phase` | Run specific phase: `all`, `descriptions`, `subtasks`, `comments`, `statuses` |
+| `--story` | Filter to specific story ID |
+| `--verbose, -v` | Verbose output |
+| `--export` | Export results to JSON |
+| `--validate` | Validate markdown only |
 
-## Customization
-
-### Story Pattern
-
-The default pattern for detecting user stories is:
-
-```regex
-### [^\n]+ (US-\d+): ([^\n]+)\n
-```
-
-To customize, modify `STORY_PATTERN` in the `MarkdownEpicParser` class.
-
-### Story Points Field
-
-Jira uses custom fields for story points. The default is:
-
-```python
-STORY_POINTS_FIELD = "customfield_10014"
-```
-
-Update in `JiraClient` if your Jira uses a different field.
-
-### Workflow Transitions
-
-The default transitions are configured for a typical Jira workflow:
-
-```
-Analyze → Open → In Progress → Resolved
-```
-
-Modify `TRANSITIONS` in `JiraClient` if your workflow differs.
-
-## Safety Features
-
-1. **Dry-run by default** - No changes unless `--execute` is specified
-2. **Confirmations** - Each change requires approval (unless `--no-confirm`)
-3. **Export** - Create backups before modifying
-4. **Phased execution** - Run sync in stages
-5. **Story filter** - Test on a single story first
-
-## Recommended Workflow
+### Examples
 
 ```bash
-# 1. Export current state as backup
-python md2jira.py --epic PROJ-123 --export
+# Validate markdown format
+md2jira -m EPIC.md -e PROJ-123 --validate
 
-# 2. Analyze differences
-python md2jira.py --markdown epic.md --epic PROJ-123 --analyze-only
+# Preview all changes
+md2jira -m EPIC.md -e PROJ-123 -v
 
-# 3. Dry-run to see what would change
-python md2jira.py --markdown epic.md --epic PROJ-123
+# Sync descriptions only
+md2jira -m EPIC.md -e PROJ-123 -x --phase descriptions
 
-# 4. Execute with confirmations
-python md2jira.py --markdown epic.md --epic PROJ-123 --execute
+# Full sync without prompts
+md2jira -m EPIC.md -e PROJ-123 -x --no-confirm
 
-# 5. Validate sync
-python md2jira.py --markdown epic.md --epic PROJ-123 --validate
+# Export results
+md2jira -m EPIC.md -e PROJ-123 -x --export sync-results.json
 ```
 
-## Creating Your Epic Markdown
+## Documentation
 
-### Option 1: Use the Template
+- [Markdown Schema](docs/SCHEMA.md) - Detailed specification of expected markdown format
+- [Template](docs/TEMPLATE.md) - Blank template to get started
+- [Example](docs/EXAMPLE.md) - Full working example
+- [AI Prompt](docs/AI_PROMPT.md) - Prompt for AI agents to generate content
 
-Copy [docs/TEMPLATE.md](docs/TEMPLATE.md) and fill in your stories.
+## Development
 
-### Option 2: Use AI Generation
+### Setup
 
-Use the prompts in [docs/AI_PROMPT.md](docs/AI_PROMPT.md) with Claude, ChatGPT, or other AI assistants to generate a complete epic document.
+```bash
+# Clone and install
+git clone https://github.com/adriandarian/md2jira.git
+cd md2jira
+pip install -e ".[dev]"
 
-### Option 3: Follow the Schema
+# Run tests
+pytest
 
-Read [docs/SCHEMA.md](docs/SCHEMA.md) for the complete format specification and create your own.
+# Run with coverage
+pytest --cov=src/md2jira
 
-### Quick Format Reference
+# Type checking
+mypy src/
 
-```markdown
-### 🔧 US-XXX: Story Title       ← Required format
+# Linting
+ruff check src/ tests/
 
-| Field | Value |                 ← Required table
-| **Story Points** | N |
-| **Priority** | 🟡 High |
-| **Status** | 📋 Planned |
+# Formatting
+black src/ tests/
+```
 
-#### Description                  ← Required section
-**As a** [role]
-**I want** [feature]
-**So that** [benefit]
+### Project Structure
 
-#### Acceptance Criteria          ← Optional
-- [ ] Criterion
-
-#### Subtasks                     ← Optional
-| # | Subtask | Description | SP | Status |
-
-#### Related Commits              ← Optional
-| Commit | Message |
-| `hash` | message |
+```
+md2jira/
+├── src/md2jira/      # Source code
+├── tests/            # Test suite
+├── docs/             # Documentation
+├── pyproject.toml    # Project config
+└── README.md
 ```
 
 ## License
 
-MIT
+MIT License - see [LICENSE](LICENSE) for details.
 
+## Contributing
+
+Contributions are welcome! Please read our contributing guidelines before submitting PRs.
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Run the test suite
+6. Submit a PR
+
+---
+
+<div align="center">
+Made with ❤️ by <a href="https://github.com/adriandarian">Adrian Darian</a>
+</div>
