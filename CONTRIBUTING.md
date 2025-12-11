@@ -580,3 +580,4 @@ By contributing to md2jira, you agree that your contributions will be licensed u
 
 Thank you for contributing to md2jira! Your help makes this project better for everyone. 💙
 
+
