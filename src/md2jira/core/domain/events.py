@@ -7,7 +7,7 @@ They enable loose coupling and audit trails.
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Callable, Optional, Union
 from uuid import uuid4
 
 from .value_objects import StoryId, IssueKey
@@ -30,8 +30,8 @@ class DomainEvent:
 class StoryMatched(DomainEvent):
     """Event: A markdown story was matched to a Jira issue."""
     
-    story_id: StoryId = None
-    issue_key: IssueKey = None
+    story_id: Optional[StoryId] = None
+    issue_key: Optional[Union[str, IssueKey]] = None
     match_confidence: float = 1.0  # 0.0 to 1.0
     match_method: str = "title"  # title, id, manual
 
@@ -40,7 +40,7 @@ class StoryMatched(DomainEvent):
 class StoryUpdated(DomainEvent):
     """Event: A story's description was updated."""
     
-    issue_key: IssueKey = None
+    issue_key: Optional[Union[str, IssueKey]] = None
     field_name: str = ""
     old_value: Optional[str] = None
     new_value: Optional[str] = None
@@ -50,8 +50,8 @@ class StoryUpdated(DomainEvent):
 class SubtaskCreated(DomainEvent):
     """Event: A new subtask was created."""
     
-    parent_key: IssueKey = None
-    subtask_key: IssueKey = None
+    parent_key: Optional[Union[str, IssueKey]] = None
+    subtask_key: Optional[Union[str, IssueKey]] = None
     subtask_name: str = ""
     story_points: int = 0
 
@@ -60,15 +60,15 @@ class SubtaskCreated(DomainEvent):
 class SubtaskUpdated(DomainEvent):
     """Event: A subtask was updated."""
     
-    subtask_key: IssueKey = None
-    changes: dict = field(default_factory=dict)
+    subtask_key: Optional[Union[str, IssueKey]] = None
+    changes: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
 class StatusTransitioned(DomainEvent):
     """Event: An issue's status changed."""
     
-    issue_key: IssueKey = None
+    issue_key: Optional[Union[str, IssueKey]] = None
     from_status: str = ""
     to_status: str = ""
     transition_id: Optional[str] = None
@@ -78,7 +78,7 @@ class StatusTransitioned(DomainEvent):
 class CommentAdded(DomainEvent):
     """Event: A comment was added to an issue."""
     
-    issue_key: IssueKey = None
+    issue_key: Optional[Union[str, IssueKey]] = None
     comment_type: str = "text"  # text, commits
     commit_count: int = 0
 
@@ -87,7 +87,7 @@ class CommentAdded(DomainEvent):
 class SyncStarted(DomainEvent):
     """Event: A sync operation started."""
     
-    epic_key: IssueKey = None
+    epic_key: Optional[Union[str, IssueKey]] = None
     markdown_path: str = ""
     dry_run: bool = True
 
@@ -96,12 +96,12 @@ class SyncStarted(DomainEvent):
 class SyncCompleted(DomainEvent):
     """Event: A sync operation completed."""
     
-    epic_key: IssueKey = None
+    epic_key: Optional[Union[str, IssueKey]] = None
     stories_matched: int = 0
     stories_updated: int = 0
     subtasks_created: int = 0
     comments_added: int = 0
-    errors: list = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
 
 
 class EventBus:
@@ -111,11 +111,15 @@ class EventBus:
     This enables loose coupling between components.
     """
     
-    def __init__(self):
-        self._handlers: dict[type, list] = {}
+    def __init__(self) -> None:
+        self._handlers: dict[type[DomainEvent], list[Callable[[DomainEvent], None]]] = {}
         self._history: list[DomainEvent] = []
     
-    def subscribe(self, event_type: type, handler: callable) -> None:
+    def subscribe(
+        self,
+        event_type: type[DomainEvent],
+        handler: Callable[[DomainEvent], None],
+    ) -> None:
         """Subscribe a handler to an event type."""
         if event_type not in self._handlers:
             self._handlers[event_type] = []

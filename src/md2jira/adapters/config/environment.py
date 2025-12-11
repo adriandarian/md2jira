@@ -9,7 +9,7 @@ Supports:
 
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from ...core.ports.config_provider import (
     ConfigProviderPort,
@@ -169,15 +169,18 @@ class EnvironmentConfigProvider(ConfigProviderPort):
         }
         
         for env_key, config_key in env_mapping.items():
-            value = os.environ.get(env_key)
-            if value is not None:
+            raw_value = os.environ.get(env_key)
+            if raw_value is not None:
                 # Convert boolean-ish values
-                if value.lower() in ("true", "1", "yes"):
-                    value = True
-                elif value.lower() in ("false", "0", "no"):
-                    value = False
+                final_value: Any
+                if raw_value.lower() in ("true", "1", "yes"):
+                    final_value = True
+                elif raw_value.lower() in ("false", "0", "no"):
+                    final_value = False
+                else:
+                    final_value = raw_value
                 
-                self._values[config_key] = value
+                self._values[config_key] = final_value
     
     def _apply_cli_overrides(self) -> None:
         """Apply CLI argument overrides."""

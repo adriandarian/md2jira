@@ -33,7 +33,7 @@ class CommandResult(Generic[T]):
     undo_data: Optional[Any] = None
     
     @classmethod
-    def ok(cls, data: T = None, dry_run: bool = False) -> "CommandResult[T]":
+    def ok(cls, data: Optional[T] = None, dry_run: bool = False) -> "CommandResult[T]":
         """Create successful result."""
         return cls(success=True, data=data, dry_run=dry_run)
     
@@ -64,7 +64,7 @@ class Command(ABC):
         tracker: IssueTrackerPort,
         event_bus: Optional[EventBus] = None,
         dry_run: bool = True,
-    ):
+    ) -> None:
         """
         Initialize command.
         

@@ -9,8 +9,8 @@ Implementations:
 """
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import Optional, Any
+from dataclasses import dataclass, field
+from typing import Any, Optional
 
 from ..domain.entities import Epic, UserStory, Subtask, Comment
 from ..domain.value_objects import IssueKey
@@ -62,14 +62,8 @@ class IssueData:
     issue_type: str = ""
     assignee: Optional[str] = None
     story_points: Optional[float] = None
-    subtasks: list["IssueData"] = None
-    comments: list[dict] = None
-    
-    def __post_init__(self):
-        if self.subtasks is None:
-            self.subtasks = []
-        if self.comments is None:
-            self.comments = []
+    subtasks: list["IssueData"] = field(default_factory=list)
+    comments: list[dict[str, Any]] = field(default_factory=list)
 
 
 class IssueTrackerPort(ABC):

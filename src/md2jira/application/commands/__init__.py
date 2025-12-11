@@ -7,7 +7,7 @@ Commands represent write operations and can be:
 - Logged for audit
 """
 
-from .base import Command, CommandResult
+from .base import Command, CommandResult, CommandBatch
 from .issue_commands import (
     UpdateDescriptionCommand,
     CreateSubtaskCommand,
@@ -19,6 +19,7 @@ from .issue_commands import (
 __all__ = [
     "Command",
     "CommandResult",
+    "CommandBatch",
     "UpdateDescriptionCommand",
     "CreateSubtaskCommand",
     "UpdateSubtaskCommand",

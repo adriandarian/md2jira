@@ -7,8 +7,6 @@ from typing import Any, Optional
 
 from .base import Command, CommandResult
 from ...core.ports.issue_tracker import IssueTrackerPort, IssueTrackerError
-from ...core.domain.entities import UserStory, Subtask
-from ...core.domain.value_objects import CommitRef
 from ...core.domain.events import (
     EventBus,
     StoryUpdated,

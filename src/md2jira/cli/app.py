@@ -6,7 +6,6 @@ import argparse
 import logging
 import sys
 from pathlib import Path
-from typing import Optional
 
 from .output import Console, Symbols
 from ..adapters import (

@@ -2,8 +2,9 @@
 Domain enums - Status, Priority, and other enumerated types.
 """
 
+from __future__ import annotations
+
 from enum import Enum, auto
-from typing import Self
 
 
 class Status(Enum):
@@ -17,7 +18,7 @@ class Status(Enum):
     CANCELLED = auto()
     
     @classmethod
-    def from_string(cls, value: str) -> Self:
+    def from_string(cls, value: str) -> "Status":
         """
         Parse status from various string formats.
         
@@ -90,7 +91,7 @@ class Priority(Enum):
     LOW = auto()
     
     @classmethod
-    def from_string(cls, value: str) -> Self:
+    def from_string(cls, value: str) -> "Priority":
         """Parse priority from string."""
         value = value.strip().lower()
         
@@ -130,7 +131,7 @@ class IssueType(Enum):
     SPIKE = auto()
     
     @classmethod
-    def from_string(cls, value: str) -> Self:
+    def from_string(cls, value: str) -> "IssueType":
         """Parse issue type from string."""
         value = value.strip().lower().replace("-", "").replace(" ", "")
         

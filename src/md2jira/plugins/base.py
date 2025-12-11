@@ -3,9 +3,9 @@ Plugin Base Classes - Abstract base for all plugins.
 """
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Any, Optional, Type
+from typing import Any, Optional
 
 
 class PluginType(Enum):
@@ -51,15 +51,10 @@ class PluginMetadata:
     plugin_type: PluginType = PluginType.HOOK
     
     # Dependencies on other plugins
-    requires: list[str] = None
+    requires: list[str] = field(default_factory=list)
     
     # Configuration schema (for validation)
-    config_schema: Optional[dict] = None
-    
-    def __post_init__(self):
-        """Initialize default values for mutable fields."""
-        if self.requires is None:
-            self.requires = []
+    config_schema: Optional[dict[str, Any]] = None
 
 
 class Plugin(ABC):
@@ -72,14 +67,14 @@ class Plugin(ABC):
     - Optional: shutdown() method
     """
     
-    def __init__(self, config: Optional[dict] = None):
+    def __init__(self, config: Optional[dict[str, Any]] = None) -> None:
         """
         Initialize plugin with optional config.
         
         Args:
             config: Plugin-specific configuration
         """
-        self.config = config or {}
+        self.config: dict[str, Any] = config or {}
         self._initialized = False
     
     @property
@@ -112,7 +107,7 @@ class Plugin(ABC):
         Returns:
             List of validation errors (empty if valid)
         """
-        errors = []
+        errors: list[str] = []
         
         schema = self.metadata.config_schema
         if not schema:

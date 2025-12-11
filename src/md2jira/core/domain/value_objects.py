@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Iterator, Optional
 
 
 @dataclass(frozen=True)
@@ -176,7 +176,7 @@ class AcceptanceCriteria:
     def __len__(self) -> int:
         return len(self.items)
     
-    def __iter__(self):
+    def __iter__(self) -> Iterator[tuple[str, bool]]:
         return iter(zip(self.items, self.checked))
     
     @property

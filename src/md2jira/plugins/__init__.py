@@ -10,7 +10,7 @@ Plugins can extend:
 
 from .registry import PluginRegistry
 from .base import Plugin, PluginType, PluginMetadata
-from .hooks import Hook, HookPoint, HookManager
+from .hooks import Hook, HookPoint, HookManager, HookContext
 
 __all__ = [
     "PluginRegistry",
@@ -20,5 +20,6 @@ __all__ = [
     "Hook",
     "HookPoint",
     "HookManager",
+    "HookContext",
 ]
 

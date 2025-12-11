@@ -68,7 +68,7 @@ class JiraApiClient:
         self,
         method: str,
         endpoint: str,
-        **kwargs
+        **kwargs: Any,
     ) -> dict[str, Any]:
         """
         Make an authenticated request to Jira API.
@@ -94,7 +94,7 @@ class JiraApiClient:
         except requests.exceptions.Timeout as e:
             raise IssueTrackerError(f"Request timed out: {e}", cause=e)
     
-    def get(self, endpoint: str, **kwargs) -> dict[str, Any]:
+    def get(self, endpoint: str, **kwargs: Any) -> dict[str, Any]:
         """
         Perform a GET request to the Jira API.
         
@@ -107,7 +107,12 @@ class JiraApiClient:
         """
         return self.request("GET", endpoint, **kwargs)
     
-    def post(self, endpoint: str, json: dict = None, **kwargs) -> dict[str, Any]:
+    def post(
+        self,
+        endpoint: str,
+        json: Optional[dict[str, Any]] = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
         """
         Perform a POST request to the Jira API.
         
@@ -126,7 +131,12 @@ class JiraApiClient:
             return {}
         return self.request("POST", endpoint, json=json, **kwargs)
     
-    def put(self, endpoint: str, json: dict = None, **kwargs) -> dict[str, Any]:
+    def put(
+        self,
+        endpoint: str,
+        json: Optional[dict[str, Any]] = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
         """
         Perform a PUT request to the Jira API.
         
@@ -145,7 +155,7 @@ class JiraApiClient:
             return {}
         return self.request("PUT", endpoint, json=json, **kwargs)
     
-    def delete(self, endpoint: str, **kwargs) -> dict[str, Any]:
+    def delete(self, endpoint: str, **kwargs: Any) -> dict[str, Any]:
         """
         Perform a DELETE request to the Jira API.
         

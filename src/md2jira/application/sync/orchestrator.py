@@ -6,8 +6,7 @@ This is the main entry point for sync operations.
 
 import logging
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Optional, Any, Callable
+from typing import Any, Callable, Optional
 
 from ...core.ports.issue_tracker import IssueTrackerPort, IssueData
 from ...core.ports.document_parser import DocumentParserPort
@@ -362,7 +361,7 @@ class SyncOrchestrator:
         result.stories_updated = batch.executed_count
         
         for cmd_result in batch.results:
-            if not cmd_result.success:
+            if not cmd_result.success and cmd_result.error:
                 result.add_error(cmd_result.error)
     
     def _sync_subtasks(self, result: SyncResult) -> None:
@@ -394,7 +393,7 @@ class SyncOrchestrator:
                     # Update existing subtask
                     existing = existing_subtasks[subtask_name_lower]
                     
-                    cmd = UpdateSubtaskCommand(
+                    update_cmd = UpdateSubtaskCommand(
                         tracker=self.tracker,
                         issue_key=existing.key,
                         description=md_subtask.description,
@@ -402,15 +401,15 @@ class SyncOrchestrator:
                         event_bus=self.event_bus,
                         dry_run=self.config.dry_run,
                     )
-                    cmd_result = cmd.execute()
+                    update_result = update_cmd.execute()
                     
-                    if cmd_result.success and not cmd_result.dry_run:
+                    if update_result.success and not update_result.dry_run:
                         result.subtasks_updated += 1
                 else:
                     # Create new subtask
                     adf = self.formatter.format_text(md_subtask.description)
                     
-                    cmd = CreateSubtaskCommand(
+                    create_cmd = CreateSubtaskCommand(
                         tracker=self.tracker,
                         parent_key=issue_key,
                         project_key=project_key,
@@ -420,12 +419,12 @@ class SyncOrchestrator:
                         event_bus=self.event_bus,
                         dry_run=self.config.dry_run,
                     )
-                    cmd_result = cmd.execute()
+                    create_result = create_cmd.execute()
                     
-                    if cmd_result.success:
+                    if create_result.success:
                         result.subtasks_created += 1
-                    elif cmd_result.error:
-                        result.add_error(cmd_result.error)
+                    elif create_result.error:
+                        result.add_error(create_result.error)
     
     def _sync_comments(self, result: SyncResult) -> None:
         """

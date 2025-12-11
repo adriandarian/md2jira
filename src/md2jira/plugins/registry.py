@@ -5,7 +5,7 @@ Plugin Registry - Manages plugin discovery, loading, and lifecycle.
 import importlib
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Optional
 
 from .base import Plugin, PluginType, PluginMetadata
 
@@ -21,10 +21,10 @@ class PluginRegistry:
     - Plugin lifecycle management
     """
     
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize an empty plugin registry."""
-        self._plugins: Dict[str, Plugin] = {}
-        self._by_type: Dict[PluginType, List[Plugin]] = {t: [] for t in PluginType}
+        self._plugins: dict[str, Plugin] = {}
+        self._by_type: dict[PluginType, list[Plugin]] = {t: [] for t in PluginType}
         self.logger = logging.getLogger("PluginRegistry")
     
     # -------------------------------------------------------------------------
@@ -50,8 +50,8 @@ class PluginRegistry:
     
     def register_class(
         self,
-        plugin_class: Type[Plugin],
-        config: Optional[dict] = None
+        plugin_class: type[Plugin],
+        config: Optional[dict[str, Any]] = None,
     ) -> Plugin:
         """
         Register a plugin by class.
@@ -99,7 +99,7 @@ class PluginRegistry:
     # Discovery
     # -------------------------------------------------------------------------
     
-    def discover_from_directory(self, directory: Path) -> List[str]:
+    def discover_from_directory(self, directory: Path) -> list[str]:
         """
         Discover and load plugins from a directory.
         
@@ -111,7 +111,7 @@ class PluginRegistry:
         Returns:
             List of loaded plugin names
         """
-        loaded = []
+        loaded: list[str] = []
         
         if not directory.exists():
             return loaded
@@ -148,7 +148,7 @@ class PluginRegistry:
         
         return None
     
-    def discover_entry_points(self, group: str = "md2jira.plugins") -> List[str]:
+    def discover_entry_points(self, group: str = "md2jira.plugins") -> list[str]:
         """
         Discover plugins from setuptools entry points.
         
@@ -158,7 +158,7 @@ class PluginRegistry:
         Returns:
             List of loaded plugin names
         """
-        loaded = []
+        loaded: list[str] = []
         
         try:
             from importlib.metadata import entry_points
@@ -194,7 +194,7 @@ class PluginRegistry:
         """
         return self._plugins.get(name)
     
-    def get_by_type(self, plugin_type: PluginType) -> List[Plugin]:
+    def get_by_type(self, plugin_type: PluginType) -> list[Plugin]:
         """
         Get all plugins of a specific type.
         
@@ -206,7 +206,7 @@ class PluginRegistry:
         """
         return self._by_type[plugin_type].copy()
     
-    def get_all(self) -> List[Plugin]:
+    def get_all(self) -> list[Plugin]:
         """
         Get all registered plugins.
         
@@ -231,14 +231,14 @@ class PluginRegistry:
     # Lifecycle
     # -------------------------------------------------------------------------
     
-    def initialize_all(self) -> List[str]:
+    def initialize_all(self) -> list[str]:
         """
         Initialize all plugins that haven't been initialized.
         
         Returns:
             List of plugin names that failed to initialize
         """
-        failures = []
+        failures: list[str] = []
         
         for name, plugin in self._plugins.items():
             if plugin.is_initialized:
@@ -288,7 +288,7 @@ class PluginRegistry:
     # Info
     # -------------------------------------------------------------------------
     
-    def list_plugins(self) -> List[dict]:
+    def list_plugins(self) -> list[dict[str, Any]]:
         """
         Get information about all registered plugins.
         

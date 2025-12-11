@@ -182,7 +182,7 @@ class HookManager:
         manager.trigger(HookPoint.BEFORE_SYNC, {"epic_key": "PROJ-123"})
     """
     
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the hook manager with empty hook lists for all hook points."""
         self._hooks: dict[HookPoint, list[Hook]] = {hp: [] for hp in HookPoint}
         self.logger = logging.getLogger("HookManager")
@@ -258,7 +258,7 @@ class HookManager:
         hook_point: HookPoint,
         priority: int = 100,
         name: Optional[str] = None,
-    ) -> Callable:
+    ) -> Callable[[Callable[[HookContext], None]], Callable[[HookContext], None]]:
         """
         Decorator to register a hook.
         
@@ -267,7 +267,7 @@ class HookManager:
             def my_hook(ctx):
                 print("Before sync!")
         """
-        def decorator(func: Callable[[HookContext], None]) -> Callable:
+        def decorator(func: Callable[[HookContext], None]) -> Callable[[HookContext], None]:
             hook_name = name or func.__name__
             self.register(Hook(hook_name, hook_point, func, priority))
             return func
