@@ -95,25 +95,69 @@ class JiraApiClient:
             raise IssueTrackerError(f"Request timed out: {e}", cause=e)
     
     def get(self, endpoint: str, **kwargs) -> dict[str, Any]:
-        """GET request."""
+        """
+        Perform a GET request to the Jira API.
+        
+        Args:
+            endpoint: API endpoint (e.g., 'issue/PROJ-123').
+            **kwargs: Additional arguments passed to requests.
+            
+        Returns:
+            JSON response as dictionary.
+        """
         return self.request("GET", endpoint, **kwargs)
     
     def post(self, endpoint: str, json: dict = None, **kwargs) -> dict[str, Any]:
-        """POST request (checks dry_run for mutations)."""
+        """
+        Perform a POST request to the Jira API.
+        
+        Respects dry_run mode for mutation endpoints (search is allowed).
+        
+        Args:
+            endpoint: API endpoint.
+            json: JSON body to send.
+            **kwargs: Additional arguments passed to requests.
+            
+        Returns:
+            JSON response as dictionary, or empty dict in dry-run mode.
+        """
         if self.dry_run and not endpoint.endswith("/search/jql"):
             self.logger.info(f"[DRY-RUN] Would POST to {endpoint}")
             return {}
         return self.request("POST", endpoint, json=json, **kwargs)
     
     def put(self, endpoint: str, json: dict = None, **kwargs) -> dict[str, Any]:
-        """PUT request (checks dry_run)."""
+        """
+        Perform a PUT request to the Jira API.
+        
+        Respects dry_run mode - no changes made in dry-run.
+        
+        Args:
+            endpoint: API endpoint.
+            json: JSON body to send.
+            **kwargs: Additional arguments passed to requests.
+            
+        Returns:
+            JSON response as dictionary, or empty dict in dry-run mode.
+        """
         if self.dry_run:
             self.logger.info(f"[DRY-RUN] Would PUT to {endpoint}")
             return {}
         return self.request("PUT", endpoint, json=json, **kwargs)
     
     def delete(self, endpoint: str, **kwargs) -> dict[str, Any]:
-        """DELETE request (checks dry_run)."""
+        """
+        Perform a DELETE request to the Jira API.
+        
+        Respects dry_run mode - no changes made in dry-run.
+        
+        Args:
+            endpoint: API endpoint.
+            **kwargs: Additional arguments passed to requests.
+            
+        Returns:
+            JSON response as dictionary, or empty dict in dry-run mode.
+        """
         if self.dry_run:
             self.logger.info(f"[DRY-RUN] Would DELETE {endpoint}")
             return {}
@@ -128,7 +172,22 @@ class JiraApiClient:
         response: requests.Response,
         endpoint: str
     ) -> dict[str, Any]:
-        """Handle API response and errors."""
+        """
+        Handle API response and convert errors to typed exceptions.
+        
+        Args:
+            response: The requests Response object.
+            endpoint: The endpoint that was called (for error messages).
+            
+        Returns:
+            Parsed JSON response as dictionary.
+            
+        Raises:
+            AuthenticationError: On 401 responses.
+            PermissionError: On 403 responses.
+            NotFoundError: On 404 responses.
+            IssueTrackerError: On other error responses.
+        """
         if response.ok:
             if response.text:
                 return response.json()
@@ -166,13 +225,25 @@ class JiraApiClient:
     # -------------------------------------------------------------------------
     
     def get_myself(self) -> dict[str, Any]:
-        """Get current authenticated user."""
+        """
+        Get the current authenticated user's information.
+        
+        Results are cached after the first call.
+        
+        Returns:
+            Dictionary with user details (accountId, displayName, etc.).
+        """
         if self._current_user is None:
             self._current_user = self.get("myself")
         return self._current_user
     
     def get_current_user_id(self) -> str:
-        """Get current user's account ID."""
+        """
+        Get the current user's Jira account ID.
+        
+        Returns:
+            The accountId string for the authenticated user.
+        """
         return self.get_myself()["accountId"]
     
     def search_jql(
@@ -181,7 +252,17 @@ class JiraApiClient:
         fields: list[str],
         max_results: int = 100
     ) -> dict[str, Any]:
-        """Execute JQL search."""
+        """
+        Execute a JQL search query.
+        
+        Args:
+            jql: The JQL query string.
+            fields: List of field names to include in results.
+            max_results: Maximum number of results to return.
+            
+        Returns:
+            Dictionary with 'issues' list and pagination info.
+        """
         return self.post(
             "search/jql",
             json={
@@ -192,7 +273,12 @@ class JiraApiClient:
         )
     
     def test_connection(self) -> bool:
-        """Test if connection is valid."""
+        """
+        Test if the API connection and credentials are valid.
+        
+        Returns:
+            True if connection successful, False otherwise.
+        """
         try:
             self.get_myself()
             return True
@@ -201,6 +287,11 @@ class JiraApiClient:
     
     @property
     def is_connected(self) -> bool:
-        """Check if connected."""
+        """
+        Check if the client has successfully connected.
+        
+        Returns:
+            True if user info has been fetched (connection verified).
+        """
         return self._current_user is not None
 

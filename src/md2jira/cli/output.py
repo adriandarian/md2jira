@@ -12,7 +12,28 @@ from ..application.sync import SyncResult
 
 
 class Colors:
-    """ANSI color codes."""
+    """
+    ANSI color codes for terminal output.
+    
+    Provides constants for text colors, background colors, and text styles
+    that can be used to format terminal output.
+    
+    Attributes:
+        RESET: Reset all formatting to default.
+        BOLD: Make text bold.
+        DIM: Make text dimmed/faded.
+        RED: Red text color.
+        GREEN: Green text color.
+        YELLOW: Yellow text color.
+        BLUE: Blue text color.
+        MAGENTA: Magenta text color.
+        CYAN: Cyan text color.
+        WHITE: White text color.
+        BG_RED: Red background color.
+        BG_GREEN: Green background color.
+        BG_YELLOW: Yellow background color.
+        BG_BLUE: Blue background color.
+    """
     
     RESET = "\033[0m"
     BOLD = "\033[1m"
@@ -33,7 +54,31 @@ class Colors:
 
 
 class Symbols:
-    """Unicode symbols for output."""
+    """
+    Unicode symbols for terminal output.
+    
+    Provides constants for commonly used symbols in CLI output,
+    including status indicators, navigation arrows, and box drawing characters.
+    
+    Attributes:
+        CHECK: Checkmark symbol for success.
+        CROSS: Cross symbol for failure.
+        ARROW: Right arrow for navigation/pointers.
+        DOT: Bullet point for list items.
+        WARN: Warning triangle symbol.
+        INFO: Information symbol.
+        ROCKET: Rocket emoji for launch/start.
+        GEAR: Gear emoji for settings/processing.
+        FILE: File emoji for documents.
+        FOLDER: Folder emoji for directories.
+        LINK: Link emoji for URLs.
+        BOX_TL: Box drawing top-left corner.
+        BOX_TR: Box drawing top-right corner.
+        BOX_BL: Box drawing bottom-left corner.
+        BOX_BR: Box drawing bottom-right corner.
+        BOX_H: Box drawing horizontal line.
+        BOX_V: Box drawing vertical line.
+    """
     
     CHECK = "✓"
     CROSS = "✗"
@@ -57,24 +102,60 @@ class Symbols:
 
 
 class Console:
-    """Console output helper with colors and formatting."""
+    """
+    Console output helper with colors and formatting.
+    
+    Provides methods for printing formatted, colorized output to the terminal.
+    Supports headers, sections, status messages, tables, progress bars, and
+    interactive prompts.
+    
+    Attributes:
+        color: Whether to use ANSI color codes.
+        verbose: Whether to print debug messages.
+    """
     
     def __init__(self, color: bool = True, verbose: bool = False):
+        """
+        Initialize the console output helper.
+        
+        Args:
+            color: Enable colored output. Automatically disabled if stdout is not a TTY.
+            verbose: Enable verbose debug output.
+        """
         self.color = color and sys.stdout.isatty()
         self.verbose = verbose
     
     def _c(self, text: str, *codes: str) -> str:
-        """Apply color codes to text."""
+        """
+        Apply color codes to text.
+        
+        Args:
+            text: The text to colorize.
+            *codes: ANSI color codes to apply.
+            
+        Returns:
+            Colorized text with reset code appended, or plain text if color is disabled.
+        """
         if not self.color:
             return text
         return "".join(codes) + text + Colors.RESET
     
     def print(self, text: str = "") -> None:
-        """Print text."""
+        """
+        Print text to stdout.
+        
+        Args:
+            text: Text to print. Defaults to empty string for blank line.
+        """
         print(text)
     
     def header(self, text: str) -> None:
-        """Print a header."""
+        """
+        Print a prominent header with borders.
+        
+        Args:
+            text: Header text to display.
+        """
         width = max(len(text) + 4, 50)
         border = Colors.CYAN + Symbols.BOX_H * width + Colors.RESET if self.color else "-" * width
         
@@ -85,37 +166,82 @@ class Console:
         self.print()
     
     def section(self, text: str) -> None:
-        """Print a section header."""
+        """
+        Print a section header.
+        
+        Args:
+            text: Section title to display.
+        """
         self.print()
         self.print(self._c(f"{Symbols.ARROW} {text}", Colors.BOLD, Colors.BLUE))
     
     def success(self, text: str) -> None:
-        """Print success message."""
+        """
+        Print a success message with checkmark.
+        
+        Args:
+            text: Success message to display.
+        """
         self.print(self._c(f"  {Symbols.CHECK} {text}", Colors.GREEN))
     
     def error(self, text: str) -> None:
-        """Print error message."""
+        """
+        Print an error message with cross symbol.
+        
+        Args:
+            text: Error message to display.
+        """
         self.print(self._c(f"  {Symbols.CROSS} {text}", Colors.RED))
     
     def warning(self, text: str) -> None:
-        """Print warning message."""
+        """
+        Print a warning message with warning symbol.
+        
+        Args:
+            text: Warning message to display.
+        """
         self.print(self._c(f"  {Symbols.WARN} {text}", Colors.YELLOW))
     
     def info(self, text: str) -> None:
-        """Print info message."""
+        """
+        Print an info message with info symbol.
+        
+        Args:
+            text: Info message to display.
+        """
         self.print(self._c(f"  {Symbols.INFO} {text}", Colors.CYAN))
     
     def detail(self, text: str) -> None:
-        """Print detail text (dimmed)."""
+        """
+        Print detail text in dimmed color with extra indentation.
+        
+        Args:
+            text: Detail text to display.
+        """
         self.print(self._c(f"    {text}", Colors.DIM))
     
     def debug(self, text: str) -> None:
-        """Print debug message (only in verbose mode)."""
+        """
+        Print debug message (only visible in verbose mode).
+        
+        Args:
+            text: Debug message to display.
+        """
         if self.verbose:
             self.print(self._c(f"  [DEBUG] {text}", Colors.DIM))
     
     def item(self, text: str, status: Optional[str] = None) -> None:
-        """Print a list item."""
+        """
+        Print a list item with optional status indicator.
+        
+        Args:
+            text: Item text to display.
+            status: Optional status string. Special values:
+                - "ok": Shows green checkmark
+                - "skip": Shows yellow SKIP label
+                - "fail": Shows red cross
+                - Any other string: Shows dimmed label
+        """
         status_str = ""
         if status == "ok":
             status_str = self._c(f" [{Symbols.CHECK}]", Colors.GREEN)
@@ -129,7 +255,15 @@ class Console:
         self.print(f"    {Symbols.DOT} {text}{status_str}")
     
     def table(self, headers: list[str], rows: list[list[str]]) -> None:
-        """Print a simple table."""
+        """
+        Print a formatted table with headers.
+        
+        Automatically calculates column widths based on content.
+        
+        Args:
+            headers: List of column header strings.
+            rows: List of rows, where each row is a list of cell values.
+        """
         # Calculate column widths
         widths = [len(h) for h in headers]
         for row in rows:
@@ -154,7 +288,16 @@ class Console:
             self.print(row_line)
     
     def progress(self, current: int, total: int, message: str = "") -> None:
-        """Print progress bar."""
+        """
+        Print an updating progress bar.
+        
+        Uses carriage return to update in place. Prints newline when complete.
+        
+        Args:
+            current: Current progress value.
+            total: Total/maximum progress value.
+            message: Optional message to display after the progress bar.
+        """
         width = 30
         filled = int(width * current / total)
         bar = "█" * filled + "░" * (width - filled)
@@ -168,7 +311,11 @@ class Console:
             self.print()
     
     def dry_run_banner(self) -> None:
-        """Print dry-run mode banner."""
+        """
+        Print a prominent dry-run mode banner.
+        
+        Displays a highlighted banner indicating that no changes will be made.
+        """
         self.print()
         banner = f"  {Symbols.GEAR} DRY-RUN MODE - No changes will be made"
         if self.color:
@@ -178,7 +325,14 @@ class Console:
         self.print()
     
     def sync_result(self, result: SyncResult) -> None:
-        """Print sync result summary."""
+        """
+        Print a formatted sync result summary.
+        
+        Displays statistics, warnings, errors, and final status.
+        
+        Args:
+            result: SyncResult object containing sync operation details.
+        """
         self.section("Sync Summary")
         self.print()
         
@@ -227,7 +381,17 @@ class Console:
             self.error("Sync completed with errors")
     
     def confirm(self, message: str) -> bool:
-        """Ask for confirmation."""
+        """
+        Ask the user for confirmation.
+        
+        Displays a yes/no prompt and waits for user input.
+        
+        Args:
+            message: Confirmation message to display.
+            
+        Returns:
+            True if user confirmed (y/yes), False otherwise or on interrupt.
+        """
         prompt = self._c(f"\n{Symbols.WARN} {message} (y/N): ", Colors.YELLOW)
         try:
             response = input(prompt).strip().lower()

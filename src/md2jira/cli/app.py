@@ -20,7 +20,15 @@ from ..core.domain.events import EventBus
 
 
 def create_parser() -> argparse.ArgumentParser:
-    """Create the argument parser."""
+    """
+    Create the command-line argument parser for md2jira.
+    
+    Defines all CLI arguments including required inputs (markdown file, epic key),
+    execution modes, phase control, filters, and output options.
+    
+    Returns:
+        Configured ArgumentParser instance.
+    """
     parser = argparse.ArgumentParser(
         prog="md2jira",
         description="Sync markdown epic documentation with Jira",
@@ -139,7 +147,19 @@ def validate_markdown(
     console: Console,
     markdown_path: str
 ) -> bool:
-    """Validate markdown file format."""
+    """
+    Validate a markdown file's format and structure.
+    
+    Checks the file against the expected epic markdown schema and reports
+    any validation errors found.
+    
+    Args:
+        console: Console instance for output.
+        markdown_path: Path to the markdown file to validate.
+        
+    Returns:
+        True if validation passed, False if errors were found.
+    """
     console.header("Validating Markdown File")
     
     parser = MarkdownParser()
@@ -170,7 +190,19 @@ def run_sync(
     console: Console,
     args: argparse.Namespace,
 ) -> int:
-    """Run the sync operation."""
+    """
+    Run the sync operation between markdown and Jira.
+    
+    Handles the complete sync workflow including configuration loading,
+    validation, connection testing, and orchestrating the sync phases.
+    
+    Args:
+        console: Console instance for output.
+        args: Parsed command-line arguments.
+        
+    Returns:
+        Exit code (0 for success, 1 for errors).
+    """
     # Load configuration
     config_provider = EnvironmentConfigProvider(cli_overrides=vars(args))
     errors = config_provider.validate()
@@ -286,7 +318,15 @@ def run_sync(
 
 
 def main() -> int:
-    """Main entry point."""
+    """
+    Main entry point for the md2jira CLI.
+    
+    Parses arguments, sets up logging, and runs the appropriate mode
+    (validate or sync).
+    
+    Returns:
+        Exit code (0 for success, non-zero for errors).
+    """
     parser = create_parser()
     args = parser.parse_args()
     
@@ -329,7 +369,11 @@ def main() -> int:
 
 
 def run() -> None:
-    """Entry point for console script."""
+    """
+    Entry point for the console script.
+    
+    Calls main() and exits with its return code.
+    """
     sys.exit(main())
 
 

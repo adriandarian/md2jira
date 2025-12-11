@@ -22,6 +22,7 @@ class PluginRegistry:
     """
     
     def __init__(self):
+        """Initialize an empty plugin registry."""
         self._plugins: Dict[str, Plugin] = {}
         self._by_type: Dict[PluginType, List[Plugin]] = {t: [] for t in PluginType}
         self.logger = logging.getLogger("PluginRegistry")
@@ -182,19 +183,48 @@ class PluginRegistry:
     # -------------------------------------------------------------------------
     
     def get(self, name: str) -> Optional[Plugin]:
-        """Get a plugin by name."""
+        """
+        Get a plugin by its name.
+        
+        Args:
+            name: The plugin name to look up.
+            
+        Returns:
+            The Plugin instance, or None if not found.
+        """
         return self._plugins.get(name)
     
     def get_by_type(self, plugin_type: PluginType) -> List[Plugin]:
-        """Get all plugins of a type."""
+        """
+        Get all plugins of a specific type.
+        
+        Args:
+            plugin_type: The PluginType to filter by.
+            
+        Returns:
+            List of plugins matching the type (copy of internal list).
+        """
         return self._by_type[plugin_type].copy()
     
     def get_all(self) -> List[Plugin]:
-        """Get all registered plugins."""
+        """
+        Get all registered plugins.
+        
+        Returns:
+            List of all Plugin instances.
+        """
         return list(self._plugins.values())
     
     def has(self, name: str) -> bool:
-        """Check if a plugin is registered."""
+        """
+        Check if a plugin is registered.
+        
+        Args:
+            name: The plugin name to check.
+            
+        Returns:
+            True if a plugin with this name is registered.
+        """
         return name in self._plugins
     
     # -------------------------------------------------------------------------
@@ -240,7 +270,13 @@ class PluginRegistry:
         return failures
     
     def shutdown_all(self) -> None:
-        """Shutdown all plugins."""
+        """
+        Shutdown all registered plugins.
+        
+        Plugins are shut down in reverse order of registration to handle
+        dependencies correctly. Errors during shutdown are logged but
+        don't prevent other plugins from shutting down.
+        """
         for name, plugin in reversed(list(self._plugins.items())):
             try:
                 plugin.shutdown()
@@ -253,7 +289,17 @@ class PluginRegistry:
     # -------------------------------------------------------------------------
     
     def list_plugins(self) -> List[dict]:
-        """Get info about all plugins."""
+        """
+        Get information about all registered plugins.
+        
+        Returns:
+            List of dictionaries containing plugin metadata:
+            - name: Plugin name
+            - version: Plugin version
+            - type: Plugin type name
+            - description: Plugin description
+            - initialized: Whether the plugin has been initialized
+        """
         return [
             {
                 "name": p.metadata.name,
@@ -271,7 +317,14 @@ _registry: Optional[PluginRegistry] = None
 
 
 def get_registry() -> PluginRegistry:
-    """Get the global plugin registry."""
+    """
+    Get the global plugin registry singleton.
+    
+    Creates the registry on first call. Subsequent calls return the same instance.
+    
+    Returns:
+        The global PluginRegistry instance.
+    """
     global _registry
     if _registry is None:
         _registry = PluginRegistry()

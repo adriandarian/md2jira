@@ -27,7 +27,25 @@ from ..commands import (
 
 @dataclass
 class SyncResult:
-    """Result of a sync operation."""
+    """
+    Result of a sync operation.
+    
+    Contains counts, details, and status of a completed sync operation.
+    
+    Attributes:
+        success: Whether the sync completed without errors.
+        dry_run: Whether this was a dry-run (no changes made).
+        stories_matched: Number of markdown stories matched to tracker issues.
+        stories_updated: Number of story descriptions updated.
+        subtasks_created: Number of new subtasks created.
+        subtasks_updated: Number of existing subtasks updated.
+        comments_added: Number of comments added to issues.
+        statuses_updated: Number of status transitions performed.
+        matched_stories: List of (markdown_id, tracker_key) tuples.
+        unmatched_stories: List of markdown story IDs that couldn't be matched.
+        errors: List of error messages encountered.
+        warnings: List of warning messages.
+    """
     
     success: bool = True
     dry_run: bool = True
@@ -47,12 +65,22 @@ class SyncResult:
     warnings: list[str] = field(default_factory=list)
     
     def add_error(self, error: str) -> None:
-        """Add an error message."""
+        """
+        Add an error message and mark sync as failed.
+        
+        Args:
+            error: Error message to add.
+        """
         self.errors.append(error)
         self.success = False
     
     def add_warning(self, warning: str) -> None:
-        """Add a warning message."""
+        """
+        Add a warning message (does not affect success status).
+        
+        Args:
+            warning: Warning message to add.
+        """
         self.warnings.append(warning)
 
 
@@ -200,7 +228,16 @@ class SyncOrchestrator:
         markdown_path: str,
         epic_key: str,
     ) -> SyncResult:
-        """Sync only story descriptions."""
+        """
+        Sync only story descriptions (skip subtasks, comments, statuses).
+        
+        Args:
+            markdown_path: Path to markdown file.
+            epic_key: Jira epic key.
+            
+        Returns:
+            SyncResult with sync details.
+        """
         result = SyncResult(dry_run=self.config.dry_run)
         self.analyze(markdown_path, epic_key)
         self._sync_descriptions(result)
@@ -211,7 +248,16 @@ class SyncOrchestrator:
         markdown_path: str,
         epic_key: str,
     ) -> SyncResult:
-        """Sync only subtasks."""
+        """
+        Sync only subtasks (skip descriptions, comments, statuses).
+        
+        Args:
+            markdown_path: Path to markdown file.
+            epic_key: Jira epic key.
+            
+        Returns:
+            SyncResult with sync details.
+        """
         result = SyncResult(dry_run=self.config.dry_run)
         self.analyze(markdown_path, epic_key)
         self._sync_subtasks(result)
@@ -223,7 +269,19 @@ class SyncOrchestrator:
         epic_key: str,
         target_status: str = "Resolved",
     ) -> SyncResult:
-        """Sync subtask statuses to target status."""
+        """
+        Sync subtask statuses to a target status.
+        
+        Only updates subtasks belonging to completed stories.
+        
+        Args:
+            markdown_path: Path to markdown file.
+            epic_key: Jira epic key.
+            target_status: Status to transition subtasks to.
+            
+        Returns:
+            SyncResult with sync details.
+        """
         result = SyncResult(dry_run=self.config.dry_run)
         self.analyze(markdown_path, epic_key)
         self._sync_statuses(result, target_status)
@@ -234,7 +292,15 @@ class SyncOrchestrator:
     # -------------------------------------------------------------------------
     
     def _match_stories(self, result: SyncResult) -> None:
-        """Match markdown stories to Jira issues."""
+        """
+        Match markdown stories to Jira issues by title.
+        
+        Populates self._matches with story_id -> issue_key mappings.
+        Updates result with matched and unmatched story information.
+        
+        Args:
+            result: SyncResult to update with matching results.
+        """
         self._matches = {}
         
         for md_story in self._md_stories:
@@ -261,7 +327,15 @@ class SyncOrchestrator:
     # -------------------------------------------------------------------------
     
     def _sync_descriptions(self, result: SyncResult) -> None:
-        """Sync story descriptions."""
+        """
+        Sync story descriptions from markdown to issue tracker.
+        
+        Creates UpdateDescriptionCommand for each matched story with a description,
+        and executes them as a batch.
+        
+        Args:
+            result: SyncResult to update with operation counts and errors.
+        """
         batch = CommandBatch(stop_on_error=False)
         
         for md_story in self._md_stories:
@@ -292,7 +366,15 @@ class SyncOrchestrator:
                 result.add_error(cmd_result.error)
     
     def _sync_subtasks(self, result: SyncResult) -> None:
-        """Sync subtasks for each story."""
+        """
+        Sync subtasks from markdown to issue tracker.
+        
+        For each matched story, creates new subtasks or updates existing ones
+        based on name matching.
+        
+        Args:
+            result: SyncResult to update with operation counts and errors.
+        """
         for md_story in self._md_stories:
             story_id = str(md_story.id)
             if story_id not in self._matches:
@@ -346,7 +428,14 @@ class SyncOrchestrator:
                         result.add_error(cmd_result.error)
     
     def _sync_comments(self, result: SyncResult) -> None:
-        """Add commit comments to stories."""
+        """
+        Add commit table comments to stories that have related commits.
+        
+        Skips stories that already have a "Related Commits" comment.
+        
+        Args:
+            result: SyncResult to update with operation counts and errors.
+        """
         for md_story in self._md_stories:
             story_id = str(md_story.id)
             if story_id not in self._matches:
@@ -389,7 +478,16 @@ class SyncOrchestrator:
         result: SyncResult,
         target_status: str = "Resolved"
     ) -> None:
-        """Sync subtask statuses based on markdown status."""
+        """
+        Transition subtask statuses based on markdown story status.
+        
+        Only processes stories that are marked as complete in markdown.
+        Skips subtasks that are already in a resolved/done state.
+        
+        Args:
+            result: SyncResult to update with operation counts and errors.
+            target_status: The status to transition subtasks to.
+        """
         for md_story in self._md_stories:
             story_id = str(md_story.id)
             if story_id not in self._matches:

@@ -9,7 +9,16 @@ from typing import Any, Optional, Type
 
 
 class PluginType(Enum):
-    """Types of plugins supported."""
+    """
+    Types of plugins supported by the plugin system.
+    
+    Attributes:
+        PARSER: Input format parsers (e.g., Markdown, YAML).
+        TRACKER: Issue tracker integrations (e.g., Jira, GitHub).
+        FORMATTER: Output formatters (e.g., ADF, HTML).
+        HOOK: Processing hooks for extensibility.
+        COMMAND: Custom CLI commands.
+    """
     
     PARSER = auto()      # Input format parsers
     TRACKER = auto()     # Issue trackers
@@ -20,7 +29,20 @@ class PluginType(Enum):
 
 @dataclass
 class PluginMetadata:
-    """Metadata about a plugin."""
+    """
+    Metadata describing a plugin.
+    
+    Contains identifying information, dependencies, and configuration schema.
+    
+    Attributes:
+        name: Unique plugin identifier.
+        version: Semantic version string.
+        description: Human-readable description of what the plugin does.
+        author: Optional author name or email.
+        plugin_type: The type of plugin (parser, tracker, etc.).
+        requires: List of plugin names this plugin depends on.
+        config_schema: Optional JSON Schema for config validation.
+    """
     
     name: str
     version: str
@@ -35,6 +57,7 @@ class PluginMetadata:
     config_schema: Optional[dict] = None
     
     def __post_init__(self):
+        """Initialize default values for mutable fields."""
         if self.requires is None:
             self.requires = []
 
@@ -104,45 +127,83 @@ class Plugin(ABC):
     
     @property
     def is_initialized(self) -> bool:
-        """Check if plugin is initialized."""
+        """
+        Check if the plugin has been initialized.
+        
+        Returns:
+            True if initialize() has been called successfully.
+        """
         return self._initialized
 
 
 class ParserPlugin(Plugin):
-    """Base class for parser plugins."""
+    """
+    Base class for document parser plugins.
+    
+    Parser plugins provide DocumentParserPort implementations for
+    reading different input formats (Markdown, YAML, etc.).
+    """
     
     @property
     def plugin_type(self) -> PluginType:
+        """Return the plugin type (always PARSER for this class)."""
         return PluginType.PARSER
     
     @abstractmethod
     def get_parser(self) -> Any:
-        """Get the parser instance (must implement DocumentParserPort)."""
+        """
+        Get the parser instance.
+        
+        Returns:
+            An object implementing DocumentParserPort.
+        """
         ...
 
 
 class TrackerPlugin(Plugin):
-    """Base class for tracker plugins."""
+    """
+    Base class for issue tracker plugins.
+    
+    Tracker plugins provide IssueTrackerPort implementations for
+    integrating with issue tracking systems (Jira, GitHub, etc.).
+    """
     
     @property
     def plugin_type(self) -> PluginType:
+        """Return the plugin type (always TRACKER for this class)."""
         return PluginType.TRACKER
     
     @abstractmethod
     def get_tracker(self) -> Any:
-        """Get the tracker instance (must implement IssueTrackerPort)."""
+        """
+        Get the tracker instance.
+        
+        Returns:
+            An object implementing IssueTrackerPort.
+        """
         ...
 
 
 class FormatterPlugin(Plugin):
-    """Base class for formatter plugins."""
+    """
+    Base class for document formatter plugins.
+    
+    Formatter plugins provide DocumentFormatterPort implementations for
+    formatting output in different formats (ADF, HTML, etc.).
+    """
     
     @property
     def plugin_type(self) -> PluginType:
+        """Return the plugin type (always FORMATTER for this class)."""
         return PluginType.FORMATTER
     
     @abstractmethod
     def get_formatter(self) -> Any:
-        """Get the formatter instance (must implement DocumentFormatterPort)."""
+        """
+        Get the formatter instance.
+        
+        Returns:
+            An object implementing DocumentFormatterPort.
+        """
         ...
 

@@ -9,7 +9,34 @@ import logging
 
 
 class HookPoint(Enum):
-    """Points where hooks can be attached."""
+    """
+    Points where hooks can be attached in the sync lifecycle.
+    
+    Hook points are organized by phase:
+    - Parsing: Before/after parsing markdown documents
+    - Matching: Before/after matching stories to issues
+    - Sync operations: Before/after the overall sync
+    - Individual operations: Before/after specific API calls
+    - Error handling: When errors occur
+    
+    Attributes:
+        BEFORE_PARSE: Before parsing a markdown document.
+        AFTER_PARSE: After parsing completes successfully.
+        BEFORE_MATCH: Before matching markdown stories to tracker issues.
+        AFTER_MATCH: After matching completes.
+        ON_MATCH_FAILURE: When a story cannot be matched.
+        BEFORE_SYNC: Before the sync operation starts.
+        AFTER_SYNC: After the sync operation completes.
+        BEFORE_UPDATE_DESCRIPTION: Before updating an issue description.
+        AFTER_UPDATE_DESCRIPTION: After updating an issue description.
+        BEFORE_CREATE_SUBTASK: Before creating a subtask.
+        AFTER_CREATE_SUBTASK: After creating a subtask.
+        BEFORE_ADD_COMMENT: Before adding a comment.
+        AFTER_ADD_COMMENT: After adding a comment.
+        BEFORE_TRANSITION: Before transitioning issue status.
+        AFTER_TRANSITION: After transitioning issue status.
+        ON_ERROR: When an error occurs during processing.
+    """
     
     # Parsing
     BEFORE_PARSE = auto()
@@ -43,7 +70,19 @@ class HookPoint(Enum):
 
 @dataclass
 class HookContext:
-    """Context passed to hook handlers."""
+    """
+    Context passed to hook handlers.
+    
+    Provides access to hook data and allows hooks to modify behavior
+    by cancelling operations or overriding results.
+    
+    Attributes:
+        hook_point: The hook point that triggered this context.
+        data: Dictionary of data relevant to the hook point.
+        result: Result from the operation (set by post-hooks).
+        error: Exception if an error occurred.
+        cancelled: Whether the operation was cancelled by a hook.
+    """
     
     hook_point: HookPoint
     data: dict = field(default_factory=dict)
@@ -52,11 +91,20 @@ class HookContext:
     cancelled: bool = False
     
     def cancel(self) -> None:
-        """Cancel the current operation."""
+        """
+        Cancel the current operation.
+        
+        When called, the operation associated with this hook point will be skipped.
+        """
         self.cancelled = True
     
     def set_result(self, result: Any) -> None:
-        """Override the result."""
+        """
+        Override the operation result.
+        
+        Args:
+            result: The new result to use instead of the default.
+        """
         self.result = result
 
 
@@ -65,6 +113,12 @@ class Hook:
     A hook that can be attached to a hook point.
     
     Hooks are called in priority order (lower = earlier).
+    
+    Attributes:
+        name: Unique name identifying this hook.
+        hook_point: The hook point this hook is attached to.
+        handler: Callable that receives HookContext.
+        priority: Execution order (lower = earlier, default 100).
     """
     
     def __init__(
@@ -74,17 +128,39 @@ class Hook:
         handler: Callable[[HookContext], None],
         priority: int = 100,
     ):
+        """
+        Initialize a hook.
+        
+        Args:
+            name: Unique name for this hook.
+            hook_point: Hook point to attach to.
+            handler: Function to call when hook is triggered.
+            priority: Execution order (lower = earlier).
+        """
         self.name = name
         self.hook_point = hook_point
         self.handler = handler
         self.priority = priority
     
     def __call__(self, context: HookContext) -> None:
-        """Execute the hook."""
+        """
+        Execute the hook handler.
+        
+        Args:
+            context: Hook context with data and control methods.
+        """
         self.handler(context)
     
     def __lt__(self, other: "Hook") -> bool:
-        """Compare by priority for sorting."""
+        """
+        Compare by priority for sorting.
+        
+        Args:
+            other: Another Hook to compare with.
+            
+        Returns:
+            True if this hook has lower priority (should run first).
+        """
         return self.priority < other.priority
 
 
@@ -107,17 +183,35 @@ class HookManager:
     """
     
     def __init__(self):
+        """Initialize the hook manager with empty hook lists for all hook points."""
         self._hooks: dict[HookPoint, list[Hook]] = {hp: [] for hp in HookPoint}
         self.logger = logging.getLogger("HookManager")
     
     def register(self, hook: Hook) -> None:
-        """Register a hook."""
+        """
+        Register a hook at its designated hook point.
+        
+        Hooks are automatically sorted by priority after registration.
+        
+        Args:
+            hook: The Hook instance to register.
+        """
         self._hooks[hook.hook_point].append(hook)
         self._hooks[hook.hook_point].sort()  # Sort by priority
         self.logger.debug(f"Registered hook: {hook.name} at {hook.hook_point.name}")
     
     def unregister(self, hook_name: str) -> bool:
-        """Unregister a hook by name."""
+        """
+        Unregister a hook by its name.
+        
+        Searches all hook points for a hook with the given name.
+        
+        Args:
+            hook_name: Name of the hook to remove.
+            
+        Returns:
+            True if the hook was found and removed, False otherwise.
+        """
         for hook_point in HookPoint:
             for hook in self._hooks[hook_point]:
                 if hook.name == hook_name:
@@ -180,11 +274,25 @@ class HookManager:
         return decorator
     
     def get_hooks(self, hook_point: HookPoint) -> list[Hook]:
-        """Get all hooks for a hook point."""
+        """
+        Get all hooks registered at a hook point.
+        
+        Args:
+            hook_point: The hook point to query.
+            
+        Returns:
+            Copy of the list of hooks at this point (sorted by priority).
+        """
         return self._hooks[hook_point].copy()
     
     def clear(self, hook_point: Optional[HookPoint] = None) -> None:
-        """Clear hooks (all or for specific point)."""
+        """
+        Clear registered hooks.
+        
+        Args:
+            hook_point: If provided, clear only hooks at this point.
+                       If None, clear all hooks at all points.
+        """
         if hook_point:
             self._hooks[hook_point] = []
         else:
