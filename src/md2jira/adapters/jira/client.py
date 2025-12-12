@@ -12,6 +12,8 @@ import time
 from typing import Any, Optional
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry as Urllib3Retry
 
 from ...core.ports.issue_tracker import (
     IssueTrackerError,
@@ -233,6 +235,12 @@ class JiraApiClient:
     DEFAULT_REQUESTS_PER_SECOND = 5.0  # 300 per minute (safe margin)
     DEFAULT_BURST_SIZE = 10  # Allow short bursts
     
+    # Default connection pool configuration
+    DEFAULT_POOL_CONNECTIONS = 10  # Number of connection pools to cache
+    DEFAULT_POOL_MAXSIZE = 10  # Max connections per pool
+    DEFAULT_POOL_BLOCK = False  # Don't block when pool is exhausted
+    DEFAULT_TIMEOUT = 30.0  # Request timeout in seconds
+    
     def __init__(
         self,
         base_url: str,
@@ -246,6 +254,10 @@ class JiraApiClient:
         jitter: float = DEFAULT_JITTER,
         requests_per_second: float | None = DEFAULT_REQUESTS_PER_SECOND,
         burst_size: int = DEFAULT_BURST_SIZE,
+        pool_connections: int = DEFAULT_POOL_CONNECTIONS,
+        pool_maxsize: int = DEFAULT_POOL_MAXSIZE,
+        pool_block: bool = DEFAULT_POOL_BLOCK,
+        timeout: float = DEFAULT_TIMEOUT,
     ):
         """
         Initialize the Jira client.
@@ -262,12 +274,17 @@ class JiraApiClient:
             jitter: Random jitter factor (0.1 = 10% variation)
             requests_per_second: Maximum request rate (None to disable rate limiting)
             burst_size: Maximum burst capacity for rate limiting
+            pool_connections: Number of connection pools to cache
+            pool_maxsize: Maximum connections to save in the pool
+            pool_block: Whether to block when pool is full
+            timeout: Request timeout in seconds (connect + read)
         """
         self.base_url = base_url.rstrip("/")
         self.api_url = f"{self.base_url}/rest/api/{self.API_VERSION}"
         self.auth = (email, api_token)
         self.dry_run = dry_run
         self.logger = logging.getLogger("JiraApiClient")
+        self.timeout = timeout
         
         # Retry configuration
         self.max_retries = max_retries
@@ -289,9 +306,24 @@ class JiraApiClient:
             "Content-Type": "application/json",
         }
         
+        # Configure session with connection pooling
         self._session = requests.Session()
         self._session.auth = self.auth
         self._session.headers.update(self.headers)
+        
+        # Configure HTTP adapter with connection pooling
+        adapter = HTTPAdapter(
+            pool_connections=pool_connections,
+            pool_maxsize=pool_maxsize,
+            pool_block=pool_block,
+        )
+        self._session.mount("https://", adapter)
+        self._session.mount("http://", adapter)
+        
+        # Store pool config for stats
+        self._pool_connections = pool_connections
+        self._pool_maxsize = pool_maxsize
+        self._pool_block = pool_block
         
         self._current_user: Optional[dict] = None
     
@@ -337,6 +369,9 @@ class JiraApiClient:
                 self._rate_limiter.acquire()
             
             try:
+                # Apply default timeout if not specified
+                if "timeout" not in kwargs:
+                    kwargs["timeout"] = self.timeout
                 response = self._session.request(method, url, **kwargs)
                 
                 # Update rate limiter based on response (for dynamic adjustment)
@@ -697,3 +732,46 @@ class JiraApiClient:
     def is_rate_limited(self) -> bool:
         """Check if rate limiting is enabled."""
         return self._rate_limiter is not None
+    
+    # -------------------------------------------------------------------------
+    # Connection Pooling
+    # -------------------------------------------------------------------------
+    
+    @property
+    def pool_config(self) -> dict[str, Any]:
+        """
+        Get connection pool configuration.
+        
+        Returns:
+            Dictionary with pool settings: pool_connections, pool_maxsize,
+            pool_block, timeout.
+        """
+        return {
+            "pool_connections": self._pool_connections,
+            "pool_maxsize": self._pool_maxsize,
+            "pool_block": self._pool_block,
+            "timeout": self.timeout,
+        }
+    
+    def close(self) -> None:
+        """
+        Close the client and release connection pool resources.
+        
+        Should be called when the client is no longer needed to free up
+        connections. After calling close(), the client should not be used.
+        """
+        self._session.close()
+        self.logger.debug("Closed HTTP session and released connection pool")
+    
+    def __enter__(self) -> "JiraApiClient":
+        """Context manager entry."""
+        return self
+    
+    def __exit__(
+        self,
+        exc_type: type | None,
+        exc_val: Exception | None,
+        exc_tb: Any,
+    ) -> None:
+        """Context manager exit - closes the client."""
+        self.close()

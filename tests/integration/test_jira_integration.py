@@ -827,6 +827,153 @@ class TestRateLimitingIntegration:
 
 
 # =============================================================================
+# Connection Pooling Tests
+# =============================================================================
+
+class TestConnectionPooling:
+    """Tests for connection pooling functionality."""
+
+    def test_default_pool_configuration(self, jira_config):
+        """Test that default pool configuration is applied."""
+        client = JiraApiClient(
+            base_url=jira_config.url,
+            email=jira_config.email,
+            api_token=jira_config.api_token,
+            dry_run=False,
+        )
+        
+        config = client.pool_config
+        assert config["pool_connections"] == 10
+        assert config["pool_maxsize"] == 10
+        assert config["pool_block"] is False
+        assert config["timeout"] == 30.0
+
+    def test_custom_pool_configuration(self, jira_config):
+        """Test that custom pool configuration is applied."""
+        client = JiraApiClient(
+            base_url=jira_config.url,
+            email=jira_config.email,
+            api_token=jira_config.api_token,
+            dry_run=False,
+            pool_connections=5,
+            pool_maxsize=20,
+            pool_block=True,
+            timeout=60.0,
+        )
+        
+        config = client.pool_config
+        assert config["pool_connections"] == 5
+        assert config["pool_maxsize"] == 20
+        assert config["pool_block"] is True
+        assert config["timeout"] == 60.0
+
+    def test_session_has_adapter_mounted(self, jira_config):
+        """Test that HTTP adapter is mounted on session."""
+        from requests.adapters import HTTPAdapter
+        
+        client = JiraApiClient(
+            base_url=jira_config.url,
+            email=jira_config.email,
+            api_token=jira_config.api_token,
+            dry_run=False,
+        )
+        
+        # Check that adapters are mounted for both http and https
+        https_adapter = client._session.get_adapter("https://")
+        http_adapter = client._session.get_adapter("http://")
+        
+        assert isinstance(https_adapter, HTTPAdapter)
+        assert isinstance(http_adapter, HTTPAdapter)
+
+    def test_close_method(self, jira_config):
+        """Test that close method works without error."""
+        client = JiraApiClient(
+            base_url=jira_config.url,
+            email=jira_config.email,
+            api_token=jira_config.api_token,
+            dry_run=False,
+        )
+        
+        # Should not raise
+        client.close()
+
+    def test_context_manager(self, jira_config, mock_myself_response):
+        """Test that client works as context manager."""
+        with JiraApiClient(
+            base_url=jira_config.url,
+            email=jira_config.email,
+            api_token=jira_config.api_token,
+            dry_run=False,
+        ) as client:
+            assert client is not None
+            # Session should be open during context
+            with patch.object(client._session, "request") as mock_request:
+                mock_response = Mock()
+                mock_response.ok = True
+                mock_response.status_code = 200
+                mock_response.text = json.dumps(mock_myself_response)
+                mock_response.json.return_value = mock_myself_response
+                mock_response.headers = {}
+                mock_request.return_value = mock_response
+                
+                result = client.get_myself()
+                assert result["accountId"] == "user-123-abc"
+        
+        # After context, session is closed (no easy way to verify)
+
+    def test_timeout_applied_to_requests(self, jira_config, mock_myself_response):
+        """Test that timeout is applied to requests."""
+        client = JiraApiClient(
+            base_url=jira_config.url,
+            email=jira_config.email,
+            api_token=jira_config.api_token,
+            dry_run=False,
+            timeout=15.0,
+        )
+        
+        with patch.object(client._session, "request") as mock_request:
+            mock_response = Mock()
+            mock_response.ok = True
+            mock_response.status_code = 200
+            mock_response.text = json.dumps(mock_myself_response)
+            mock_response.json.return_value = mock_myself_response
+            mock_response.headers = {}
+            mock_request.return_value = mock_response
+            
+            client.get("myself")
+            
+            # Check that timeout was passed to request
+            call_kwargs = mock_request.call_args[1]
+            assert call_kwargs.get("timeout") == 15.0
+
+    def test_timeout_can_be_overridden_per_request(self, jira_config, mock_myself_response):
+        """Test that timeout can be overridden for individual requests."""
+        client = JiraApiClient(
+            base_url=jira_config.url,
+            email=jira_config.email,
+            api_token=jira_config.api_token,
+            dry_run=False,
+            timeout=30.0,
+        )
+        
+        with patch.object(client._session, "request") as mock_request:
+            mock_response = Mock()
+            mock_response.ok = True
+            mock_response.status_code = 200
+            mock_response.text = json.dumps(mock_myself_response)
+            mock_response.json.return_value = mock_myself_response
+            mock_response.headers = {}
+            mock_request.return_value = mock_response
+            
+            # Override timeout for this request
+            client.request("GET", "myself", timeout=5.0)
+            
+            # Check that overridden timeout was used
+            call_kwargs = mock_request.call_args[1]
+            assert call_kwargs.get("timeout") == 5.0
+
+
+# =============================================================================
 # JiraAdapter Tests
 # =============================================================================
 
