@@ -3,10 +3,19 @@ Integration tests with mocked Jira API responses.
 
 These tests verify the full flow from adapter through client
 using realistic API responses.
+
+Note: Common fixtures are imported from conftest.py:
+- tracker_config (aliased as jira_config below)
+- mock_myself_response
+- mock_issue_response
+- mock_epic_children_response
+- mock_transitions_response
+- mock_comments_response
+- mock_create_issue_response
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 import json
 
 from md2jira.adapters.jira.client import JiraApiClient
@@ -17,145 +26,13 @@ from md2jira.core.ports.issue_tracker import (
     NotFoundError,
     PermissionError,
 )
-from md2jira.core.ports.config_provider import TrackerConfig
 
 
-# =============================================================================
-# Fixtures - Mock Jira API Responses
-# =============================================================================
-
+# Alias the shared tracker_config fixture for clarity in Jira-specific tests
 @pytest.fixture
-def jira_config():
-    """Create a test Jira configuration."""
-    return TrackerConfig(
-        url="https://test.atlassian.net",
-        email="test@example.com",
-        api_token="test-token-123",
-        project_key="TEST",
-    )
-
-
-@pytest.fixture
-def mock_myself_response():
-    """Mock response for /rest/api/3/myself endpoint."""
-    return {
-        "accountId": "user-123-abc",
-        "displayName": "Test User",
-        "emailAddress": "test@example.com",
-        "active": True,
-        "timeZone": "America/New_York",
-    }
-
-
-@pytest.fixture
-def mock_issue_response():
-    """Mock response for issue GET endpoint."""
-    return {
-        "key": "TEST-123",
-        "fields": {
-            "summary": "Sample User Story",
-            "description": {
-                "type": "doc",
-                "version": 1,
-                "content": [
-                    {"type": "paragraph", "content": [{"type": "text", "text": "Description here"}]}
-                ],
-            },
-            "status": {"name": "Open"},
-            "issuetype": {"name": "Story"},
-            "subtasks": [
-                {
-                    "key": "TEST-124",
-                    "fields": {
-                        "summary": "Subtask 1",
-                        "status": {"name": "Open"},
-                    },
-                },
-                {
-                    "key": "TEST-125",
-                    "fields": {
-                        "summary": "Subtask 2",
-                        "status": {"name": "In Progress"},
-                    },
-                },
-            ],
-        },
-    }
-
-
-@pytest.fixture
-def mock_epic_children_response():
-    """Mock response for JQL search for epic children."""
-    return {
-        "total": 2,
-        "issues": [
-            {
-                "key": "TEST-10",
-                "fields": {
-                    "summary": "Story Alpha",
-                    "description": None,
-                    "status": {"name": "Open"},
-                    "issuetype": {"name": "Story"},
-                    "subtasks": [],
-                },
-            },
-            {
-                "key": "TEST-11",
-                "fields": {
-                    "summary": "Story Beta",
-                    "description": None,
-                    "status": {"name": "In Progress"},
-                    "issuetype": {"name": "Story"},
-                    "subtasks": [
-                        {
-                            "key": "TEST-12",
-                            "fields": {
-                                "summary": "Beta Subtask",
-                                "status": {"name": "Open"},
-                            },
-                        },
-                    ],
-                },
-            },
-        ],
-    }
-
-
-@pytest.fixture
-def mock_transitions_response():
-    """Mock response for available transitions."""
-    return {
-        "transitions": [
-            {"id": "4", "name": "Start Progress", "to": {"name": "In Progress"}},
-            {"id": "5", "name": "Resolve", "to": {"name": "Resolved"}},
-            {"id": "7", "name": "Open", "to": {"name": "Open"}},
-        ]
-    }
-
-
-@pytest.fixture
-def mock_comments_response():
-    """Mock response for issue comments."""
-    return {
-        "comments": [
-            {
-                "id": "10001",
-                "author": {"displayName": "Test User"},
-                "body": {"type": "doc", "content": []},
-                "created": "2024-01-15T10:00:00.000+0000",
-            },
-        ]
-    }
-
-
-@pytest.fixture
-def mock_create_issue_response():
-    """Mock response for creating an issue."""
-    return {
-        "id": "10099",
-        "key": "TEST-99",
-        "self": "https://test.atlassian.net/rest/api/3/issue/10099",
-    }
+def jira_config(tracker_config):
+    """Alias for tracker_config - Jira-specific configuration."""
+    return tracker_config
 
 
 # =============================================================================
@@ -485,129 +362,21 @@ class TestJiraAdapterIntegration:
 # =============================================================================
 
 class TestSyncFlowIntegration:
-    """End-to-end integration tests for the sync flow."""
+    """End-to-end integration tests for the sync flow.
+    
+    Uses shared fixtures from conftest.py:
+    - mock_tracker_with_children
+    - mock_parser
+    - mock_formatter
+    - sync_config
+    """
 
-    @pytest.fixture
-    def mock_tracker(self, mock_issue_response, mock_epic_children_response):
-        """Create a fully mocked tracker for sync tests."""
-        tracker = Mock()
-        tracker.name = "Jira"
-        tracker.is_connected = True
-        tracker.test_connection.return_value = True
-        
-        # Set up get_issue to return different data based on key
-        def get_issue_side_effect(key):
-            from md2jira.core.ports.issue_tracker import IssueData
-            if key == "TEST-10":
-                return IssueData(
-                    key="TEST-10",
-                    summary="Story Alpha",
-                    description=None,
-                    status="Open",
-                    issue_type="Story",
-                    subtasks=[],
-                )
-            elif key == "TEST-11":
-                return IssueData(
-                    key="TEST-11",
-                    summary="Story Beta",
-                    description=None,
-                    status="In Progress",
-                    issue_type="Story",
-                    subtasks=[
-                        IssueData(
-                            key="TEST-12",
-                            summary="Beta Subtask",
-                            status="Open",
-                            issue_type="Sub-task",
-                        )
-                    ],
-                )
-            return IssueData(key=key, summary="Unknown", status="Open")
-        
-        tracker.get_issue.side_effect = get_issue_side_effect
-        
-        # Epic children
-        from md2jira.core.ports.issue_tracker import IssueData
-        tracker.get_epic_children.return_value = [
-            IssueData(key="TEST-10", summary="Story Alpha", status="Open", issue_type="Story"),
-            IssueData(key="TEST-11", summary="Story Beta", status="In Progress", issue_type="Story"),
-        ]
-        
-        tracker.update_issue_description.return_value = True
-        tracker.create_subtask.return_value = "TEST-99"
-        tracker.add_comment.return_value = True
-        tracker.get_issue_comments.return_value = []
-        tracker.get_issue_status.return_value = "Open"
-        tracker.transition_issue.return_value = True
-        
-        return tracker
-
-    @pytest.fixture
-    def mock_parser(self):
-        """Create a mock parser that returns test stories."""
-        from md2jira.core.domain.entities import UserStory, Subtask
-        from md2jira.core.domain.enums import Status
-        from md2jira.core.domain.value_objects import StoryId, Description
-        
-        parser = Mock()
-        parser.parse_stories.return_value = [
-            UserStory(
-                id=StoryId("US-001"),
-                title="Story Alpha",
-                description=Description(
-                    role="developer",
-                    want="to test the alpha story",
-                    benefit="I can verify the sync works"
-                ),
-                status=Status.PLANNED,
-                subtasks=[
-                    Subtask(name="Alpha Task 1", description="Do thing 1", story_points=2),
-                ],
-            ),
-            UserStory(
-                id=StoryId("US-002"),
-                title="Story Beta",
-                description=Description(
-                    role="developer",
-                    want="to test the beta story",
-                    benefit="I can verify updates work"
-                ),
-                status=Status.DONE,
-                subtasks=[
-                    Subtask(name="Beta Subtask", description="Already exists", story_points=3),
-                ],
-            ),
-        ]
-        return parser
-
-    @pytest.fixture
-    def mock_formatter(self):
-        """Create a mock formatter."""
-        formatter = Mock()
-        formatter.format_story_description.return_value = {"type": "doc", "content": []}
-        formatter.format_text.return_value = {"type": "doc", "content": []}
-        formatter.format_commits_table.return_value = {"type": "doc", "content": []}
-        return formatter
-
-    @pytest.fixture
-    def sync_config(self):
-        """Create a sync configuration."""
-        from md2jira.core.ports.config_provider import SyncConfig
-        return SyncConfig(
-            dry_run=False,
-            sync_descriptions=True,
-            sync_subtasks=True,
-            sync_comments=False,
-            sync_statuses=False,
-        )
-
-    def test_analyze_matches_stories(self, mock_tracker, mock_parser, mock_formatter, sync_config):
+    def test_analyze_matches_stories(self, mock_tracker_with_children, mock_parser, mock_formatter, sync_config):
         """Test that analyze correctly matches markdown stories to Jira issues."""
         from md2jira.application.sync.orchestrator import SyncOrchestrator
 
         orchestrator = SyncOrchestrator(
-            tracker=mock_tracker,
+            tracker=mock_tracker_with_children,
             parser=mock_parser,
             formatter=mock_formatter,
             config=sync_config,
@@ -620,12 +389,12 @@ class TestSyncFlowIntegration:
         assert ("US-001", "TEST-10") in result.matched_stories
         assert ("US-002", "TEST-11") in result.matched_stories
 
-    def test_sync_updates_descriptions(self, mock_tracker, mock_parser, mock_formatter, sync_config):
+    def test_sync_updates_descriptions(self, mock_tracker_with_children, mock_parser, mock_formatter, sync_config):
         """Test that sync updates story descriptions."""
         from md2jira.application.sync.orchestrator import SyncOrchestrator
 
         orchestrator = SyncOrchestrator(
-            tracker=mock_tracker,
+            tracker=mock_tracker_with_children,
             parser=mock_parser,
             formatter=mock_formatter,
             config=sync_config,
@@ -634,14 +403,14 @@ class TestSyncFlowIntegration:
         result = orchestrator.sync("/path/to/doc.md", "TEST-1")
 
         assert result.stories_updated == 2
-        assert mock_tracker.update_issue_description.call_count == 2
+        assert mock_tracker_with_children.update_issue_description.call_count == 2
 
-    def test_sync_creates_new_subtasks(self, mock_tracker, mock_parser, mock_formatter, sync_config):
+    def test_sync_creates_new_subtasks(self, mock_tracker_with_children, mock_parser, mock_formatter, sync_config):
         """Test that sync creates subtasks that don't exist."""
         from md2jira.application.sync.orchestrator import SyncOrchestrator
 
         orchestrator = SyncOrchestrator(
-            tracker=mock_tracker,
+            tracker=mock_tracker_with_children,
             parser=mock_parser,
             formatter=mock_formatter,
             config=sync_config,
@@ -652,24 +421,17 @@ class TestSyncFlowIntegration:
         # Alpha Task 1 should be created (doesn't exist)
         # Beta Subtask should be updated (already exists)
         assert result.subtasks_created >= 1
-        mock_tracker.create_subtask.assert_called()
+        mock_tracker_with_children.create_subtask.assert_called()
 
-    def test_sync_dry_run_no_changes(self, mock_tracker, mock_parser, mock_formatter):
+    def test_sync_dry_run_no_changes(self, mock_tracker_with_children, mock_parser, mock_formatter, sync_config_dry_run):
         """Test that dry_run mode doesn't make actual changes."""
         from md2jira.application.sync.orchestrator import SyncOrchestrator
-        from md2jira.core.ports.config_provider import SyncConfig
-
-        dry_run_config = SyncConfig(
-            dry_run=True,
-            sync_descriptions=True,
-            sync_subtasks=True,
-        )
 
         orchestrator = SyncOrchestrator(
-            tracker=mock_tracker,
+            tracker=mock_tracker_with_children,
             parser=mock_parser,
             formatter=mock_formatter,
-            config=dry_run_config,
+            config=sync_config_dry_run,
         )
 
         result = orchestrator.sync("/path/to/doc.md", "TEST-1")
@@ -678,7 +440,7 @@ class TestSyncFlowIntegration:
         # In dry_run, commands don't execute actual tracker methods
         # (the command layer handles this)
 
-    def test_sync_handles_unmatched_stories(self, mock_tracker, mock_parser, mock_formatter, sync_config):
+    def test_sync_handles_unmatched_stories(self, mock_tracker_with_children, mock_parser, mock_formatter, sync_config):
         """Test that unmatched stories are reported as warnings."""
         from md2jira.application.sync.orchestrator import SyncOrchestrator
         from md2jira.core.domain.entities import UserStory
@@ -700,7 +462,7 @@ class TestSyncFlowIntegration:
         )
 
         orchestrator = SyncOrchestrator(
-            tracker=mock_tracker,
+            tracker=mock_tracker_with_children,
             parser=mock_parser,
             formatter=mock_formatter,
             config=sync_config,

@@ -19,41 +19,36 @@ from md2jira.application.sync import SyncResult
 class TestArgumentParser:
     """Tests for CLI argument parsing."""
 
-    @pytest.fixture
-    def parser(self):
-        """Create a fresh parser instance."""
-        return create_parser()
-
-    def test_required_arguments(self, parser):
+    def test_required_arguments(self, cli_parser):
         """Test that --markdown and --epic are required."""
         with pytest.raises(SystemExit):
-            parser.parse_args([])
+            cli_parser.parse_args([])
 
         with pytest.raises(SystemExit):
-            parser.parse_args(["--markdown", "file.md"])
+            cli_parser.parse_args(["--markdown", "file.md"])
 
         with pytest.raises(SystemExit):
-            parser.parse_args(["--epic", "PROJ-123"])
+            cli_parser.parse_args(["--epic", "PROJ-123"])
 
-    def test_minimal_valid_args(self, parser):
+    def test_minimal_valid_args(self, cli_parser):
         """Test parsing with only required arguments."""
-        args = parser.parse_args(["--markdown", "epic.md", "--epic", "PROJ-123"])
+        args = cli_parser.parse_args(["--markdown", "epic.md", "--epic", "PROJ-123"])
 
         assert args.markdown == "epic.md"
         assert args.epic == "PROJ-123"
         assert args.execute is False  # default
         assert args.phase == "all"  # default
 
-    def test_short_form_arguments(self, parser):
+    def test_short_form_arguments(self, cli_parser):
         """Test short form argument aliases."""
-        args = parser.parse_args(["-m", "epic.md", "-e", "PROJ-123"])
+        args = cli_parser.parse_args(["-m", "epic.md", "-e", "PROJ-123"])
 
         assert args.markdown == "epic.md"
         assert args.epic == "PROJ-123"
 
-    def test_execute_flag(self, parser):
+    def test_execute_flag(self, cli_parser):
         """Test --execute flag for live mode."""
-        args = parser.parse_args([
+        args = cli_parser.parse_args([
             "--markdown", "epic.md",
             "--epic", "PROJ-123",
             "--execute"
@@ -61,9 +56,9 @@ class TestArgumentParser:
 
         assert args.execute is True
 
-    def test_execute_short_form(self, parser):
+    def test_execute_short_form(self, cli_parser):
         """Test -x short form for execute."""
-        args = parser.parse_args([
+        args = cli_parser.parse_args([
             "-m", "epic.md",
             "-e", "PROJ-123",
             "-x"
@@ -71,9 +66,9 @@ class TestArgumentParser:
 
         assert args.execute is True
 
-    def test_no_confirm_flag(self, parser):
+    def test_no_confirm_flag(self, cli_parser):
         """Test --no-confirm flag."""
-        args = parser.parse_args([
+        args = cli_parser.parse_args([
             "--markdown", "epic.md",
             "--epic", "PROJ-123",
             "--no-confirm"
@@ -81,30 +76,30 @@ class TestArgumentParser:
 
         assert args.no_confirm is True
 
-    def test_phase_choices(self, parser):
+    def test_phase_choices(self, cli_parser):
         """Test --phase argument with valid choices."""
         valid_phases = ["all", "descriptions", "subtasks", "comments", "statuses"]
 
         for phase in valid_phases:
-            args = parser.parse_args([
+            args = cli_parser.parse_args([
                 "--markdown", "epic.md",
                 "--epic", "PROJ-123",
                 "--phase", phase
             ])
             assert args.phase == phase
 
-    def test_phase_invalid_choice(self, parser):
+    def test_phase_invalid_choice(self, cli_parser):
         """Test --phase with invalid choice raises error."""
         with pytest.raises(SystemExit):
-            parser.parse_args([
+            cli_parser.parse_args([
                 "--markdown", "epic.md",
                 "--epic", "PROJ-123",
                 "--phase", "invalid"
             ])
 
-    def test_story_filter(self, parser):
+    def test_story_filter(self, cli_parser):
         """Test --story filter argument."""
-        args = parser.parse_args([
+        args = cli_parser.parse_args([
             "--markdown", "epic.md",
             "--epic", "PROJ-123",
             "--story", "US-001"
@@ -112,9 +107,9 @@ class TestArgumentParser:
 
         assert args.story == "US-001"
 
-    def test_jira_url_override(self, parser):
+    def test_jira_url_override(self, cli_parser):
         """Test --jira-url override."""
-        args = parser.parse_args([
+        args = cli_parser.parse_args([
             "--markdown", "epic.md",
             "--epic", "PROJ-123",
             "--jira-url", "https://custom.atlassian.net"
@@ -122,9 +117,9 @@ class TestArgumentParser:
 
         assert args.jira_url == "https://custom.atlassian.net"
 
-    def test_project_override(self, parser):
+    def test_project_override(self, cli_parser):
         """Test --project override."""
-        args = parser.parse_args([
+        args = cli_parser.parse_args([
             "--markdown", "epic.md",
             "--epic", "PROJ-123",
             "--project", "NEWPROJ"
@@ -132,9 +127,9 @@ class TestArgumentParser:
 
         assert args.project == "NEWPROJ"
 
-    def test_verbose_flag(self, parser):
+    def test_verbose_flag(self, cli_parser):
         """Test --verbose flag."""
-        args = parser.parse_args([
+        args = cli_parser.parse_args([
             "--markdown", "epic.md",
             "--epic", "PROJ-123",
             "--verbose"
@@ -142,9 +137,9 @@ class TestArgumentParser:
 
         assert args.verbose is True
 
-    def test_verbose_short_form(self, parser):
+    def test_verbose_short_form(self, cli_parser):
         """Test -v short form for verbose."""
-        args = parser.parse_args([
+        args = cli_parser.parse_args([
             "-m", "epic.md",
             "-e", "PROJ-123",
             "-v"
@@ -152,9 +147,9 @@ class TestArgumentParser:
 
         assert args.verbose is True
 
-    def test_no_color_flag(self, parser):
+    def test_no_color_flag(self, cli_parser):
         """Test --no-color flag."""
-        args = parser.parse_args([
+        args = cli_parser.parse_args([
             "--markdown", "epic.md",
             "--epic", "PROJ-123",
             "--no-color"
@@ -162,9 +157,9 @@ class TestArgumentParser:
 
         assert args.no_color is True
 
-    def test_export_path(self, parser):
+    def test_export_path(self, cli_parser):
         """Test --export argument."""
-        args = parser.parse_args([
+        args = cli_parser.parse_args([
             "--markdown", "epic.md",
             "--epic", "PROJ-123",
             "--export", "results.json"
@@ -172,9 +167,9 @@ class TestArgumentParser:
 
         assert args.export == "results.json"
 
-    def test_validate_flag(self, parser):
+    def test_validate_flag(self, cli_parser):
         """Test --validate mode flag."""
-        args = parser.parse_args([
+        args = cli_parser.parse_args([
             "--markdown", "epic.md",
             "--epic", "PROJ-123",
             "--validate"
@@ -182,9 +177,9 @@ class TestArgumentParser:
 
         assert args.validate is True
 
-    def test_combined_arguments(self, parser):
+    def test_combined_arguments(self, cli_parser):
         """Test multiple arguments combined."""
-        args = parser.parse_args([
+        args = cli_parser.parse_args([
             "--markdown", "epic.md",
             "--epic", "PROJ-123",
             "--execute",
@@ -213,21 +208,11 @@ class TestConsoleOutput:
     """Tests for Console output formatting."""
 
     @pytest.fixture
-    def console(self):
-        """Create a console with colors disabled for testing."""
-        return Console(color=False, verbose=False)
-
-    @pytest.fixture
     def color_console(self):
         """Create a console with colors enabled (forced)."""
         console = Console(color=True, verbose=False)
         console.color = True  # Force color even if not a TTY
         return console
-
-    @pytest.fixture
-    def verbose_console(self):
-        """Create a verbose console."""
-        return Console(color=False, verbose=True)
 
     def test_console_init_defaults(self):
         """Test Console initialization defaults."""
@@ -548,11 +533,6 @@ class TestMainFunction:
 class TestValidateMarkdown:
     """Tests for markdown validation function."""
 
-    @pytest.fixture
-    def console(self):
-        """Create a test console."""
-        return Console(color=False, verbose=False)
-
     def test_validate_markdown_success(self, console, capsys):
         """Test validation with valid markdown."""
         with patch("md2jira.cli.app.MarkdownParser") as MockParser:
@@ -606,44 +586,21 @@ class TestValidateMarkdown:
 class TestRunSync:
     """Tests for the run_sync function."""
 
-    @pytest.fixture
-    def console(self):
-        """Create a test console."""
-        return Console(color=False, verbose=False)
-
-    @pytest.fixture
-    def base_args(self):
-        """Create base command line args."""
-        args = Mock()
-        args.markdown = "epic.md"
-        args.epic = "PROJ-123"
-        args.execute = False
-        args.no_confirm = True
-        args.phase = "all"
-        args.story = None
-        args.jira_url = None
-        args.project = None
-        args.verbose = False
-        args.no_color = False
-        args.export = None
-        args.validate = False
-        return args
-
-    def test_run_sync_config_errors(self, console, base_args, capsys):
+    def test_run_sync_config_errors(self, console, base_cli_args, capsys):
         """Test run_sync returns error on config validation failure."""
         with patch("md2jira.cli.app.EnvironmentConfigProvider") as MockProvider:
             mock_provider = MockProvider.return_value
             mock_provider.validate.return_value = ["Missing JIRA_URL"]
 
-            result = run_sync(console, base_args)
+            result = run_sync(console, base_cli_args)
 
             assert result == 1
             captured = capsys.readouterr()
             assert "Missing JIRA_URL" in captured.out
 
-    def test_run_sync_markdown_not_found(self, console, base_args, capsys):
+    def test_run_sync_markdown_not_found(self, console, base_cli_args, capsys):
         """Test run_sync returns error when markdown file not found."""
-        base_args.markdown = "/nonexistent/path/epic.md"
+        base_cli_args.markdown = "/nonexistent/path/epic.md"
 
         with patch("md2jira.cli.app.EnvironmentConfigProvider") as MockProvider:
             mock_provider = MockProvider.return_value
@@ -653,18 +610,18 @@ class TestRunSync:
                 tracker=Mock()
             )
 
-            result = run_sync(console, base_args)
+            result = run_sync(console, base_cli_args)
 
             assert result == 1
             captured = capsys.readouterr()
             assert "not found" in captured.out.lower()
 
-    def test_run_sync_connection_failure(self, console, base_args, capsys, tmp_path):
+    def test_run_sync_connection_failure(self, console, base_cli_args, capsys, tmp_path):
         """Test run_sync returns error on Jira connection failure."""
         # Create temp markdown file
         md_file = tmp_path / "epic.md"
         md_file.write_text("# Test Epic")
-        base_args.markdown = str(md_file)
+        base_cli_args.markdown = str(md_file)
 
         with patch("md2jira.cli.app.EnvironmentConfigProvider") as MockProvider, \
              patch("md2jira.cli.app.JiraAdapter") as MockAdapter:
@@ -679,19 +636,19 @@ class TestRunSync:
             mock_adapter = MockAdapter.return_value
             mock_adapter.test_connection.return_value = False
 
-            result = run_sync(console, base_args)
+            result = run_sync(console, base_cli_args)
 
             assert result == 1
             captured = capsys.readouterr()
             assert "Failed to connect" in captured.out
 
-    def test_run_sync_user_cancellation(self, console, base_args, capsys, tmp_path):
+    def test_run_sync_user_cancellation(self, console, base_cli_args, capsys, tmp_path):
         """Test run_sync handles user cancellation."""
         md_file = tmp_path / "epic.md"
         md_file.write_text("# Test Epic")
-        base_args.markdown = str(md_file)
-        base_args.execute = True
-        base_args.no_confirm = False
+        base_cli_args.markdown = str(md_file)
+        base_cli_args.execute = True
+        base_cli_args.no_confirm = False
 
         with patch("md2jira.cli.app.EnvironmentConfigProvider") as MockProvider, \
              patch("md2jira.cli.app.JiraAdapter") as MockAdapter:
@@ -709,17 +666,17 @@ class TestRunSync:
 
             # Mock console.confirm to return False
             with patch.object(console, "confirm", return_value=False):
-                result = run_sync(console, base_args)
+                result = run_sync(console, base_cli_args)
 
             assert result == 0
             captured = capsys.readouterr()
             assert "Cancelled" in captured.out
 
-    def test_run_sync_success(self, console, base_args, capsys, tmp_path):
+    def test_run_sync_success(self, console, base_cli_args, capsys, tmp_path):
         """Test successful sync execution."""
         md_file = tmp_path / "epic.md"
         md_file.write_text("# Test Epic")
-        base_args.markdown = str(md_file)
+        base_cli_args.markdown = str(md_file)
 
         with patch("md2jira.cli.app.EnvironmentConfigProvider") as MockProvider, \
              patch("md2jira.cli.app.JiraAdapter") as MockAdapter, \
@@ -743,18 +700,18 @@ class TestRunSync:
                 stories_matched=3,
             )
 
-            result = run_sync(console, base_args)
+            result = run_sync(console, base_cli_args)
 
             assert result == 0
 
-    def test_run_sync_with_export(self, console, base_args, capsys, tmp_path):
+    def test_run_sync_with_export(self, console, base_cli_args, capsys, tmp_path):
         """Test sync with JSON export."""
         md_file = tmp_path / "epic.md"
         md_file.write_text("# Test Epic")
-        base_args.markdown = str(md_file)
+        base_cli_args.markdown = str(md_file)
 
         export_file = tmp_path / "results.json"
-        base_args.export = str(export_file)
+        base_cli_args.export = str(export_file)
 
         with patch("md2jira.cli.app.EnvironmentConfigProvider") as MockProvider, \
              patch("md2jira.cli.app.JiraAdapter") as MockAdapter, \
@@ -778,7 +735,7 @@ class TestRunSync:
                 stories_matched=3,
             )
 
-            result = run_sync(console, base_args)
+            result = run_sync(console, base_cli_args)
 
             assert result == 0
             assert export_file.exists()
