@@ -80,3 +80,5 @@ jira_backup_*.json
 
 # Jupyter
 .ipynb_checkpoints/
+
+IMPROVEMENTS.md
