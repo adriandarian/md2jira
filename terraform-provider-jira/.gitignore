@@ -1,0 +1,29 @@
+# Binaries
+terraform-provider-jira
+*.exe
+dist/
+
+# Go
+*.test
+coverage.out
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Debug
+__debug_bin
+
