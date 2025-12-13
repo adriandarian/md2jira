@@ -154,6 +154,12 @@ Environment Variables:
         help="Write logs to file (in addition to stderr)"
     )
     parser.add_argument(
+        "--audit-trail",
+        type=str,
+        metavar="PATH",
+        help="Export audit trail to JSON file (records all operations)"
+    )
+    parser.add_argument(
         "--export",
         type=str,
         help="Export analysis to JSON file"
@@ -345,6 +351,25 @@ def run_sync(
     formatter = ADFFormatter()
     parser = MarkdownParser()
     
+    # Setup audit trail if requested
+    audit_trail = None
+    audit_recorder = None
+    audit_trail_path = getattr(args, "audit_trail", None)
+    if audit_trail_path and isinstance(audit_trail_path, str):
+        from ..application.sync.audit import create_audit_trail, AuditTrailRecorder
+        from ..application.sync.state import SyncState
+        
+        session_id = SyncState.generate_session_id(str(markdown_path), args.epic)
+        audit_trail = create_audit_trail(
+            session_id=session_id,
+            epic_key=args.epic,
+            markdown_path=str(markdown_path),
+            dry_run=config.sync.dry_run,
+        )
+        audit_recorder = AuditTrailRecorder(audit_trail, dry_run=config.sync.dry_run)
+        audit_recorder.subscribe_to(event_bus)
+        console.info(f"Audit trail: {audit_trail_path}")
+    
     tracker = JiraAdapter(
         config=config.tracker,
         dry_run=config.sync.dry_run,
@@ -465,6 +490,22 @@ def run_sync(
             json.dump(export_data, f, indent=2)
         
         console.success(f"Exported results to {args.export}")
+    
+    # Export audit trail if requested
+    if audit_trail and audit_trail_path:
+        audit_trail.complete(
+            success=result.success,
+            stories_matched=result.stories_matched,
+            stories_updated=result.stories_updated,
+            subtasks_created=result.subtasks_created,
+            subtasks_updated=result.subtasks_updated,
+            comments_added=result.comments_added,
+            statuses_updated=result.statuses_updated,
+            errors=result.errors,
+            warnings=result.warnings,
+        )
+        audit_path = audit_trail.export(audit_trail_path)
+        console.success(f"Audit trail exported to {audit_path}")
     
     # Determine exit code based on result
     if result.success:
