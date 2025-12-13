@@ -16,6 +16,8 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+from ...core.exceptions import OutputError
+
 
 @dataclass
 class ConfluenceConfig:
@@ -30,8 +32,13 @@ class ConfluenceConfig:
     retry_delay: float = 1.0
 
 
-class ConfluenceAPIError(Exception):
-    """Confluence API error."""
+class ConfluenceAPIError(OutputError):
+    """
+    Confluence API error.
+    
+    Low-level API error with HTTP response details.
+    Inherits from OutputError for consistent exception hierarchy.
+    """
     
     def __init__(
         self, 

@@ -15,43 +15,17 @@ from typing import Any, Optional
 
 from ..domain.entities import Epic, UserStory
 
+# Import exceptions from centralized module and re-export for backward compatibility
+from ..exceptions import (
+    OutputError as DocumentOutputError,
+    OutputAuthenticationError as AuthenticationError,
+    OutputNotFoundError as NotFoundError,
+    OutputAccessDeniedError as PermissionError,
+    OutputRateLimitError as RateLimitError,
+)
 
-class DocumentOutputError(Exception):
-    """Base exception for document output errors."""
-    
-    def __init__(self, message: str, page_id: Optional[str] = None, cause: Optional[Exception] = None):
-        super().__init__(message)
-        self.page_id = page_id
-        self.cause = cause
-
-
-class AuthenticationError(DocumentOutputError):
-    """Authentication failed."""
-    pass
-
-
-class NotFoundError(DocumentOutputError):
-    """Page or space not found."""
-    pass
-
-
-class PermissionError(DocumentOutputError):
-    """Insufficient permissions."""
-    pass
-
-
-class RateLimitError(DocumentOutputError):
-    """Rate limit exceeded."""
-    
-    def __init__(
-        self,
-        message: str,
-        retry_after: int | None = None,
-        page_id: str | None = None,
-        cause: Exception | None = None
-    ):
-        super().__init__(message, page_id, cause)
-        self.retry_after = retry_after
+# Exception classes are now imported from ..exceptions and re-exported above
+# for backward compatibility. See core/exceptions.py for definitions.
 
 
 @dataclass

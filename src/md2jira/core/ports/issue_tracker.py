@@ -13,6 +13,17 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Optional
 
+# Import exceptions from centralized module and re-export for backward compatibility
+from ..exceptions import (
+    TrackerError as IssueTrackerError,
+    AuthenticationError,
+    ResourceNotFoundError as NotFoundError,
+    AccessDeniedError as PermissionError,
+    TransitionError,
+    RateLimitError,
+    TransientError,
+)
+
 
 
 class LinkType(Enum):
@@ -109,52 +120,8 @@ class IssueLink:
         return ""
 
 
-class IssueTrackerError(Exception):
-    """Base exception for issue tracker errors."""
-    
-    def __init__(self, message: str, issue_key: Optional[str] = None, cause: Optional[Exception] = None):
-        super().__init__(message)
-        self.issue_key = issue_key
-        self.cause = cause
-
-
-class AuthenticationError(IssueTrackerError):
-    """Authentication failed."""
-    pass
-
-
-class NotFoundError(IssueTrackerError):
-    """Issue not found."""
-    pass
-
-
-class PermissionError(IssueTrackerError):
-    """Insufficient permissions."""
-    pass
-
-
-class TransitionError(IssueTrackerError):
-    """Failed to transition issue status."""
-    pass
-
-
-class RateLimitError(IssueTrackerError):
-    """Rate limit exceeded (HTTP 429)."""
-    
-    def __init__(
-        self,
-        message: str,
-        retry_after: int | None = None,
-        issue_key: str | None = None,
-        cause: Exception | None = None
-    ):
-        super().__init__(message, issue_key, cause)
-        self.retry_after = retry_after
-
-
-class TransientError(IssueTrackerError):
-    """Transient server error (5xx) that may succeed on retry."""
-    pass
+# Exception classes are now imported from ..exceptions and re-exported above
+# for backward compatibility. See core/exceptions.py for definitions.
 
 
 @dataclass

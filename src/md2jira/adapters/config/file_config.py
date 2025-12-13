@@ -23,6 +23,9 @@ from ...core.ports.config_provider import (
     TrackerConfig,
 )
 
+# Import ConfigFileError from centralized module and re-export for backward compatibility
+from ...core.exceptions import ConfigFileError
+
 
 # TOML support: use stdlib tomllib (3.11+) or tomli fallback (3.10)
 if sys.version_info >= (3, 11):
@@ -39,14 +42,8 @@ try:
 except ImportError:
     yaml = None  # type: ignore[assignment]
 
-
-class ConfigFileError(Exception):
-    """Raised when config file parsing fails."""
-
-    def __init__(self, path: Path, message: str) -> None:
-        self.path = path
-        self.message = message
-        super().__init__(f"{path}: {message}")
+# ConfigFileError is now imported from core.exceptions and re-exported above
+# for backward compatibility. See core/exceptions.py for definition.
 
 
 class FileConfigProvider(ConfigProviderPort):

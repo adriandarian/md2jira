@@ -14,14 +14,11 @@ from typing import Optional, Union
 
 from ..domain.entities import Epic, UserStory
 
+# Import ParserError from centralized module and re-export for backward compatibility
+from ..exceptions import ParserError
 
-class ParserError(Exception):
-    """Error during document parsing."""
-    
-    def __init__(self, message: str, line_number: Optional[int] = None, source: Optional[str] = None):
-        super().__init__(message)
-        self.line_number = line_number
-        self.source = source
+# ParserError is now imported from ..exceptions and re-exported above
+# for backward compatibility. See core/exceptions.py for definition.
 
 
 class DocumentParserPort(ABC):
