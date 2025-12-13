@@ -7,12 +7,24 @@ This module contains implementations for:
 - Formatters: ADF (Atlassian Document Format)
 - Config: Environment variables
 - Async: Parallel API call infrastructure
+- Cache: Response caching layer
 """
 
 from .jira import JiraAdapter
 from .parsers import MarkdownParser
 from .formatters import ADFFormatter
 from .config import EnvironmentConfigProvider
+
+# Cache infrastructure
+from .cache import (
+    CacheBackend,
+    CacheEntry,
+    CacheStats,
+    MemoryCache,
+    FileCache,
+    CacheManager,
+    CacheKeyBuilder,
+)
 
 # Async infrastructure (optional, requires aiohttp)
 try:
@@ -35,6 +47,15 @@ __all__ = [
     "MarkdownParser",
     "ADFFormatter",
     "EnvironmentConfigProvider",
+    # Cache
+    "CacheBackend",
+    "CacheEntry",
+    "CacheStats",
+    "MemoryCache",
+    "FileCache",
+    "CacheManager",
+    "CacheKeyBuilder",
+    # Async
     "ASYNC_AVAILABLE",
 ]
 

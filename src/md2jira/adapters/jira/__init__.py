@@ -1,13 +1,15 @@
 """
 Jira Adapter - Implementation of IssueTrackerPort for Atlassian Jira.
 
-Includes both synchronous and asynchronous clients:
-- JiraApiClient: Synchronous client for simple use cases
-- AsyncJiraApiClient: Async client with parallel request support
+Includes multiple client options:
+- JiraApiClient: Basic synchronous client
+- CachedJiraApiClient: Client with response caching
+- AsyncJiraApiClient: Async client with parallel request support (requires aiohttp)
 """
 
 from .adapter import JiraAdapter
 from .client import JiraApiClient
+from .cached_client import CachedJiraApiClient
 
 # Async client is optional (requires aiohttp)
 try:
@@ -17,5 +19,11 @@ except ImportError:
     AsyncJiraApiClient = None  # type: ignore[misc, assignment]
     ASYNC_AVAILABLE = False
 
-__all__ = ["JiraAdapter", "JiraApiClient", "AsyncJiraApiClient", "ASYNC_AVAILABLE"]
+__all__ = [
+    "JiraAdapter",
+    "JiraApiClient",
+    "CachedJiraApiClient",
+    "AsyncJiraApiClient",
+    "ASYNC_AVAILABLE",
+]
 

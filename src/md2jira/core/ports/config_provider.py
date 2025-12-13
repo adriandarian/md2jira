@@ -124,6 +124,12 @@ class SyncConfig:
     backup_dir: Optional[str] = None  # Custom backup directory
     backup_max_count: int = 10  # Max backups to keep per epic
     backup_retention_days: int = 30  # Delete backups older than this
+    
+    # Cache settings
+    cache_enabled: bool = True  # Enable response caching
+    cache_ttl: float = 300.0  # Default cache TTL in seconds (5 min)
+    cache_max_size: int = 1000  # Maximum cache entries
+    cache_dir: Optional[str] = None  # For file-based cache (None = memory)
 
 
 @dataclass
