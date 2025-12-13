@@ -20,9 +20,9 @@ export default defineConfig({
     
     nav: [
       { text: 'Guide', link: '/guide/getting-started' },
-      { text: 'Reference', link: '/reference/cli' },
+      { text: 'Tutorials', link: '/tutorials/' },
       { text: 'Cookbook', link: '/cookbook/' },
-      { text: 'Examples', link: '/examples/basic' },
+      { text: 'Reference', link: '/reference/cli' },
       {
         text: 'v1.0.0',
         items: [
@@ -91,6 +91,18 @@ export default defineConfig({
             { text: 'Epic Template', link: '/examples/template' },
             { text: 'E-commerce Epic', link: '/examples/ecommerce' },
             { text: 'CI/CD Integration', link: '/examples/cicd' },
+          ]
+        }
+      ],
+      '/tutorials/': [
+        {
+          text: 'Video Tutorials',
+          items: [
+            { text: 'Overview', link: '/tutorials/' },
+            { text: 'Your First Sync', link: '/tutorials/first-sync' },
+            { text: 'Interactive Mode', link: '/tutorials/interactive-mode' },
+            { text: 'Backup & Restore', link: '/tutorials/backup-restore' },
+            { text: 'CI/CD Setup', link: '/tutorials/cicd-setup' },
           ]
         }
       ],
