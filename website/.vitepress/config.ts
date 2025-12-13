@@ -21,6 +21,7 @@ export default defineConfig({
     nav: [
       { text: 'Guide', link: '/guide/getting-started' },
       { text: 'Reference', link: '/reference/cli' },
+      { text: 'Cookbook', link: '/cookbook/' },
       { text: 'Examples', link: '/examples/basic' },
       {
         text: 'v1.0.0',
@@ -90,6 +91,37 @@ export default defineConfig({
             { text: 'Epic Template', link: '/examples/template' },
             { text: 'E-commerce Epic', link: '/examples/ecommerce' },
             { text: 'CI/CD Integration', link: '/examples/cicd' },
+          ]
+        }
+      ],
+      '/cookbook/': [
+        {
+          text: 'Cookbook',
+          items: [
+            { text: 'Overview', link: '/cookbook/' },
+          ]
+        },
+        {
+          text: 'Workflows',
+          items: [
+            { text: 'Sprint Planning', link: '/cookbook/sprint-planning' },
+            { text: 'Multi-Team', link: '/cookbook/multi-team' },
+            { text: 'Release Planning', link: '/cookbook/release-planning' },
+          ]
+        },
+        {
+          text: 'Use Cases',
+          items: [
+            { text: 'Migration Projects', link: '/cookbook/migration' },
+            { text: 'Bug Triage', link: '/cookbook/bug-triage' },
+            { text: 'Documentation-Driven', link: '/cookbook/documentation-driven' },
+          ]
+        },
+        {
+          text: 'Advanced',
+          items: [
+            { text: 'AI-Assisted Planning', link: '/cookbook/ai-assisted' },
+            { text: 'Monorepo Setup', link: '/cookbook/monorepo' },
           ]
         }
       ]
