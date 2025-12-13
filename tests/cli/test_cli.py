@@ -192,6 +192,23 @@ class TestArgumentParser:
         ])
         assert args.log_format == "text"
 
+    def test_log_file_argument(self, cli_parser):
+        """Test --log-file argument."""
+        # Default is None
+        args = cli_parser.parse_args([
+            "--markdown", "epic.md",
+            "--epic", "PROJ-123",
+        ])
+        assert args.log_file is None
+        
+        # With log file path
+        args = cli_parser.parse_args([
+            "--markdown", "epic.md",
+            "--epic", "PROJ-123",
+            "--log-file", "/var/log/md2jira.log"
+        ])
+        assert args.log_file == "/var/log/md2jira.log"
+
     def test_export_path(self, cli_parser):
         """Test --export argument."""
         args = cli_parser.parse_args([

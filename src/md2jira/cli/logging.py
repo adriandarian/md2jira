@@ -229,6 +229,7 @@ class TextFormatter(logging.Formatter):
 def setup_logging(
     level: int = logging.INFO,
     log_format: str = "text",
+    log_file: str | None = None,
     include_location: bool = False,
     static_fields: dict[str, Any] | None = None,
     noisy_loggers: list[str] | None = None,
@@ -239,6 +240,7 @@ def setup_logging(
     Args:
         level: Log level (e.g., logging.DEBUG, logging.INFO)
         log_format: Output format - "text" or "json"
+        log_file: Path to log file (if provided, logs are written to file)
         include_location: Include file/line info in JSON logs
         static_fields: Static fields to add to every JSON log record
         noisy_loggers: Logger names to suppress to WARNING level
@@ -253,15 +255,18 @@ def setup_logging(
             log_format="json",
             static_fields={"service": "md2jira", "version": "2.0.0"}
         )
+        
+        # Log to file
+        setup_logging(
+            level=logging.DEBUG,
+            log_file="/var/log/md2jira.log",
+            log_format="json"
+        )
     """
     # Remove existing handlers
     root = logging.getLogger()
     for handler in root.handlers[:]:
         root.removeHandler(handler)
-    
-    # Create handler
-    handler = logging.StreamHandler(sys.stderr)
-    handler.setLevel(level)
     
     # Create formatter based on format type
     if log_format == "json":
@@ -271,15 +276,38 @@ def setup_logging(
         )
     else:
         formatter = TextFormatter(
-            use_colors=True,
+            use_colors=(log_file is None),  # No colors when writing to file
             include_context=(level <= logging.DEBUG),
         )
     
-    handler.setFormatter(formatter)
+    # Create console handler (always output to stderr)
+    console_handler = logging.StreamHandler(sys.stderr)
+    console_handler.setLevel(level)
+    console_handler.setFormatter(formatter)
+    root.addHandler(console_handler)
+    
+    # Create file handler if log_file is specified
+    if log_file:
+        file_handler = logging.FileHandler(log_file, encoding="utf-8")
+        file_handler.setLevel(level)
+        
+        # File logs always use JSON format for better parsing, or text without colors
+        if log_format == "json":
+            file_formatter: logging.Formatter = JSONFormatter(
+                include_location=include_location,
+                static_fields=static_fields,
+            )
+        else:
+            file_formatter = TextFormatter(
+                use_colors=False,  # Never use colors in file output
+                include_context=(level <= logging.DEBUG),
+            )
+        
+        file_handler.setFormatter(file_formatter)
+        root.addHandler(file_handler)
     
     # Configure root logger
     root.setLevel(level)
-    root.addHandler(handler)
     
     # Suppress noisy loggers
     default_noisy = ["urllib3", "requests", "httpcore", "httpx"]

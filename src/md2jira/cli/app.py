@@ -148,6 +148,12 @@ Environment Variables:
         help="Log format: text (default) or json for structured log aggregation"
     )
     parser.add_argument(
+        "--log-file",
+        type=str,
+        metavar="PATH",
+        help="Write logs to file (in addition to stderr)"
+    )
+    parser.add_argument(
         "--export",
         type=str,
         help="Export analysis to JSON file"
@@ -515,10 +521,12 @@ def main() -> int:
     
     log_level = logging.DEBUG if args.verbose else logging.INFO
     log_format = getattr(args, "log_format", "text")
+    log_file = getattr(args, "log_file", None)
     
     setup_logging(
         level=log_level,
         log_format=log_format,
+        log_file=log_file,
         static_fields={"service": "md2jira"} if log_format == "json" else None,
     )
     

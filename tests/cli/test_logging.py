@@ -368,6 +368,92 @@ class TestSetupLogging:
         
         # Should have exactly 1 handler after setup
         assert len(root.handlers) == 1
+    
+    def test_setup_logging_with_log_file(self, tmp_path):
+        """Test setting up logging with file output."""
+        log_file = tmp_path / "test.log"
+        
+        setup_logging(
+            level=logging.INFO,
+            log_format="text",
+            log_file=str(log_file),
+        )
+        
+        root = logging.getLogger()
+        # Should have 2 handlers: console + file
+        assert len(root.handlers) == 2
+        
+        # Check one is a FileHandler
+        file_handlers = [h for h in root.handlers if isinstance(h, logging.FileHandler)]
+        assert len(file_handlers) == 1
+        assert file_handlers[0].baseFilename == str(log_file)
+    
+    def test_log_file_receives_logs(self, tmp_path):
+        """Test that logs are actually written to the file."""
+        log_file = tmp_path / "test.log"
+        
+        setup_logging(
+            level=logging.INFO,
+            log_format="text",
+            log_file=str(log_file),
+        )
+        
+        logger = logging.getLogger("TestFileLogger")
+        logger.info("Test message to file")
+        
+        # Flush handlers
+        for handler in logging.getLogger().handlers:
+            handler.flush()
+        
+        content = log_file.read_text()
+        assert "Test message to file" in content
+        assert "TestFileLogger" in content
+    
+    def test_log_file_with_json_format(self, tmp_path):
+        """Test JSON format in log file."""
+        log_file = tmp_path / "test.json.log"
+        
+        setup_logging(
+            level=logging.INFO,
+            log_format="json",
+            log_file=str(log_file),
+        )
+        
+        logger = logging.getLogger("JSONFileLogger")
+        logger.info("JSON test message")
+        
+        # Flush handlers
+        for handler in logging.getLogger().handlers:
+            handler.flush()
+        
+        content = log_file.read_text().strip()
+        parsed = json.loads(content)
+        
+        assert parsed["message"] == "JSON test message"
+        assert parsed["logger"] == "JSONFileLogger"
+        assert parsed["level"] == "INFO"
+    
+    def test_log_file_no_colors(self, tmp_path):
+        """Test that file logs don't contain ANSI color codes."""
+        log_file = tmp_path / "test.log"
+        
+        setup_logging(
+            level=logging.INFO,
+            log_format="text",
+            log_file=str(log_file),
+        )
+        
+        logger = logging.getLogger("NoColorLogger")
+        logger.warning("Warning message")
+        
+        # Flush handlers
+        for handler in logging.getLogger().handlers:
+            handler.flush()
+        
+        content = log_file.read_text()
+        # Should not contain ANSI escape sequences
+        assert "\033[" not in content
+        assert "Warning message" in content
 
 
 # =============================================================================
