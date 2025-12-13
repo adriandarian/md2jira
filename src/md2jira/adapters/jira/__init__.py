@@ -5,11 +5,13 @@ Includes multiple client options:
 - JiraApiClient: Basic synchronous client
 - CachedJiraApiClient: Client with response caching
 - AsyncJiraApiClient: Async client with parallel request support (requires aiohttp)
+- JiraBatchClient: Batch operations using bulk APIs
 """
 
 from .adapter import JiraAdapter
 from .client import JiraApiClient
 from .cached_client import CachedJiraApiClient
+from .batch import JiraBatchClient, BatchResult, BatchOperation
 
 # Async client is optional (requires aiohttp)
 try:
@@ -23,6 +25,9 @@ __all__ = [
     "JiraAdapter",
     "JiraApiClient",
     "CachedJiraApiClient",
+    "JiraBatchClient",
+    "BatchResult",
+    "BatchOperation",
     "AsyncJiraApiClient",
     "ASYNC_AVAILABLE",
 ]

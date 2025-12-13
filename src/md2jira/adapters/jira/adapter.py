@@ -20,6 +20,7 @@ from ...core.domain.entities import UserStory, Subtask
 from ...core.domain.value_objects import CommitRef
 from ..formatters.adf import ADFFormatter
 from .client import JiraApiClient
+from .batch import JiraBatchClient, BatchResult
 
 
 class JiraAdapter(IssueTrackerPort):
@@ -64,6 +65,9 @@ class JiraAdapter(IssueTrackerPort):
             api_token=config.api_token,
             dry_run=dry_run,
         )
+        
+        # Initialize batch client for bulk operations
+        self._batch_client = JiraBatchClient(self._client)
         
         if config.story_points_field:
             self.STORY_POINTS_FIELD = config.story_points_field
@@ -587,4 +591,86 @@ class JiraAdapter(IssueTrackerPort):
         result["unchanged"] = len(existing_set & desired_set)
         
         return result
+    
+    # -------------------------------------------------------------------------
+    # Batch Operations
+    # -------------------------------------------------------------------------
+    
+    @property
+    def batch_client(self) -> JiraBatchClient:
+        """Get the batch client for bulk operations."""
+        return self._batch_client
+    
+    def bulk_create_subtasks(
+        self,
+        parent_key: str,
+        project_key: str,
+        subtasks: list[dict[str, Any]],
+        assignee: str | None = None,
+    ) -> BatchResult:
+        """
+        Create multiple subtasks using Jira's bulk create API.
+        
+        More efficient than creating subtasks one by one.
+        
+        Args:
+            parent_key: Parent issue key
+            project_key: Project key
+            subtasks: List of subtask data dicts
+            assignee: Optional assignee for all subtasks
+            
+        Returns:
+            BatchResult with created subtask keys
+        """
+        return self._batch_client.bulk_create_subtasks(
+            parent_key=parent_key,
+            project_key=project_key,
+            subtasks=subtasks,
+            assignee=assignee,
+        )
+    
+    def bulk_update_descriptions(
+        self,
+        updates: list[tuple[str, Any]],
+    ) -> BatchResult:
+        """
+        Update descriptions for multiple issues in parallel.
+        
+        Args:
+            updates: List of (issue_key, description_adf) tuples
+            
+        Returns:
+            BatchResult
+        """
+        return self._batch_client.bulk_update_descriptions(updates)
+    
+    def bulk_transition_issues(
+        self,
+        transitions: list[tuple[str, str]],
+    ) -> BatchResult:
+        """
+        Transition multiple issues in parallel.
+        
+        Args:
+            transitions: List of (issue_key, target_status) tuples
+            
+        Returns:
+            BatchResult
+        """
+        return self._batch_client.bulk_transition_issues(transitions)
+    
+    def bulk_add_comments(
+        self,
+        comments: list[tuple[str, Any]],
+    ) -> BatchResult:
+        """
+        Add comments to multiple issues in parallel.
+        
+        Args:
+            comments: List of (issue_key, comment_body_adf) tuples
+            
+        Returns:
+            BatchResult
+        """
+        return self._batch_client.bulk_add_comments(comments)
 

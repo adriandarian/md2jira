@@ -10,7 +10,7 @@ This module contains implementations for:
 - Cache: Response caching layer
 """
 
-from .jira import JiraAdapter
+from .jira import JiraAdapter, JiraBatchClient, BatchResult, BatchOperation
 from .parsers import MarkdownParser
 from .formatters import ADFFormatter
 from .config import EnvironmentConfigProvider
@@ -44,6 +44,9 @@ except ImportError:
 
 __all__ = [
     "JiraAdapter",
+    "JiraBatchClient",
+    "BatchResult",
+    "BatchOperation",
     "MarkdownParser",
     "ADFFormatter",
     "EnvironmentConfigProvider",
