@@ -651,5 +651,6 @@ def base_cli_args():
     args.no_color = False
     args.export = None
     args.validate = False
+    args.interactive = False  # Interactive mode disabled by default
     return args
 

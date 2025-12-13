@@ -44,6 +44,9 @@ Examples:
   # Full sync without prompts
   md2jira --markdown EPIC.md --epic PROJ-123 --execute --no-confirm
 
+  # Interactive mode - step-by-step guided sync
+  md2jira --markdown EPIC.md --epic PROJ-123 --interactive
+
   # Sync only descriptions
   md2jira --markdown EPIC.md --epic PROJ-123 --execute --phase descriptions
 
@@ -138,6 +141,11 @@ Environment Variables:
         "--validate",
         action="store_true",
         help="Validate markdown file format"
+    )
+    parser.add_argument(
+        "--interactive", "-i",
+        action="store_true",
+        help="Interactive mode with step-by-step guided sync"
     )
     parser.add_argument(
         "--version",
@@ -281,6 +289,18 @@ def run_sync(
         config=config.sync,
         event_bus=event_bus,
     )
+    
+    # Interactive mode
+    if args.interactive:
+        from .interactive import run_interactive
+        
+        success = run_interactive(
+            console=console,
+            orchestrator=orchestrator,
+            markdown_path=str(markdown_path),
+            epic_key=args.epic,
+        )
+        return ExitCode.SUCCESS if success else ExitCode.CANCELLED
     
     # Confirmation
     if args.execute and not args.no_confirm:
