@@ -141,6 +141,13 @@ Environment Variables:
         help="Disable colored output"
     )
     parser.add_argument(
+        "--log-format",
+        type=str,
+        choices=["text", "json"],
+        default="text",
+        help="Log format: text (default) or json for structured log aggregation"
+    )
+    parser.add_argument(
         "--export",
         type=str,
         help="Export analysis to JSON file"
@@ -503,15 +510,17 @@ def main() -> int:
     if not args.markdown or not args.epic:
         parser.error("the following arguments are required: --markdown/-m, --epic/-e")
     
-    # Setup logging
-    log_level = logging.DEBUG if args.verbose else logging.INFO
-    logging.basicConfig(
-        level=log_level,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+    # Setup logging with optional JSON format
+    from .logging import setup_logging
     
-    # Suppress noisy loggers
-    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    log_level = logging.DEBUG if args.verbose else logging.INFO
+    log_format = getattr(args, "log_format", "text")
+    
+    setup_logging(
+        level=log_level,
+        log_format=log_format,
+        static_fields={"service": "md2jira"} if log_format == "json" else None,
+    )
     
     # Create console
     console = Console(

@@ -167,6 +167,31 @@ class TestArgumentParser:
 
         assert args.no_color is True
 
+    def test_log_format_choices(self, cli_parser):
+        """Test --log-format argument with valid choices."""
+        # Default is text
+        args = cli_parser.parse_args([
+            "--markdown", "epic.md",
+            "--epic", "PROJ-123",
+        ])
+        assert args.log_format == "text"
+        
+        # JSON format
+        args = cli_parser.parse_args([
+            "--markdown", "epic.md",
+            "--epic", "PROJ-123",
+            "--log-format", "json"
+        ])
+        assert args.log_format == "json"
+        
+        # Text format (explicit)
+        args = cli_parser.parse_args([
+            "--markdown", "epic.md",
+            "--epic", "PROJ-123",
+            "--log-format", "text"
+        ])
+        assert args.log_format == "text"
+
     def test_export_path(self, cli_parser):
         """Test --export argument."""
         args = cli_parser.parse_args([
