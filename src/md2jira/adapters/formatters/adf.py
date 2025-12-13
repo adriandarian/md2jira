@@ -5,11 +5,26 @@ Converts markdown and domain entities to Jira's ADF format.
 """
 
 import re
-from typing import Any
+from dataclasses import dataclass, field
+from typing import Any, Optional
 
 from ...core.ports.document_formatter import DocumentFormatterPort
 from ...core.domain.entities import UserStory, Subtask
 from ...core.domain.value_objects import CommitRef
+
+
+@dataclass
+class _ParserState:
+    """Internal state for the markdown-to-ADF parser."""
+    
+    content: list = field(default_factory=list)
+    current_list: Optional[dict] = None
+    current_list_type: Optional[str] = None
+    
+    def reset_list(self) -> None:
+        """Reset list context (called on empty line or non-list element)."""
+        self.current_list = None
+        self.current_list_type = None
 
 
 class ADFFormatter(DocumentFormatterPort):
@@ -30,85 +45,106 @@ class ADFFormatter(DocumentFormatterPort):
     
     def format_text(self, text: str) -> dict[str, Any]:
         """Convert markdown text to ADF."""
-        content = []
-        current_list = None
-        current_list_type = None
+        parser_state = _ParserState()
         
         for line in text.split("\n"):
-            if not line.strip():
-                current_list = None
-                current_list_type = None
-                continue
-            
-            # Headings
-            if line.startswith("### "):
-                current_list = None
-                content.append(self._heading(line[4:], level=3))
-            elif line.startswith("## "):
-                current_list = None
-                content.append(self._heading(line[3:], level=2))
-            elif line.startswith("# "):
-                current_list = None
-                content.append(self._heading(line[2:], level=1))
-            
-            # Jira wiki headings
-            elif line.startswith("h3. "):
-                current_list = None
-                content.append(self._heading(line[4:], level=3))
-            elif line.startswith("h2. "):
-                current_list = None
-                content.append(self._heading(line[4:], level=2))
-            
-            # Task list items
-            elif re.match(r'^- \[[ x]\] ', line):
-                is_checked = line[3] == 'x'
-                item_text = line[6:]
-                
-                if current_list_type != 'task':
-                    current_list = {
-                        "type": "taskList",
-                        "attrs": {"localId": ""},
-                        "content": []
-                    }
-                    current_list_type = 'task'
-                    content.append(current_list)
-                
-                current_list["content"].append({
-                    "type": "taskItem",
-                    "attrs": {"localId": "", "state": "DONE" if is_checked else "TODO"},
-                    "content": self._parse_inline(item_text)
-                })
-            
-            # Bullet list
-            elif line.startswith("* ") or (line.startswith("- ") and not line.startswith("- [")):
-                item_text = line[2:]
-                
-                if current_list_type != 'bullet':
-                    current_list = {"type": "bulletList", "content": []}
-                    current_list_type = 'bullet'
-                    content.append(current_list)
-                
-                current_list["content"].append({
-                    "type": "listItem",
-                    "content": [{"type": "paragraph", "content": self._parse_inline(item_text)}]
-                })
-            
-            # Skip table rows
-            elif line.startswith("|"):
-                current_list = None
-                current_list_type = None
-                continue
-            
-            # Regular paragraph
-            else:
-                current_list = None
-                current_list_type = None
-                content.append({
-                    "type": "paragraph",
-                    "content": self._parse_inline(line)
-                })
+            self._process_line(line, parser_state)
         
-        return self._doc(content)
+        return self._doc(parser_state.content)
+    
+    def _process_line(self, line: str, state: "_ParserState") -> None:
+        """Process a single line and update parser state."""
+        # Empty line resets list context
+        if not line.strip():
+            state.reset_list()
+            return
+        
+        # Try each line type handler in order
+        if self._try_heading(line, state):
+            return
+        if self._try_task_list(line, state):
+            return
+        if self._try_bullet_list(line, state):
+            return
+        if self._try_table_row(line, state):
+            return
+        
+        # Default: paragraph
+        state.reset_list()
+        state.content.append({
+            "type": "paragraph",
+            "content": self._parse_inline(line)
+        })
+    
+    def _try_heading(self, line: str, state: "_ParserState") -> bool:
+        """Try to parse line as a heading. Returns True if matched."""
+        # Markdown headings
+        for prefix, level in [("### ", 3), ("## ", 2), ("# ", 1)]:
+            if line.startswith(prefix):
+                state.reset_list()
+                state.content.append(self._heading(line[len(prefix):], level=level))
+                return True
+        
+        # Jira wiki headings (h2. h3.)
+        for prefix, level in [("h3. ", 3), ("h2. ", 2)]:
+            if line.startswith(prefix):
+                state.reset_list()
+                state.content.append(self._heading(line[len(prefix):], level=level))
+                return True
+        
+        return False
+    
+    def _try_task_list(self, line: str, state: "_ParserState") -> bool:
+        """Try to parse line as a task list item. Returns True if matched."""
+        if not re.match(r'^- \[[ x]\] ', line):
+            return False
+        
+        is_checked = line[3] == 'x'
+        item_text = line[6:]
+        
+        # Start new task list if needed
+        if state.current_list_type != 'task':
+            state.current_list = {
+                "type": "taskList",
+                "attrs": {"localId": ""},
+                "content": []
+            }
+            state.current_list_type = 'task'
+            state.content.append(state.current_list)
+        
+        state.current_list["content"].append({
+            "type": "taskItem",
+            "attrs": {"localId": "", "state": "DONE" if is_checked else "TODO"},
+            "content": self._parse_inline(item_text)
+        })
+        return True
+    
+    def _try_bullet_list(self, line: str, state: "_ParserState") -> bool:
+        """Try to parse line as a bullet list item. Returns True if matched."""
+        is_bullet = line.startswith("* ") or (line.startswith("- ") and not line.startswith("- ["))
+        if not is_bullet:
+            return False
+        
+        item_text = line[2:]
+        
+        # Start new bullet list if needed
+        if state.current_list_type != 'bullet':
+            state.current_list = {"type": "bulletList", "content": []}
+            state.current_list_type = 'bullet'
+            state.content.append(state.current_list)
+        
+        state.current_list["content"].append({
+            "type": "listItem",
+            "content": [{"type": "paragraph", "content": self._parse_inline(item_text)}]
+        })
+        return True
+    
+    def _try_table_row(self, line: str, state: "_ParserState") -> bool:
+        """Try to parse line as a table row (skip it). Returns True if matched."""
+        if line.startswith("|"):
+            state.reset_list()
+            return True  # Skip table rows
+        return False
     
     def format_story_description(self, story: UserStory) -> dict[str, Any]:
         """Format a story's complete description."""

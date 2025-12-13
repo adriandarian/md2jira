@@ -603,96 +603,145 @@ class SyncOrchestrator:
         Args:
             result: SyncResult to update with operation counts and errors.
         """
-        from ...core.ports.issue_tracker import IssueTrackerError
-        
         for md_story in self._md_stories:
             story_id = str(md_story.id)
-            if story_id not in self._matches:
-                continue
             
-            # Skip unchanged stories in incremental mode
-            if self.config.incremental and story_id not in self._changed_story_ids:
+            # Skip unmatched or unchanged stories
+            if not self._should_sync_story_subtasks(story_id):
                 continue
             
             issue_key = self._matches[story_id]
+            existing_subtasks = self._fetch_existing_subtasks(issue_key, story_id, result)
+            
+            if existing_subtasks is None:
+                continue  # Failed to fetch, already logged
+            
+            # Sync each subtask
             project_key = issue_key.split("-")[0]
-            
-            # Get existing subtasks - wrap in try/except for graceful degradation
-            try:
-                jira_issue = self.tracker.get_issue(issue_key)
-                existing_subtasks = {st.summary.lower(): st for st in jira_issue.subtasks}
-            except IssueTrackerError as e:
-                result.add_failed_operation(
-                    operation="fetch_issue",
-                    issue_key=issue_key,
-                    error=str(e),
-                    story_id=story_id,
-                )
-                self.logger.warning(f"Failed to fetch issue {issue_key}, skipping subtasks: {e}")
-                continue  # Skip this story's subtasks but continue with others
-            
             for md_subtask in md_story.subtasks:
-                subtask_name_lower = md_subtask.name.lower()
-                
-                try:
-                    if subtask_name_lower in existing_subtasks:
-                        # Update existing subtask
-                        existing = existing_subtasks[subtask_name_lower]
-                        
-                        update_cmd = UpdateSubtaskCommand(
-                            tracker=self.tracker,
-                            issue_key=existing.key,
-                            description=md_subtask.description,
-                            story_points=md_subtask.story_points,
-                            event_bus=self.event_bus,
-                            dry_run=self.config.dry_run,
-                        )
-                        update_result = update_cmd.execute()
-                        
-                        if update_result.success and not update_result.dry_run:
-                            result.subtasks_updated += 1
-                        elif not update_result.success and update_result.error:
-                            result.add_failed_operation(
-                                operation="update_subtask",
-                                issue_key=existing.key,
-                                error=update_result.error,
-                                story_id=story_id,
-                            )
-                    else:
-                        # Create new subtask
-                        adf = self.formatter.format_text(md_subtask.description)
-                        
-                        create_cmd = CreateSubtaskCommand(
-                            tracker=self.tracker,
-                            parent_key=issue_key,
-                            project_key=project_key,
-                            summary=md_subtask.name,
-                            description=adf,
-                            story_points=md_subtask.story_points,
-                            event_bus=self.event_bus,
-                            dry_run=self.config.dry_run,
-                        )
-                        create_result = create_cmd.execute()
-                        
-                        if create_result.success:
-                            result.subtasks_created += 1
-                        elif create_result.error:
-                            result.add_failed_operation(
-                                operation="create_subtask",
-                                issue_key=issue_key,
-                                error=create_result.error,
-                                story_id=story_id,
-                            )
-                            
-                except Exception as e:
-                    # Catch any unexpected errors and continue
-                    result.add_failed_operation(
-                        operation="sync_subtask",
-                        issue_key=issue_key,
-                        error=f"Unexpected error: {e}",
-                        story_id=story_id,
-                    )
-                    self.logger.exception(f"Unexpected error syncing subtask for {issue_key}")
+                self._sync_single_subtask(
+                    md_subtask, existing_subtasks, issue_key, project_key, story_id, result
+                )
+    
+    def _should_sync_story_subtasks(self, story_id: str) -> bool:
+        """Check if a story's subtasks should be synced."""
+        if story_id not in self._matches:
+            return False
+        if self.config.incremental and story_id not in self._changed_story_ids:
+            return False
+        return True
+    
+    def _fetch_existing_subtasks(
+        self, issue_key: str, story_id: str, result: SyncResult
+    ) -> Optional[dict]:
+        """Fetch existing subtasks for an issue. Returns None on failure."""
+        from ...core.ports.issue_tracker import IssueTrackerError
+        
+        try:
+            jira_issue = self.tracker.get_issue(issue_key)
+            return {st.summary.lower(): st for st in jira_issue.subtasks}
+        except IssueTrackerError as e:
+            result.add_failed_operation(
+                operation="fetch_issue",
+                issue_key=issue_key,
+                error=str(e),
+                story_id=story_id,
+            )
+            self.logger.warning(f"Failed to fetch issue {issue_key}, skipping subtasks: {e}")
+            return None
+    
+    def _sync_single_subtask(
+        self,
+        md_subtask: "Subtask",
+        existing_subtasks: dict,
+        parent_key: str,
+        project_key: str,
+        story_id: str,
+        result: SyncResult,
+    ) -> None:
+        """Sync a single subtask - update if exists, create if new."""
+        from ...core.domain.entities import Subtask
+        
+        subtask_name_lower = md_subtask.name.lower()
+        
+        try:
+            if subtask_name_lower in existing_subtasks:
+                self._update_existing_subtask(
+                    md_subtask, existing_subtasks[subtask_name_lower], story_id, result
+                )
+            else:
+                self._create_new_subtask(
+                    md_subtask, parent_key, project_key, story_id, result
+                )
+        except Exception as e:
+            result.add_failed_operation(
+                operation="sync_subtask",
+                issue_key=parent_key,
+                error=f"Unexpected error: {e}",
+                story_id=story_id,
+            )
+            self.logger.exception(f"Unexpected error syncing subtask for {parent_key}")
+    
+    def _update_existing_subtask(
+        self,
+        md_subtask: "Subtask",
+        existing: "IssueData",
+        story_id: str,
+        result: SyncResult,
+    ) -> None:
+        """Update an existing subtask."""
+        update_cmd = UpdateSubtaskCommand(
+            tracker=self.tracker,
+            issue_key=existing.key,
+            description=md_subtask.description,
+            story_points=md_subtask.story_points,
+            event_bus=self.event_bus,
+            dry_run=self.config.dry_run,
+        )
+        update_result = update_cmd.execute()
+        
+        if update_result.success and not update_result.dry_run:
+            result.subtasks_updated += 1
+        elif not update_result.success and update_result.error:
+            result.add_failed_operation(
+                operation="update_subtask",
+                issue_key=existing.key,
+                error=update_result.error,
+                story_id=story_id,
+            )
+    
+    def _create_new_subtask(
+        self,
+        md_subtask: "Subtask",
+        parent_key: str,
+        project_key: str,
+        story_id: str,
+        result: SyncResult,
+    ) -> None:
+        """Create a new subtask."""
+        adf = self.formatter.format_text(md_subtask.description)
+        
+        create_cmd = CreateSubtaskCommand(
+            tracker=self.tracker,
+            parent_key=parent_key,
+            project_key=project_key,
+            summary=md_subtask.name,
+            description=adf,
+            story_points=md_subtask.story_points,
+            event_bus=self.event_bus,
+            dry_run=self.config.dry_run,
+        )
+        create_result = create_cmd.execute()
+        
+        if create_result.success:
+            result.subtasks_created += 1
+        elif create_result.error:
+            result.add_failed_operation(
+                operation="create_subtask",
+                issue_key=parent_key,
+                error=create_result.error,
+                story_id=story_id,
+            )
     
     def _sync_comments(self, result: SyncResult) -> None:
         """
