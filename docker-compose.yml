@@ -1,0 +1,59 @@
+# ==============================================================================
+# md2jira Docker Compose
+# Example setup for containerized usage with environment configuration
+# ==============================================================================
+#
+# Usage:
+#   1. Copy .env.example to .env and fill in your Jira credentials
+#   2. Place your markdown file in the current directory
+#   3. Run: docker compose run --rm md2jira --markdown EPIC.md --epic PROJ-123
+#
+# ==============================================================================
+
+services:
+  md2jira:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: md2jira:latest
+    
+    # Mount current directory as workspace for markdown files
+    volumes:
+      - .:/workspace:ro
+      # Optional: persist backups between runs
+      - md2jira-backups:/home/md2jira/.md2jira/backups
+    
+    # Load environment from .env file
+    env_file:
+      - .env
+    
+    # Override with explicit environment variables if needed
+    environment:
+      - JIRA_URL=${JIRA_URL:-}
+      - JIRA_EMAIL=${JIRA_EMAIL:-}
+      - JIRA_API_TOKEN=${JIRA_API_TOKEN:-}
+    
+    # Working directory inside container
+    working_dir: /workspace
+
+  # Convenience service for dry-run mode
+  md2jira-dry-run:
+    extends:
+      service: md2jira
+    # Default to showing help; override with your command
+    command: ["--help"]
+
+  # Convenience service for executing syncs
+  md2jira-sync:
+    extends:
+      service: md2jira
+    # Mount as read-write for backup/export operations
+    volumes:
+      - .:/workspace
+      - md2jira-backups:/home/md2jira/.md2jira/backups
+    command: ["--execute", "--no-confirm"]
+
+volumes:
+  md2jira-backups:
+    name: md2jira-backups
+

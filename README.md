@@ -78,6 +78,26 @@ docker run --rm \
   --markdown EPIC.md --epic PROJ-123 --execute
 ```
 
+### Docker Compose
+
+For easier usage with persistent configuration:
+
+```bash
+# 1. Copy the example environment file
+cp .env.example .env
+
+# 2. Edit .env with your Jira credentials
+#    JIRA_URL=https://your-company.atlassian.net
+#    JIRA_EMAIL=your.email@company.com
+#    JIRA_API_TOKEN=your-api-token
+
+# 3. Run a dry-run preview
+docker compose run --rm md2jira --markdown EPIC.md --epic PROJ-123
+
+# 4. Execute the sync
+docker compose run --rm md2jira --markdown EPIC.md --epic PROJ-123 --execute
+```
+
 ## Quick Start
 
 ### 1. Set up environment variables
