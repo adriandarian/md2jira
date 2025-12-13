@@ -3,12 +3,10 @@ Tests for YAML Parser.
 """
 
 import pytest
-from pathlib import Path
 from textwrap import dedent
 
 from md2jira.adapters.parsers.yaml_parser import YamlParser
 from md2jira.adapters.parsers.yaml_plugin import YamlParserPlugin, create_plugin
-from md2jira.core.ports.document_parser import ParserError
 from md2jira.core.domain.enums import Status, Priority
 
 

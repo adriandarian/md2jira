@@ -8,13 +8,9 @@ Uses the async_base infrastructure for rate limiting and connection pooling.
 import logging
 from typing import Any, Optional
 
-from ..async_base import AsyncHttpClient, AsyncRateLimiter, ParallelResult, batch_execute
+from ..async_base import AsyncHttpClient, ParallelResult, batch_execute
 from ...core.ports.issue_tracker import (
     IssueTrackerError,
-    AuthenticationError,
-    NotFoundError,
-    PermissionError,
-    RateLimitError,
 )
 
 

@@ -1,7 +1,5 @@
 """Tests for Markdown parser adapter."""
 
-import pytest
-from pathlib import Path
 
 
 class TestMarkdownParser:

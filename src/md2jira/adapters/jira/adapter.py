@@ -11,12 +11,10 @@ from ...core.ports.issue_tracker import (
     IssueTrackerPort,
     IssueData,
     IssueTrackerError,
-    TransitionError,
     IssueLink,
     LinkType,
 )
 from ...core.ports.config_provider import TrackerConfig
-from ...core.domain.entities import UserStory, Subtask
 from ...core.domain.value_objects import CommitRef
 from ..formatters.adf import ADFFormatter
 from .client import JiraApiClient

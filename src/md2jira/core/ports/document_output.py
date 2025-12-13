@@ -14,7 +14,6 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from ..domain.entities import Epic, UserStory
-from ..domain.value_objects import IssueKey
 
 
 class DocumentOutputError(Exception):

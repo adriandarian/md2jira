@@ -546,7 +546,7 @@ def is_parallel_available() -> bool:
     Requires aiohttp to be installed.
     """
     try:
-        import aiohttp
+        import aiohttp  # noqa: F401
         return True
     except ImportError:
         return False

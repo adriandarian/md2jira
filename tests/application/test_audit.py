@@ -3,13 +3,10 @@ Tests for audit trail functionality.
 """
 
 import json
-from datetime import datetime, timezone
 
-import pytest
 
 from md2jira.application.sync.audit import (
     AuditEntry,
-    AuditTrail,
     AuditTrailRecorder,
     create_audit_trail,
 )

@@ -4,12 +4,9 @@ Tests for incremental sync functionality.
 Tests change detection, fingerprinting, and incremental sync operations.
 """
 
-import json
 import pytest
 import tempfile
 from pathlib import Path
-from datetime import datetime
-from unittest.mock import MagicMock, patch
 
 from md2jira.application.sync.incremental import (
     StoryFingerprint,

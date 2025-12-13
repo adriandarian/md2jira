@@ -28,7 +28,7 @@ from .cache import (
 
 # Async infrastructure (optional, requires aiohttp)
 try:
-    from .async_base import (
+    from .async_base import (  # noqa: F401
         AsyncRateLimiter,
         AsyncHttpClient,
         gather_with_limit,
@@ -37,7 +37,7 @@ try:
         ParallelResult,
         ParallelExecutor,
     )
-    from .async_base.parallel import ParallelExecutor
+    from .async_base.parallel import ParallelExecutor  # noqa: F401
     ASYNC_AVAILABLE = True
 except ImportError:
     ASYNC_AVAILABLE = False

@@ -3,14 +3,12 @@ Tests for GitHub Issues Adapter.
 """
 
 import pytest
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 from md2jira.adapters.github.client import GitHubApiClient, GitHubRateLimiter
 from md2jira.adapters.github.adapter import GitHubAdapter
 from md2jira.adapters.github.plugin import GitHubTrackerPlugin, create_plugin
 from md2jira.core.ports.issue_tracker import (
-    IssueData,
-    IssueTrackerError,
     AuthenticationError,
     NotFoundError,
 )

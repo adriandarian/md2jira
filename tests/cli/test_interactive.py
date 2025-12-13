@@ -3,8 +3,7 @@ Tests for the interactive CLI mode.
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
-from io import StringIO
+from unittest.mock import Mock, patch
 
 from md2jira.cli.interactive import (
     Action,

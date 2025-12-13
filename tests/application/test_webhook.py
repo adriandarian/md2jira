@@ -5,14 +5,11 @@ Tests for webhook receiver - receive Jira webhooks for reverse sync.
 import pytest
 import json
 import time
-import threading
-from datetime import datetime
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock
 from http.client import HTTPConnection
 
 from md2jira.application.webhook import (
     WebhookServer,
-    WebhookHandler,
     WebhookParser,
     WebhookEvent,
     WebhookEventType,

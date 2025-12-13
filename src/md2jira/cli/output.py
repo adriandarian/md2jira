@@ -5,7 +5,6 @@ Provides pretty-printed output with colors and formatting.
 """
 
 import sys
-from dataclasses import dataclass
 from typing import Optional
 
 from ..application.sync import SyncResult

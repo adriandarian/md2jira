@@ -3,9 +3,6 @@ Tests for sync state persistence.
 """
 
 import pytest
-import json
-from pathlib import Path
-from datetime import datetime
 
 from md2jira.application.sync.state import (
     SyncPhase,

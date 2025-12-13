@@ -6,7 +6,6 @@ Stores cache entries as JSON files for persistence across restarts.
 
 import json
 import logging
-import os
 import time
 from pathlib import Path
 from typing import Any

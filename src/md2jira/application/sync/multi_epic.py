@@ -17,7 +17,6 @@ from ...core.ports.document_parser import DocumentParserPort
 from ...core.ports.document_formatter import DocumentFormatterPort
 
 if TYPE_CHECKING:
-    from .orchestrator import SyncResult, SyncOrchestrator
     from ...core.domain.config import SyncConfig
 
 
@@ -235,7 +234,6 @@ class MultiEpicSyncOrchestrator:
         Returns:
             MultiEpicSyncResult with sync details
         """
-        from .orchestrator import SyncOrchestrator
         
         result = MultiEpicSyncResult(dry_run=self.config.dry_run)
         

@@ -2,14 +2,12 @@
 Tests for configuration providers.
 """
 
-import os
 from pathlib import Path
 from textwrap import dedent
 
 import pytest
 
 from md2jira.adapters.config import (
-    ConfigFileError,
     EnvironmentConfigProvider,
     FileConfigProvider,
 )

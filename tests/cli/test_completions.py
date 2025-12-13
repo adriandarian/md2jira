@@ -2,9 +2,7 @@
 Tests for shell completion generation.
 """
 
-import pytest
 from unittest.mock import patch
-from io import StringIO
 
 from md2jira.cli.completions import (
     get_completion_script,

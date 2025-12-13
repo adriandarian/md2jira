@@ -6,10 +6,9 @@ including timestamps, operation details, and outcomes.
 """
 
 import json
-import os
 import getpass
 import socket
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional

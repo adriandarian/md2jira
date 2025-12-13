@@ -6,11 +6,10 @@ and converts them back to markdown format for bidirectional sync.
 """
 
 from datetime import datetime
-from typing import Optional
 
-from ...core.domain.entities import Epic, UserStory, Subtask, Comment
-from ...core.domain.value_objects import Description, AcceptanceCriteria, CommitRef
-from ...core.domain.enums import Status, Priority
+from ...core.domain.entities import Epic, UserStory, Subtask
+from ...core.domain.value_objects import CommitRef
+from ...core.domain.enums import Status
 
 
 class MarkdownWriter:

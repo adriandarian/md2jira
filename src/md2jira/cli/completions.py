@@ -4,7 +4,6 @@ Shell Completions - Generate shell completion scripts for md2jira.
 Supports Bash, Zsh, and Fish shells.
 """
 
-from pathlib import Path
 from typing import Optional
 
 

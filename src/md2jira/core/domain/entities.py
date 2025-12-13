@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import Optional, Any
 from uuid import uuid4
 
-from .enums import Status, Priority, IssueType
+from .enums import Status, Priority
 from .value_objects import (
     StoryId,
     IssueKey,

@@ -1,6 +1,5 @@
 """Tests for ADF formatter adapter."""
 
-import pytest
 from md2jira.core.domain import CommitRef
 
 

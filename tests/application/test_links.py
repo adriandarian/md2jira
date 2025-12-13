@@ -3,8 +3,7 @@ Tests for cross-project linking - link stories across Jira projects.
 """
 
 import pytest
-from datetime import datetime
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock
 
 from md2jira.application.sync.links import (
     LinkSyncOrchestrator,

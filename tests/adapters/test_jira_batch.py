@@ -5,8 +5,7 @@ Tests the JiraBatchClient for bulk create, update, transition, and comment opera
 """
 
 import pytest
-from unittest.mock import MagicMock, patch, call
-from concurrent.futures import ThreadPoolExecutor
+from unittest.mock import MagicMock
 
 from md2jira.adapters.jira.batch import (
     JiraBatchClient,

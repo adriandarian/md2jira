@@ -13,7 +13,6 @@ from typing import Any, Optional
 
 import requests
 from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry as Urllib3Retry
 
 from ...core.ports.issue_tracker import (
     IssueTrackerError,

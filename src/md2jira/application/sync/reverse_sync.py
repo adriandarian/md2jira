@@ -7,7 +7,6 @@ Jira -> Markdown (as opposed to the main sync which is Markdown -> Jira).
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -18,9 +17,8 @@ from ...core.domain.value_objects import (
     StoryId,
     IssueKey,
     Description,
-    AcceptanceCriteria,
 )
-from ...core.domain.enums import Status, Priority
+from ...core.domain.enums import Status
 from ...core.domain.events import EventBus
 from ...adapters.formatters.markdown_writer import MarkdownWriter, MarkdownUpdater
 

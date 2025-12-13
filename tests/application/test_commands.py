@@ -1,15 +1,13 @@
 """Tests for application commands."""
 
 import pytest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock
 
 from md2jira.application.commands import (
-    Command,
     CommandResult,
     CommandBatch,
     UpdateDescriptionCommand,
     CreateSubtaskCommand,
-    AddCommentCommand,
     TransitionStatusCommand,
 )
 from md2jira.core.ports.issue_tracker import IssueData

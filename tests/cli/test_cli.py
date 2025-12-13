@@ -2,12 +2,10 @@
 Tests for CLI argument parsing and output formatting.
 """
 
-import io
-import sys
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
-from md2jira.cli.app import create_parser, main, validate_markdown, run_sync
+from md2jira.cli.app import main, validate_markdown, run_sync
 from md2jira.cli.output import Console, Colors, Symbols
 from md2jira.cli.exit_codes import ExitCode
 from md2jira.application.sync import SyncResult

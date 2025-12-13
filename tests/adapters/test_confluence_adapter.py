@@ -14,7 +14,6 @@ from md2jira.adapters.confluence.adapter import ConfluenceAdapter
 from md2jira.adapters.confluence.plugin import ConfluencePlugin, create_plugin
 from md2jira.core.ports.document_output import (
     NotFoundError,
-    PermissionError,
     AuthenticationError,
 )
 from md2jira.core.domain.entities import Epic, UserStory, Subtask

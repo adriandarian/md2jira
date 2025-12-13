@@ -6,7 +6,6 @@ Publishes epics and stories as Confluence pages with proper formatting.
 
 import html
 import logging
-import re
 from typing import Optional
 
 from ...core.ports.document_output import (
@@ -16,12 +15,11 @@ from ...core.ports.document_output import (
     AuthenticationError,
     NotFoundError,
     PermissionError,
-    RateLimitError,
 )
 from ...core.domain.entities import Epic, UserStory, Subtask
-from ...core.domain.value_objects import Description, AcceptanceCriteria
-from ...core.domain.enums import Status, Priority
-from .client import ConfluenceClient, ConfluenceConfig, ConfluenceAPIError
+from ...core.domain.value_objects import Description
+from ...core.domain.enums import Status
+from .client import ConfluenceClient, ConfluenceAPIError
 
 
 class ConfluenceAdapter(DocumentOutputPort):

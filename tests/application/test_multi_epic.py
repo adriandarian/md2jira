@@ -4,8 +4,7 @@ Tests for multi-epic support - sync multiple epics from one file.
 
 import pytest
 from datetime import datetime
-from unittest.mock import Mock, MagicMock, patch
-from pathlib import Path
+from unittest.mock import Mock
 
 from md2jira.application.sync.multi_epic import (
     MultiEpicSyncOrchestrator,
@@ -13,8 +12,6 @@ from md2jira.application.sync.multi_epic import (
     EpicSyncResult,
 )
 from md2jira.adapters.parsers.markdown import MarkdownParser
-from md2jira.core.domain.entities import Epic, UserStory
-from md2jira.core.domain.value_objects import IssueKey, StoryId
 from md2jira.core.ports.config_provider import SyncConfig
 
 

@@ -2,12 +2,11 @@
 Plugin Registry - Manages plugin discovery, loading, and lifecycle.
 """
 
-import importlib
 import logging
 from pathlib import Path
 from typing import Any, Optional
 
-from .base import Plugin, PluginType, PluginMetadata
+from .base import Plugin, PluginType
 
 
 class PluginRegistry:

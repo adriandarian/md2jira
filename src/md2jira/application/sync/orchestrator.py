@@ -7,18 +7,18 @@ This is the main entry point for sync operations.
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Optional, TYPE_CHECKING
+from typing import Callable, Optional, TYPE_CHECKING
 
 from ...core.ports.issue_tracker import IssueTrackerPort, IssueData
 
 if TYPE_CHECKING:
-    from .state import SyncState, StateStore, SyncPhase
+    from .state import SyncState, StateStore
     from .backup import Backup, BackupManager
-    from .incremental import ChangeTracker, ChangeDetectionResult
+    from .incremental import ChangeTracker
 from ...core.ports.document_parser import DocumentParserPort
 from ...core.ports.document_formatter import DocumentFormatterPort
 from ...core.ports.config_provider import SyncConfig
-from ...core.domain.entities import Epic, UserStory, Subtask
+from ...core.domain.entities import UserStory
 from ...core.domain.events import EventBus, SyncStarted, SyncCompleted
 from ..commands import (
     CommandBatch,

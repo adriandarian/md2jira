@@ -5,9 +5,8 @@ Tests for watch mode - auto-sync on file changes.
 import pytest
 import tempfile
 import time
-import threading
 from pathlib import Path
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock
 
 from md2jira.application.watch import (
     FileWatcher,

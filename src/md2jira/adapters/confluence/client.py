@@ -10,7 +10,7 @@ import logging
 import time
 from dataclasses import dataclass
 from typing import Any, Optional
-from urllib.parse import urljoin, quote
+from urllib.parse import quote
 
 import requests
 from requests.adapters import HTTPAdapter

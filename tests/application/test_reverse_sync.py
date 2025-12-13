@@ -3,8 +3,7 @@ Tests for reverse sync (pull from Jira to markdown).
 """
 
 import pytest
-from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock
 
 from md2jira.application.sync.reverse_sync import (
     ReverseSyncOrchestrator,

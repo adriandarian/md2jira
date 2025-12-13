@@ -10,7 +10,7 @@ Tests cover:
 
 import asyncio
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 import time
 
 # Skip all tests if aiohttp is not available

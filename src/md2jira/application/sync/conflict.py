@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any, Optional, Callable, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...core.ports.issue_tracker import IssueTrackerPort, IssueData
+    from ...core.ports.issue_tracker import IssueData
     from ...core.domain.entities import UserStory
 
 logger = logging.getLogger(__name__)

@@ -1,10 +1,8 @@
 """Tests for plugin hook system."""
 
-import pytest
 from md2jira.plugins import (
     Hook,
     HookPoint,
-    HookManager,
     HookContext,
 )
 

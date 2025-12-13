@@ -2,10 +2,8 @@
 Tests for conflict detection and resolution.
 """
 
-import pytest
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock
 
 from md2jira.application.sync.conflict import (
     ConflictType,
@@ -22,8 +20,8 @@ from md2jira.application.sync.conflict import (
     create_snapshot_from_sync,
 )
 from md2jira.core.domain.entities import UserStory, Subtask
-from md2jira.core.domain.value_objects import StoryId, IssueKey, Description
-from md2jira.core.domain.enums import Status, Priority
+from md2jira.core.domain.value_objects import StoryId, Description
+from md2jira.core.domain.enums import Status
 from md2jira.core.ports.issue_tracker import IssueData
 
 

@@ -3,14 +3,12 @@ Tests for Linear Adapter.
 """
 
 import pytest
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 from md2jira.adapters.linear.client import LinearApiClient, LinearRateLimiter
 from md2jira.adapters.linear.adapter import LinearAdapter
 from md2jira.adapters.linear.plugin import LinearTrackerPlugin, create_plugin
 from md2jira.core.ports.issue_tracker import (
-    IssueData,
-    IssueTrackerError,
     AuthenticationError,
     NotFoundError,
     TransitionError,

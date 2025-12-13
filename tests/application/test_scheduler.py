@@ -3,15 +3,11 @@ Tests for scheduled sync - cron-like scheduled syncs.
 """
 
 import pytest
-import tempfile
 import time
-import threading
 from datetime import datetime, timedelta
-from pathlib import Path
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock
 
 from md2jira.application.scheduler import (
-    Schedule,
     IntervalSchedule,
     DailySchedule,
     HourlySchedule,
@@ -19,7 +15,6 @@ from md2jira.application.scheduler import (
     ScheduledSyncRunner,
     ScheduleDisplay,
     ScheduleStats,
-    ScheduleType,
     parse_schedule,
 )
 

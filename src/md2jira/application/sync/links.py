@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Any, Callable, Optional, TYPE_CHECKING
 
 from ...core.domain.entities import UserStory
-from ...core.ports.issue_tracker import IssueTrackerPort, IssueLink, LinkType
+from ...core.ports.issue_tracker import IssueTrackerPort, LinkType
 
 if TYPE_CHECKING:
     pass

@@ -8,7 +8,6 @@ import sys
 from io import StringIO
 from unittest.mock import patch
 
-import pytest
 
 from md2jira.cli.logging import (
     JSONFormatter,

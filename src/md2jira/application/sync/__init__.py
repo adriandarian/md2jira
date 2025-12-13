@@ -63,7 +63,7 @@ from .incremental import (
 
 # Parallel operations (optional, requires aiohttp)
 try:
-    from .parallel import (
+    from .parallel import (  # noqa: F401
         ParallelSyncOperations,
         ParallelSyncResult,
         is_parallel_available,

@@ -9,8 +9,6 @@ from md2jira.adapters.azure_devops.client import AzureDevOpsApiClient, AzureDevO
 from md2jira.adapters.azure_devops.adapter import AzureDevOpsAdapter
 from md2jira.adapters.azure_devops.plugin import AzureDevOpsTrackerPlugin, create_plugin
 from md2jira.core.ports.issue_tracker import (
-    IssueData,
-    IssueTrackerError,
     AuthenticationError,
     NotFoundError,
     TransitionError,

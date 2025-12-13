@@ -16,9 +16,9 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
-from ...core.domain.entities import UserStory, Subtask
+from ...core.domain.entities import UserStory
 
 
 logger = logging.getLogger(__name__)

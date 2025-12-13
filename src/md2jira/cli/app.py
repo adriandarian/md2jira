@@ -1785,7 +1785,7 @@ def run_pull(args) -> int:
         Exit code.
     """
     from .logging import setup_logging
-    from ..application.sync import ReverseSyncOrchestrator, PullResult
+    from ..application.sync import ReverseSyncOrchestrator
     from ..adapters import JiraAdapter, ADFFormatter, EnvironmentConfigProvider
     from ..adapters.formatters import MarkdownWriter
     

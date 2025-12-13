@@ -8,7 +8,6 @@ sync operations when modifications are detected.
 import hashlib
 import logging
 import signal
-import sys
 import threading
 import time
 from dataclasses import dataclass, field

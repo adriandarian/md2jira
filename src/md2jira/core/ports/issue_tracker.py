@@ -13,9 +13,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Optional
 
-from ..domain.entities import Epic, UserStory, Subtask, Comment
-from ..domain.value_objects import IssueKey
-from ..domain.enums import Status
 
 
 class LinkType(Enum):

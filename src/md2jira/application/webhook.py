@@ -17,7 +17,6 @@ from datetime import datetime
 from enum import Enum
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from typing import Any, Callable, Optional, TYPE_CHECKING
-from urllib.parse import parse_qs, urlparse
 
 if TYPE_CHECKING:
     from .sync.reverse_sync import ReverseSyncOrchestrator, PullResult

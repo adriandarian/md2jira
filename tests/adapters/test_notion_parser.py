@@ -3,7 +3,6 @@ Tests for Notion Parser.
 """
 
 import pytest
-from pathlib import Path
 from textwrap import dedent
 
 from md2jira.adapters.parsers.notion_parser import NotionParser

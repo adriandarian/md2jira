@@ -8,7 +8,7 @@ allowing recovery if something goes wrong.
 import json
 import logging
 import hashlib
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Optional, TYPE_CHECKING

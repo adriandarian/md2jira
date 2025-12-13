@@ -10,8 +10,7 @@ import re
 from pathlib import Path
 from typing import Optional, Union
 
-from ...core.ports.document_parser import DocumentParserPort, ParserError
-from ...core.ports.issue_tracker import IssueLink, LinkType
+from ...core.ports.document_parser import DocumentParserPort
 from ...core.domain.entities import Epic, UserStory, Subtask
 from ...core.domain.value_objects import (
     StoryId,

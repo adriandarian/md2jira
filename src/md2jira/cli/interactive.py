@@ -6,14 +6,11 @@ users to preview changes, select/deselect operations, and execute
 with full visibility.
 """
 
-import sys
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 
 from .output import Console, Colors, Symbols
-from ..core.domain.entities import UserStory, Subtask
-from ..core.ports.issue_tracker import IssueData
 
 
 class Action(Enum):

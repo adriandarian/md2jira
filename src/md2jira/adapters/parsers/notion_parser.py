@@ -12,18 +12,16 @@ Notion exports markdown files with specific formatting:
 """
 
 import csv
-import io
 import logging
 import re
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Optional, Union
 
-from ...core.ports.document_parser import DocumentParserPort, ParserError
+from ...core.ports.document_parser import DocumentParserPort
 from ...core.domain.entities import Epic, UserStory, Subtask
 from ...core.domain.value_objects import (
     StoryId,
     IssueKey,
-    CommitRef,
     Description,
     AcceptanceCriteria,
 )
