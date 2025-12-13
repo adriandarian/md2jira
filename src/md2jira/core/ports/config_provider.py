@@ -7,13 +7,23 @@ Implementations:
 """
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from enum import Enum
 from typing import Optional, Any
+
+
+class TrackerType(Enum):
+    """Supported issue tracker types."""
+    
+    JIRA = "jira"
+    GITHUB = "github"
+    LINEAR = "linear"  # Future
+    AZURE_DEVOPS = "azure_devops"  # Future
 
 
 @dataclass
 class TrackerConfig:
-    """Configuration for an issue tracker."""
+    """Configuration for an issue tracker (Jira)."""
     
     url: str
     email: str
@@ -26,6 +36,35 @@ class TrackerConfig:
     def is_valid(self) -> bool:
         """Check if configuration is valid."""
         return bool(self.url and self.email and self.api_token)
+
+
+@dataclass
+class GitHubConfig:
+    """Configuration for GitHub Issues tracker."""
+    
+    token: str
+    owner: str
+    repo: str
+    base_url: str = "https://api.github.com"
+    
+    # Label configuration
+    epic_label: str = "epic"
+    story_label: str = "story"
+    subtask_label: str = "subtask"
+    
+    # Status label mapping
+    status_labels: dict[str, str] = field(default_factory=lambda: {
+        "open": "status:open",
+        "in progress": "status:in-progress",
+        "done": "status:done",
+    })
+    
+    # Subtask handling
+    subtasks_as_issues: bool = False
+    
+    def is_valid(self) -> bool:
+        """Check if configuration is valid."""
+        return bool(self.token and self.owner and self.repo)
 
 
 @dataclass
