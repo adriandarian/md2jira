@@ -122,7 +122,7 @@ Look for issues labeled [`good first issue`](https://github.com/adriandarian/spe
 
 ### Feature Requests
 
-Check the [IMPROVEMENTS.md](https://github.com/adriandarian/spectra/blob/main/IMPROVEMENTS.md) for planned features.
+Check the [Issues](https://github.com/adriandarian/spectra/issues) page for planned features and open discussions.
 
 ### Documentation
 

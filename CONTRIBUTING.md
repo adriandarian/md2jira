@@ -39,7 +39,6 @@ This project adheres to the [Contributor Covenant Code of Conduct](CODE_OF_CONDU
 
 - Check the [Issues](https://github.com/adriandarian/spectra/issues) page for open issues
 - Look for issues labeled `good first issue` for beginner-friendly tasks
-- Check [IMPROVEMENTS.md](IMPROVEMENTS.md) for the project roadmap
 - Feel free to propose new ideas by opening an issue first
 
 ### Before You Start
@@ -530,9 +529,9 @@ Any other relevant information.
 
 Before requesting a feature:
 
-1. Check [IMPROVEMENTS.md](IMPROVEMENTS.md) - it might already be planned
-2. Search existing issues for similar requests
-3. Consider if it aligns with project goals
+1. Search existing issues for similar requests
+2. Consider if it aligns with project goals
+3. Use the feature request issue template
 
 When requesting:
 
