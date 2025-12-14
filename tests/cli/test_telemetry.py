@@ -11,10 +11,13 @@ from md2jira.cli.telemetry import (
     TelemetryConfig,
     TelemetryProvider,
     OTEL_AVAILABLE,
+    PROMETHEUS_AVAILABLE,
     traced,
     timed_api_call,
     get_telemetry,
     configure_telemetry,
+    configure_prometheus,
+    get_prometheus_metrics,
 )
 
 
@@ -510,4 +513,223 @@ class TestWithOpenTelemetry:
                 assert span is not None
         finally:
             provider.shutdown()
+
+
+# =============================================================================
+# Prometheus Tests
+# =============================================================================
+
+class TestPrometheusConfig:
+    """Tests for Prometheus configuration."""
+    
+    def test_prometheus_default_values(self):
+        """Test TelemetryConfig has Prometheus defaults."""
+        config = TelemetryConfig()
+        
+        assert config.prometheus_enabled is False
+        assert config.prometheus_port == 9090
+        assert config.prometheus_host == "0.0.0.0"
+    
+    def test_prometheus_custom_values(self):
+        """Test TelemetryConfig with custom Prometheus values."""
+        config = TelemetryConfig(
+            prometheus_enabled=True,
+            prometheus_port=8080,
+            prometheus_host="127.0.0.1",
+        )
+        
+        assert config.prometheus_enabled is True
+        assert config.prometheus_port == 8080
+        assert config.prometheus_host == "127.0.0.1"
+    
+    def test_from_env_prometheus(self):
+        """Test from_env with Prometheus env vars."""
+        env = {
+            "PROMETHEUS_ENABLED": "true",
+            "PROMETHEUS_PORT": "8080",
+            "PROMETHEUS_HOST": "localhost",
+        }
+        with patch.dict("os.environ", env, clear=True):
+            config = TelemetryConfig.from_env()
+        
+        assert config.prometheus_enabled is True
+        assert config.prometheus_port == 8080
+        assert config.prometheus_host == "localhost"
+
+
+class TestPrometheusProvider:
+    """Tests for Prometheus provider methods."""
+    
+    @pytest.fixture(autouse=True)
+    def reset_singleton(self):
+        """Reset the singleton instance before each test."""
+        TelemetryProvider._instance = None
+        yield
+        TelemetryProvider._instance = None
+    
+    def test_initialize_prometheus_disabled(self):
+        """Test initialize_prometheus when disabled."""
+        config = TelemetryConfig(prometheus_enabled=False)
+        provider = TelemetryProvider(config)
+        
+        result = provider.initialize_prometheus()
+        assert result is False
+    
+    def test_initialize_prometheus_not_available(self):
+        """Test initialize_prometheus when library not installed."""
+        config = TelemetryConfig(prometheus_enabled=True)
+        provider = TelemetryProvider(config)
+        
+        if not PROMETHEUS_AVAILABLE:
+            result = provider.initialize_prometheus()
+            assert result is False
+    
+    def test_sync_in_progress_context(self):
+        """Test sync_in_progress context manager."""
+        config = TelemetryConfig(prometheus_enabled=False)
+        provider = TelemetryProvider(config)
+        
+        # Should not raise even without Prometheus
+        with provider.sync_in_progress():
+            pass
+    
+    def test_record_sync_with_prometheus_disabled(self):
+        """Test record_sync when Prometheus is disabled."""
+        config = TelemetryConfig(prometheus_enabled=False)
+        provider = TelemetryProvider(config)
+        
+        # Should not raise
+        provider.record_sync(
+            success=True,
+            duration_seconds=1.5,
+            stories_count=5,
+            epic_key="TEST-100",
+        )
+    
+    def test_record_api_call_with_prometheus_disabled(self):
+        """Test record_api_call when Prometheus is disabled."""
+        config = TelemetryConfig(prometheus_enabled=False)
+        provider = TelemetryProvider(config)
+        
+        # Should not raise
+        provider.record_api_call(
+            operation="get_issue",
+            success=True,
+            duration_ms=150,
+        )
+    
+    def test_record_error_with_prometheus_disabled(self):
+        """Test record_error when Prometheus is disabled."""
+        config = TelemetryConfig(prometheus_enabled=False)
+        provider = TelemetryProvider(config)
+        
+        # Should not raise
+        provider.record_error(
+            error_type="AuthError",
+            operation="create_subtask",
+        )
+
+
+class TestPrometheusHelperFunctions:
+    """Tests for Prometheus helper functions."""
+    
+    @pytest.fixture(autouse=True)
+    def reset_singleton(self):
+        """Reset the singleton instance before each test."""
+        TelemetryProvider._instance = None
+        yield
+        TelemetryProvider._instance = None
+    
+    def test_configure_prometheus_disabled(self):
+        """Test configure_prometheus when disabled."""
+        provider = configure_prometheus(enabled=False)
+        
+        assert isinstance(provider, TelemetryProvider)
+        assert provider.config.prometheus_enabled is False
+    
+    def test_configure_prometheus_with_port(self):
+        """Test configure_prometheus with custom port."""
+        provider = configure_prometheus(
+            enabled=False,  # Don't actually start server
+            port=8080,
+            host="127.0.0.1",
+            service_name="test-service",
+        )
+        
+        assert provider.config.prometheus_port == 8080
+        assert provider.config.prometheus_host == "127.0.0.1"
+        assert provider.config.service_name == "test-service"
+    
+    def test_get_prometheus_metrics_not_available(self):
+        """Test get_prometheus_metrics when not installed."""
+        if not PROMETHEUS_AVAILABLE:
+            result = get_prometheus_metrics()
+            assert result is None
+
+
+class TestPrometheusCLIIntegration:
+    """Tests for Prometheus CLI integration."""
+    
+    def test_prometheus_flags_in_parser(self, cli_parser):
+        """Test --prometheus-* flags are recognized."""
+        args = cli_parser.parse_args([
+            "--prometheus",
+            "--prometheus-port", "8080",
+            "--prometheus-host", "127.0.0.1",
+            "--markdown", "epic.md",
+            "--epic", "TEST-123",
+        ])
+        
+        assert args.prometheus is True
+        assert args.prometheus_port == 8080
+        assert args.prometheus_host == "127.0.0.1"
+    
+    def test_prometheus_default_port(self, cli_parser):
+        """Test default Prometheus port."""
+        args = cli_parser.parse_args([
+            "--prometheus",
+            "--markdown", "epic.md",
+            "--epic", "TEST-123",
+        ])
+        
+        assert args.prometheus_port == 9090
+    
+    def test_prometheus_default_host(self, cli_parser):
+        """Test default Prometheus host."""
+        args = cli_parser.parse_args([
+            "--prometheus",
+            "--markdown", "epic.md",
+            "--epic", "TEST-123",
+        ])
+        
+        assert args.prometheus_host == "0.0.0.0"
+    
+    def test_prometheus_disabled_by_default(self, cli_parser):
+        """Test Prometheus is disabled by default."""
+        args = cli_parser.parse_args([
+            "--markdown", "epic.md",
+            "--epic", "TEST-123",
+        ])
+        
+        assert args.prometheus is False
+
+
+@pytest.mark.skipif(not PROMETHEUS_AVAILABLE, reason="prometheus_client not installed")
+class TestWithPrometheus:
+    """Tests that require prometheus_client to be installed."""
+    
+    @pytest.fixture(autouse=True)
+    def reset_singleton(self):
+        """Reset the singleton instance before each test."""
+        TelemetryProvider._instance = None
+        yield
+        TelemetryProvider._instance = None
+    
+    def test_get_prometheus_metrics(self):
+        """Test get_prometheus_metrics returns bytes."""
+        result = get_prometheus_metrics()
+        
+        assert isinstance(result, bytes)
+        # Should contain some metric content
+        assert b"# " in result or len(result) > 0
 

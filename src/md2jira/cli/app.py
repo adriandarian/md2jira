@@ -56,6 +56,9 @@ Examples:
   # Enable OpenTelemetry tracing
   md2jira --otel-enable --otel-endpoint http://localhost:4317 --markdown EPIC.md --epic PROJ-123
 
+  # Enable Prometheus metrics (exposed on :9090/metrics)
+  md2jira --prometheus --prometheus-port 9090 --markdown EPIC.md --epic PROJ-123
+
   # Analyze without making changes (dry-run)
   md2jira --markdown EPIC.md --epic PROJ-123
 
@@ -330,6 +333,26 @@ Environment Variables:
         "--otel-console",
         action="store_true",
         help="Export traces/metrics to console (for debugging)"
+    )
+    
+    # Prometheus metrics arguments
+    parser.add_argument(
+        "--prometheus",
+        action="store_true",
+        help="Enable Prometheus metrics HTTP server"
+    )
+    parser.add_argument(
+        "--prometheus-port",
+        type=int,
+        default=9090,
+        metavar="PORT",
+        help="Prometheus metrics port (default: 9090)"
+    )
+    parser.add_argument(
+        "--prometheus-host",
+        default="0.0.0.0",
+        metavar="HOST",
+        help="Prometheus metrics host (default: 0.0.0.0)"
     )
     
     parser.add_argument(
@@ -2421,6 +2444,18 @@ def main() -> int:
             service_name=getattr(args, 'otel_service_name', 'md2jira'),
             console_export=getattr(args, 'otel_console', False),
         )
+    
+    # Setup Prometheus metrics if enabled
+    if getattr(args, 'prometheus', False):
+        from .telemetry import configure_prometheus
+        prometheus_provider = configure_prometheus(
+            enabled=True,
+            port=getattr(args, 'prometheus_port', 9090),
+            host=getattr(args, 'prometheus_host', '0.0.0.0'),
+            service_name=getattr(args, 'otel_service_name', 'md2jira'),
+        )
+        if telemetry_provider is None:
+            telemetry_provider = prometheus_provider
     
     # Create console
     console = Console(

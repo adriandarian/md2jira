@@ -56,6 +56,24 @@ except ImportError:
     pass
 
 
+# Track whether Prometheus exporter is available
+PROMETHEUS_AVAILABLE = False
+
+try:
+    from prometheus_client import (
+        Counter as PromCounter,
+        Histogram as PromHistogram,
+        Gauge as PromGauge,
+        start_http_server as prom_start_http_server,
+        REGISTRY as PROM_REGISTRY,
+        generate_latest,
+        CONTENT_TYPE_LATEST,
+    )
+    PROMETHEUS_AVAILABLE = True
+except ImportError:
+    pass
+
+
 @dataclass
 class TelemetryConfig:
     """Configuration for OpenTelemetry instrumentation."""
@@ -76,6 +94,11 @@ class TelemetryConfig:
     metrics_enabled: bool = True
     metrics_port: int = 9464  # Prometheus metrics port
     
+    # Prometheus HTTP server settings
+    prometheus_enabled: bool = False
+    prometheus_port: int = 9090
+    prometheus_host: str = "0.0.0.0"
+    
     @classmethod
     def from_env(cls) -> "TelemetryConfig":
         """Create config from environment variables."""
@@ -86,6 +109,9 @@ class TelemetryConfig:
             otlp_insecure=os.getenv("OTEL_EXPORTER_OTLP_INSECURE", "true").lower() in ("true", "1"),
             console_export=os.getenv("OTEL_CONSOLE_EXPORT", "").lower() in ("true", "1"),
             metrics_enabled=os.getenv("OTEL_METRICS_ENABLED", "true").lower() in ("true", "1"),
+            prometheus_enabled=os.getenv("PROMETHEUS_ENABLED", "").lower() in ("true", "1", "yes"),
+            prometheus_port=int(os.getenv("PROMETHEUS_PORT", "9090")),
+            prometheus_host=os.getenv("PROMETHEUS_HOST", "0.0.0.0"),
         )
 
 
@@ -110,14 +136,24 @@ class TelemetryProvider:
         self._tracer: Optional[Any] = None
         self._meter: Optional[Any] = None
         self._initialized = False
+        self._prometheus_initialized = False
         
-        # Metrics
+        # OpenTelemetry Metrics
         self._sync_counter: Optional[Any] = None
         self._sync_duration: Optional[Any] = None
         self._stories_counter: Optional[Any] = None
         self._api_calls_counter: Optional[Any] = None
         self._api_duration: Optional[Any] = None
         self._errors_counter: Optional[Any] = None
+        
+        # Prometheus Metrics (direct prometheus_client)
+        self._prom_sync_counter: Optional[Any] = None
+        self._prom_sync_duration: Optional[Any] = None
+        self._prom_stories_counter: Optional[Any] = None
+        self._prom_api_calls_counter: Optional[Any] = None
+        self._prom_api_duration: Optional[Any] = None
+        self._prom_errors_counter: Optional[Any] = None
+        self._prom_active_syncs: Optional[Any] = None
     
     @classmethod
     def get_instance(cls) -> "TelemetryProvider":
@@ -176,6 +212,108 @@ class TelemetryProvider:
         except Exception as e:
             logger.error(f"Failed to initialize OpenTelemetry: {e}")
             return False
+    
+    def initialize_prometheus(self) -> bool:
+        """
+        Initialize Prometheus metrics server.
+        
+        Starts an HTTP server that exposes metrics in Prometheus format.
+        
+        Returns:
+            True if initialization succeeded, False otherwise.
+        """
+        if self._prometheus_initialized:
+            return True
+        
+        if not PROMETHEUS_AVAILABLE:
+            logger.warning(
+                "prometheus_client not available. Install with: pip install prometheus_client"
+            )
+            return False
+        
+        if not self.config.prometheus_enabled:
+            logger.debug("Prometheus disabled by configuration")
+            return False
+        
+        try:
+            self._setup_prometheus_metrics()
+            self._start_prometheus_server()
+            self._prometheus_initialized = True
+            logger.info(
+                f"Prometheus metrics server started on "
+                f"http://{self.config.prometheus_host}:{self.config.prometheus_port}/metrics"
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Failed to initialize Prometheus: {e}")
+            return False
+    
+    def _setup_prometheus_metrics(self) -> None:
+        """Set up Prometheus metrics collectors."""
+        # Sync operations
+        self._prom_sync_counter = PromCounter(
+            "md2jira_sync_total",
+            "Total number of sync operations",
+            ["epic_key", "success"],
+        )
+        
+        self._prom_sync_duration = PromHistogram(
+            "md2jira_sync_duration_seconds",
+            "Duration of sync operations in seconds",
+            ["epic_key"],
+            buckets=(0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0),
+        )
+        
+        # Story metrics
+        self._prom_stories_counter = PromCounter(
+            "md2jira_stories_processed_total",
+            "Total number of stories processed",
+            ["epic_key", "operation"],
+        )
+        
+        # API calls
+        self._prom_api_calls_counter = PromCounter(
+            "md2jira_api_calls_total",
+            "Total number of API calls",
+            ["operation", "success"],
+        )
+        
+        self._prom_api_duration = PromHistogram(
+            "md2jira_api_duration_milliseconds",
+            "Duration of API calls in milliseconds",
+            ["operation"],
+            buckets=(10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000),
+        )
+        
+        # Errors
+        self._prom_errors_counter = PromCounter(
+            "md2jira_errors_total",
+            "Total number of errors",
+            ["error_type", "operation"],
+        )
+        
+        # Active syncs gauge
+        self._prom_active_syncs = PromGauge(
+            "md2jira_active_syncs",
+            "Number of currently active sync operations",
+        )
+        
+        # Info metric
+        PromGauge(
+            "md2jira_info",
+            "md2jira version and service information",
+            ["version", "service_name"],
+        ).labels(
+            version=self.config.service_version,
+            service_name=self.config.service_name,
+        ).set(1)
+    
+    def _start_prometheus_server(self) -> None:
+        """Start the Prometheus HTTP server."""
+        prom_start_http_server(
+            port=self.config.prometheus_port,
+            addr=self.config.prometheus_host,
+        )
     
     def _setup_tracing(self) -> None:
         """Set up the tracer provider and exporters."""
@@ -342,9 +480,13 @@ class TelemetryProvider:
             stories_count: Number of stories processed.
             epic_key: Optional epic key.
         """
+        epic = epic_key or "unknown"
+        success_str = str(success).lower()
+        
+        # OpenTelemetry metrics
         attributes = {
-            "success": str(success).lower(),
-            "epic_key": epic_key or "unknown",
+            "success": success_str,
+            "epic_key": epic,
         }
         
         if self._sync_counter:
@@ -355,6 +497,16 @@ class TelemetryProvider:
         
         if self._stories_counter and stories_count > 0:
             self._stories_counter.add(stories_count, attributes)
+        
+        # Prometheus metrics
+        if self._prom_sync_counter:
+            self._prom_sync_counter.labels(epic_key=epic, success=success_str).inc()
+        
+        if self._prom_sync_duration:
+            self._prom_sync_duration.labels(epic_key=epic).observe(duration_seconds)
+        
+        if self._prom_stories_counter and stories_count > 0:
+            self._prom_stories_counter.labels(epic_key=epic, operation="sync").inc(stories_count)
     
     def record_api_call(
         self,
@@ -372,9 +524,12 @@ class TelemetryProvider:
             duration_ms: Duration in milliseconds.
             endpoint: Optional API endpoint.
         """
+        success_str = str(success).lower()
+        
+        # OpenTelemetry metrics
         attributes = {
             "operation": operation,
-            "success": str(success).lower(),
+            "success": success_str,
         }
         if endpoint:
             attributes["endpoint"] = endpoint
@@ -384,6 +539,13 @@ class TelemetryProvider:
         
         if self._api_duration:
             self._api_duration.record(duration_ms, attributes)
+        
+        # Prometheus metrics
+        if self._prom_api_calls_counter:
+            self._prom_api_calls_counter.labels(operation=operation, success=success_str).inc()
+        
+        if self._prom_api_duration:
+            self._prom_api_duration.labels(operation=operation).observe(duration_ms)
     
     def record_error(
         self,
@@ -397,6 +559,9 @@ class TelemetryProvider:
             error_type: Type of error.
             operation: Optional operation that caused the error.
         """
+        op = operation or "unknown"
+        
+        # OpenTelemetry metrics
         attributes = {
             "error_type": error_type,
         }
@@ -405,6 +570,28 @@ class TelemetryProvider:
         
         if self._errors_counter:
             self._errors_counter.add(1, attributes)
+        
+        # Prometheus metrics
+        if self._prom_errors_counter:
+            self._prom_errors_counter.labels(error_type=error_type, operation=op).inc()
+    
+    @contextmanager
+    def sync_in_progress(self) -> Generator[None, None, None]:
+        """
+        Context manager to track active sync operations.
+        
+        Updates the active_syncs gauge while sync is running.
+        
+        Yields:
+            None
+        """
+        if self._prom_active_syncs:
+            self._prom_active_syncs.inc()
+        try:
+            yield
+        finally:
+            if self._prom_active_syncs:
+                self._prom_active_syncs.dec()
     
     def shutdown(self) -> None:
         """Shutdown the telemetry provider."""
@@ -538,4 +725,50 @@ def configure_telemetry(
         console_export=console_export,
     )
     return TelemetryProvider.configure(config)
+
+
+def configure_prometheus(
+    enabled: bool = False,
+    port: int = 9090,
+    host: str = "0.0.0.0",
+    service_name: str = "md2jira",
+) -> TelemetryProvider:
+    """
+    Configure and start Prometheus metrics server.
+    
+    Args:
+        enabled: Whether Prometheus is enabled.
+        port: Port to expose metrics on.
+        host: Host address to bind to.
+        service_name: Service name for metrics.
+        
+    Returns:
+        The configured telemetry provider.
+    """
+    config = TelemetryConfig(
+        prometheus_enabled=enabled,
+        prometheus_port=port,
+        prometheus_host=host,
+        service_name=service_name,
+    )
+    provider = TelemetryProvider.configure(config)
+    if enabled:
+        provider.initialize_prometheus()
+    return provider
+
+
+def get_prometheus_metrics() -> Optional[bytes]:
+    """
+    Get Prometheus metrics in text format.
+    
+    This can be used to expose metrics via a custom HTTP endpoint
+    if you don't want to use the built-in server.
+    
+    Returns:
+        Metrics in Prometheus text format, or None if not available.
+    """
+    if not PROMETHEUS_AVAILABLE:
+        return None
+    
+    return generate_latest(PROM_REGISTRY)
 
