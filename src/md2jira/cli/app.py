@@ -38,6 +38,12 @@ Examples:
   # First-time setup wizard
   md2jira --init
 
+  # Generate markdown template from existing Jira epic
+  md2jira --generate --epic PROJ-123 --execute
+  
+  # Preview generated template before writing
+  md2jira --generate --epic PROJ-123 --preview
+
   # Analyze without making changes (dry-run)
   md2jira --markdown EPIC.md --epic PROJ-123
 
@@ -312,6 +318,35 @@ Environment Variables:
         "--version",
         action="version",
         version="%(prog)s 2.0.0"
+    )
+    
+    # Template generation
+    parser.add_argument(
+        "--generate",
+        action="store_true",
+        help="Generate markdown template from existing Jira epic"
+    )
+    parser.add_argument(
+        "--generate-output",
+        type=str,
+        dest="generate_output",
+        metavar="PATH",
+        help="Output path for generated markdown (defaults to EPIC_KEY.md)"
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite output file without confirmation (used with --generate)"
+    )
+    parser.add_argument(
+        "--no-subtasks",
+        action="store_true",
+        help="Don't include existing subtasks in generated template"
+    )
+    parser.add_argument(
+        "--no-descriptions",
+        action="store_true",
+        help="Don't include descriptions in generated template"
     )
     
     # Bidirectional sync (pull from Jira)
@@ -2204,6 +2239,18 @@ def main() -> int:
             verbose=getattr(args, 'verbose', False),
         )
         return run_init(console)
+    
+    # Handle generate (requires epic key)
+    if args.generate:
+        if not args.epic:
+            parser.error("--generate requires --epic/-e to be specified")
+        from .generate import run_generate
+        console = Console(
+            color=not getattr(args, 'no_color', False),
+            verbose=getattr(args, 'verbose', False),
+            quiet=getattr(args, 'quiet', False),
+        )
+        return run_generate(args, console)
     
     # Handle list-sessions (doesn't require other args)
     if args.list_sessions:
