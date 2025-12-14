@@ -39,4 +39,20 @@ from .result import (
     BatchItem,
     BatchResult,
 )
+from .specification import (
+    Specification,
+    PredicateSpec,
+    StatusSpec,
+    IssueTypeSpec,
+    HasSubtasksSpec,
+    TitleMatchesSpec,
+    HasKeySpec,
+    HasDescriptionSpec,
+    StoryPointsSpec,
+    MatchedSpec,
+    UnmatchedSpec,
+    all_of,
+    any_of,
+    none_of,
+)
 
