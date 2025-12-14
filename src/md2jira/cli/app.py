@@ -44,6 +44,12 @@ Examples:
   # Preview generated template before writing
   md2jira --generate --epic PROJ-123 --preview
 
+  # Validate markdown file format
+  md2jira --validate --markdown EPIC.md
+  
+  # Strict validation (warnings are errors)
+  md2jira --validate --markdown EPIC.md --strict
+
   # Analyze without making changes (dry-run)
   md2jira --markdown EPIC.md --epic PROJ-123
 
@@ -287,6 +293,11 @@ Environment Variables:
         help="Validate markdown file format"
     )
     parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Strict validation mode: treat warnings as errors (used with --validate)"
+    )
+    parser.add_argument(
         "--interactive", "-i",
         action="store_true",
         help="Interactive mode with step-by-step guided sync"
@@ -517,45 +528,25 @@ Environment Variables:
 
 def validate_markdown(
     console: Console,
-    markdown_path: str
-) -> bool:
+    markdown_path: str,
+    strict: bool = False,
+) -> int:
     """
     Validate a markdown file's format and structure.
     
-    Checks the file against the expected epic markdown schema and reports
-    any validation errors found.
+    Performs comprehensive validation including structure checks,
+    story content validation, and best practice suggestions.
     
     Args:
         console: Console instance for output.
         markdown_path: Path to the markdown file to validate.
+        strict: If True, treat warnings as errors.
         
     Returns:
-        True if validation passed, False if errors were found.
+        Exit code (0 for success, non-zero for errors).
     """
-    console.header("Validating Markdown File")
-    
-    parser = MarkdownParser()
-    errors = parser.validate(markdown_path)
-    
-    if errors:
-        console.error(f"Found {len(errors)} validation error(s):")
-        for error in errors:
-            console.item(error, "fail")
-        return False
-    
-    console.success("Markdown file is valid!")
-    
-    # Parse and show summary
-    stories = parser.parse_stories(markdown_path)
-    console.info(f"Found {len(stories)} user stories")
-    
-    total_subtasks = sum(len(s.subtasks) for s in stories)
-    total_commits = sum(len(s.commits) for s in stories)
-    
-    console.detail(f"Total subtasks: {total_subtasks}")
-    console.detail(f"Total commits: {total_commits}")
-    
-    return True
+    from .validate import run_validate
+    return run_validate(console, markdown_path, strict=strict)
 
 
 def list_sessions(state_store) -> int:
@@ -2332,6 +2323,27 @@ def main() -> int:
         args.markdown = state.markdown_path
         args.epic = state.epic_key
     
+    # Handle validate mode (only requires markdown)
+    if args.validate:
+        if not args.markdown:
+            parser.error("--validate requires --markdown/-m to be specified")
+        from .logging import setup_logging
+        setup_logging(
+            level=logging.DEBUG if args.verbose else logging.INFO,
+            log_format=getattr(args, "log_format", "text"),
+        )
+        console = Console(
+            color=not args.no_color,
+            verbose=args.verbose,
+            quiet=args.quiet,
+            json_mode=(args.output == "json"),
+        )
+        return validate_markdown(
+            console,
+            args.markdown,
+            strict=getattr(args, 'strict', False),
+        )
+    
     # Validate required arguments for other modes
     if not args.markdown or not args.epic:
         parser.error("the following arguments are required: --markdown/-m, --epic/-e")
@@ -2359,11 +2371,6 @@ def main() -> int:
     )
     
     try:
-        # Validate mode
-        if args.validate:
-            success = validate_markdown(console, args.markdown)
-            return ExitCode.SUCCESS if success else ExitCode.VALIDATION_ERROR
-        
         # Run sync
         return run_sync(console, args)
         
