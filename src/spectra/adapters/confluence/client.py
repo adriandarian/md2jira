@@ -16,8 +16,8 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from ...core.exceptions import OutputError
-from ...core.constants import ContentType, HttpHeader, ApiDefaults
+from spectra.core.exceptions import OutputError
+from spectra.core.constants import ContentType, HttpHeader, ApiDefaults
 
 
 @dataclass

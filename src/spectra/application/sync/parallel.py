@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...adapters.jira.async_client import AsyncJiraApiClient
+    from spectra.adapters.jira.async_client import AsyncJiraApiClient
 
 
 logger = logging.getLogger("parallel_sync")
@@ -139,7 +139,7 @@ class ParallelSyncOperations:
     def _get_client(self) -> "AsyncJiraApiClient":
         """Get or create the async client."""
         if self._client is None:
-            from ...adapters.jira.async_client import AsyncJiraApiClient
+            from spectra.adapters.jira.async_client import AsyncJiraApiClient
             self._client = AsyncJiraApiClient(
                 base_url=self.base_url,
                 email=self.email,

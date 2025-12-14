@@ -1,0 +1,9 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation
+    url: https://adriandarian.github.io/spectra
+    about: Check the docs for guides, tutorials, and API reference
+  - name: 💬 Discussions
+    url: https://github.com/adriandarian/spectra/discussions
+    about: Ask questions and share ideas in GitHub Discussions
+

@@ -20,7 +20,7 @@ from ...core.domain.value_objects import (
 )
 from ...core.domain.enums import Status
 from ...core.domain.events import EventBus
-from ...adapters.formatters.markdown_writer import MarkdownWriter, MarkdownUpdater
+from spectra.adapters.formatters.markdown_writer import MarkdownWriter, MarkdownUpdater
 
 
 @dataclass
@@ -409,7 +409,7 @@ class ReverseSyncOrchestrator:
     
     def _parse_existing_markdown(self, content: str) -> None:
         """Parse existing markdown file to get current stories."""
-        from ...adapters.parsers.markdown import MarkdownParser
+        from spectra.adapters.parsers.markdown import MarkdownParser
         
         parser = MarkdownParser()
         self._md_stories = parser.parse_stories(content)

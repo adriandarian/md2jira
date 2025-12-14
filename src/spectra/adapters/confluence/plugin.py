@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 from ...plugins.base import Plugin, PluginMetadata, PluginType
-from ...core.ports.document_output import DocumentOutputPort
+from spectra.core.ports.document_output import DocumentOutputPort
 from .client import ConfluenceClient, ConfluenceConfig
 from .adapter import ConfluenceAdapter
 

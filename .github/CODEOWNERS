@@ -1,0 +1,32 @@
+# CODEOWNERS - Default reviewers for pull requests
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything
+* @adriandarian
+
+# Core package - requires careful review
+/src/spectra/core/ @adriandarian
+
+# Adapters - platform-specific code
+/src/spectra/adapters/ @adriandarian
+
+# CLI
+/src/spectra/cli/ @adriandarian
+
+# Tests
+/tests/ @adriandarian
+
+# Documentation
+/docs/ @adriandarian
+README.md @adriandarian
+
+# Integrations
+/integrations/ @adriandarian
+
+# Packaging & Distribution
+/dist/ @adriandarian
+pyproject.toml @adriandarian
+
+# CI/CD
+/.github/ @adriandarian
+

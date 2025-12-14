@@ -7,17 +7,17 @@ This is the main entry point for Jira integration.
 import logging
 from typing import Any, Optional
 
-from ...core.ports.issue_tracker import (
+from spectra.core.ports.issue_tracker import (
     IssueTrackerPort,
     IssueData,
     IssueTrackerError,
     IssueLink,
     LinkType,
 )
-from ...core.ports.config_provider import TrackerConfig
-from ...core.domain.value_objects import CommitRef
-from ...core.constants import JiraField, IssueType
-from ..formatters.adf import ADFFormatter
+from spectra.core.ports.config_provider import TrackerConfig
+from spectra.core.domain.value_objects import CommitRef
+from spectra.core.constants import JiraField, IssueType
+from spectra.adapters.formatters.adf import ADFFormatter
 from .client import JiraApiClient
 from .batch import JiraBatchClient, BatchResult
 

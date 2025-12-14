@@ -14,7 +14,7 @@ from typing import Any, Optional
 import requests
 from requests.adapters import HTTPAdapter
 
-from ...core.ports.issue_tracker import (
+from spectra.core.ports.issue_tracker import (
     IssueTrackerError,
     AuthenticationError,
     NotFoundError,
@@ -22,7 +22,7 @@ from ...core.ports.issue_tracker import (
     RateLimitError,
     TransientError,
 )
-from ...core.constants import ContentType, HttpHeader, ApiDefaults, JiraApi
+from spectra.core.constants import ContentType, HttpHeader, ApiDefaults, JiraApi
 
 
 # HTTP status codes that should trigger retry

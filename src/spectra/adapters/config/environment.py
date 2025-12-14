@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from ...core.ports.config_provider import (
+from spectra.core.ports.config_provider import (
     AppConfig,
     ConfigProviderPort,
     SyncConfig,

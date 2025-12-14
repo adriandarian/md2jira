@@ -16,10 +16,10 @@ Example:
 import logging
 from typing import Any, Optional, Sequence
 
-from ...core.ports.async_tracker import AsyncIssueTrackerPort
-from ...core.ports.issue_tracker import IssueData
-from ...core.ports.config_provider import TrackerConfig
-from ...core.constants import JiraField, IssueType
+from spectra.core.ports.async_tracker import AsyncIssueTrackerPort
+from spectra.core.ports.issue_tracker import IssueData
+from spectra.core.ports.config_provider import TrackerConfig
+from spectra.core.constants import JiraField, IssueType
 
 try:
     from .async_client import AsyncJiraApiClient
@@ -68,7 +68,7 @@ class AsyncJiraAdapter(AsyncIssueTrackerPort):
         
         # Lazy import to avoid circular deps
         if formatter is None:
-            from ..formatters.adf import ADFFormatter
+            from spectra.adapters.formatters.adf import ADFFormatter
             formatter = ADFFormatter()
         self.formatter = formatter
         

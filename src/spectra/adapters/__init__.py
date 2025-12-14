@@ -1,21 +1,24 @@
 """
 Adapters - Concrete implementations of ports.
 
-This module contains implementations for:
-- Issue Trackers: Jira, GitHub, Linear, Azure DevOps
-- Parsers: Markdown, YAML, Notion
-- Formatters: ADF (Atlassian Document Format)
-- Config: Environment variables
-- Async: Parallel API call infrastructure
-- Cache: Response caching layer
+Subpackages organized by function:
+- Trackers: jira/, github/, azure_devops/, linear/, confluence/
+- Parsers: parsers/ (markdown, yaml, notion)
+- Formatters: formatters/ (adf, markdown)
+- Infrastructure: async_base/, cache/, config/
 """
 
+# Trackers
 from .jira import JiraAdapter, JiraBatchClient, BatchResult, BatchOperation
+
+# Parsers & Formatters
 from .parsers import MarkdownParser
 from .formatters import ADFFormatter
+
+# Infrastructure - Config
 from .config import EnvironmentConfigProvider
 
-# Cache infrastructure
+# Infrastructure - Cache
 from .cache import (
     CacheBackend,
     CacheEntry,
@@ -26,7 +29,7 @@ from .cache import (
     CacheKeyBuilder,
 )
 
-# Async infrastructure (optional, requires aiohttp)
+# Infrastructure - Async (optional, requires aiohttp)
 try:
     from .async_base import (  # noqa: F401
         AsyncRateLimiter,
@@ -37,20 +40,21 @@ try:
         ParallelResult,
         ParallelExecutor,
     )
-    from .async_base.parallel import ParallelExecutor  # noqa: F401
     ASYNC_AVAILABLE = True
 except ImportError:
     ASYNC_AVAILABLE = False
 
 __all__ = [
+    # Trackers
     "JiraAdapter",
     "JiraBatchClient",
     "BatchResult",
     "BatchOperation",
+    # Parsers & Formatters
     "MarkdownParser",
     "ADFFormatter",
+    # Infrastructure
     "EnvironmentConfigProvider",
-    # Cache
     "CacheBackend",
     "CacheEntry",
     "CacheStats",
@@ -58,7 +62,6 @@ __all__ = [
     "FileCache",
     "CacheManager",
     "CacheKeyBuilder",
-    # Async
     "ASYNC_AVAILABLE",
 ]
 

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Chocolatey package specification for spectra
+  
+  To build and test locally:
+    choco pack
+    choco install spectra -s .
+  
+  To push to Chocolatey community repository:
+    choco push spectra.2.0.0.nupkg --source https://push.chocolatey.org/
+-->
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>spectra</id>
+    <version>2.0.0</version>
+    <title>spectra</title>
+    <authors>Adrian Darian</authors>
+    <owners>adriandarian</owners>
+    <licenseUrl>https://github.com/adriandarian/spectra/blob/main/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/adriandarian/spectra</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/adriandarian/spectra/main/docs/assets/icon.png</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>
+A production-grade CLI tool for synchronizing markdown documentation with Jira.
+
+## Features
+- Full Epic Sync - Sync user stories, subtasks, descriptions, and comments
+- Markdown-Native - Write epic documentation in markdown, sync to Jira automatically
+- Smart Matching - Fuzzy title matching between markdown stories and Jira issues
+- Safe by Default - Dry-run mode, confirmations, and detailed previews
+- Command Pattern - Undo-capable operations with full audit trail
+- Plugin System - Extensible architecture for custom integrations
+
+## Requirements
+- Python 3.10 or higher
+- Jira API token (cloud or server)
+
+## Usage
+```
+spectra --markdown EPIC.md --epic PROJ-123
+spectra --markdown EPIC.md --epic PROJ-123 --execute
+```
+    </description>
+    <summary>Sync markdown epic documentation with Jira</summary>
+    <releaseNotes>https://github.com/adriandarian/spectra/blob/main/CHANGELOG.md</releaseNotes>
+    <copyright>Copyright 2024 Adrian Darian</copyright>
+    <tags>jira markdown sync documentation cli agile project-management devops</tags>
+    <projectSourceUrl>https://github.com/adriandarian/spectra</projectSourceUrl>
+    <packageSourceUrl>https://github.com/adriandarian/spectra/tree/main/packaging/chocolatey</packageSourceUrl>
+    <docsUrl>https://github.com/adriandarian/spectra#readme</docsUrl>
+    <bugTrackerUrl>https://github.com/adriandarian/spectra/issues</bugTrackerUrl>
+    <dependencies>
+      <dependency id="python3" version="[3.10,)" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>
+

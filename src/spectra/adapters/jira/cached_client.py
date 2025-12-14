@@ -8,7 +8,7 @@ import logging
 from typing import Any, Optional
 
 from .client import JiraApiClient
-from ..cache import CacheManager, MemoryCache, CacheBackend
+from spectra.adapters.cache import CacheManager, MemoryCache, CacheBackend
 
 
 class CachedJiraApiClient(JiraApiClient):

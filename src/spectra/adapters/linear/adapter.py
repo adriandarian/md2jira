@@ -15,7 +15,7 @@ Key mappings:
 import logging
 from typing import Any, Optional
 
-from ...core.ports.issue_tracker import (
+from spectra.core.ports.issue_tracker import (
     IssueTrackerPort,
     IssueData,
     IssueTrackerError,

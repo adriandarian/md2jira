@@ -8,7 +8,7 @@ import html
 import logging
 from typing import Optional
 
-from ...core.ports.document_output import (
+from spectra.core.ports.document_output import (
     DocumentOutputPort,
     PageData,
     SpaceData,
@@ -16,9 +16,9 @@ from ...core.ports.document_output import (
     NotFoundError,
     PermissionError,
 )
-from ...core.domain.entities import Epic, UserStory, Subtask
-from ...core.domain.value_objects import Description
-from ...core.domain.enums import Status
+from spectra.core.domain.entities import Epic, UserStory, Subtask
+from spectra.core.domain.value_objects import Description
+from spectra.core.domain.enums import Status
 from .client import ConfluenceClient, ConfluenceAPIError
 
 

@@ -245,7 +245,7 @@ class ConfigProviderPort(ABC):
 Jira implementation of `IssueTrackerPort`.
 
 ```python
-from spectra.adapters.jira import JiraAdapter
+from spectra.adapters.trackers.jira import JiraAdapter
 
 # Create adapter with credentials
 adapter = JiraAdapter(
@@ -265,7 +265,7 @@ adapter.transition_issue("PROJ-456", Status.DONE)
 Markdown implementation of `DocumentParserPort`.
 
 ```python
-from spectra.adapters.parsers import MarkdownParser
+from spectra.adapters.input.parsers import MarkdownParser
 
 parser = MarkdownParser()
 
@@ -287,7 +287,7 @@ for error in errors:
 Atlassian Document Format implementation.
 
 ```python
-from spectra.adapters.formatters import ADFFormatter
+from spectra.adapters.output.formatters import ADFFormatter
 
 formatter = ADFFormatter()
 
@@ -301,7 +301,7 @@ adf_content = formatter.format_description(story.description)
 Environment-based configuration.
 
 ```python
-from spectra.adapters.config import EnvironmentConfigProvider
+from spectra.adapters.infrastructure.config import EnvironmentConfigProvider
 
 config = EnvironmentConfigProvider()
 

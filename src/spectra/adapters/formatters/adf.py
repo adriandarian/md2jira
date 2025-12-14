@@ -8,9 +8,9 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from ...core.ports.document_formatter import DocumentFormatterPort
-from ...core.domain.entities import UserStory, Subtask
-from ...core.domain.value_objects import CommitRef
+from spectra.core.ports.document_formatter import DocumentFormatterPort
+from spectra.core.domain.entities import UserStory, Subtask
+from spectra.core.domain.value_objects import CommitRef
 
 
 @dataclass

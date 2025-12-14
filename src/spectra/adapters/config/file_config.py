@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 from typing import Any, ClassVar
 
-from ...core.ports.config_provider import (
+from spectra.core.ports.config_provider import (
     AppConfig,
     ConfigProviderPort,
     SyncConfig,
@@ -24,7 +24,7 @@ from ...core.ports.config_provider import (
 )
 
 # Import ConfigFileError from centralized module and re-export for backward compatibility
-from ...core.exceptions import ConfigFileError
+from spectra.core.exceptions import ConfigFileError
 
 
 # TOML support: use stdlib tomllib (3.11+) or tomli fallback (3.10)

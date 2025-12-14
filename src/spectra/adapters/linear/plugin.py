@@ -9,7 +9,7 @@ import os
 from typing import Any, Optional
 
 from ...plugins.base import TrackerPlugin, PluginMetadata, PluginType
-from ...core.ports.issue_tracker import IssueTrackerPort
+from spectra.core.ports.issue_tracker import IssueTrackerPort
 from .adapter import LinearAdapter
 
 

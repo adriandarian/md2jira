@@ -17,15 +17,15 @@ import re
 from pathlib import Path
 from typing import Optional, Union
 
-from ...core.ports.document_parser import DocumentParserPort
-from ...core.domain.entities import Epic, UserStory, Subtask
-from ...core.domain.value_objects import (
+from spectra.core.ports.document_parser import DocumentParserPort
+from spectra.core.domain.entities import Epic, UserStory, Subtask
+from spectra.core.domain.value_objects import (
     StoryId,
     IssueKey,
     Description,
     AcceptanceCriteria,
 )
-from ...core.domain.enums import Status, Priority
+from spectra.core.domain.enums import Status, Priority
 
 
 class NotionParser(DocumentParserPort):

@@ -8,7 +8,7 @@ enabling it to be discovered and loaded through the plugin system.
 from typing import Any, Optional
 
 from ...plugins.base import ParserPlugin, PluginMetadata, PluginType
-from ...core.ports.document_parser import DocumentParserPort
+from spectra.core.ports.document_parser import DocumentParserPort
 from .notion_parser import NotionParser
 
 

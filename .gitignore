@@ -10,8 +10,8 @@ __pycache__/
 *.so
 .Python
 build/
+.build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
@@ -38,6 +38,7 @@ env/
 *.swo
 *~
 .DS_Store
+.cursor/
 
 # Testing
 .pytest_cache/
@@ -49,6 +50,11 @@ coverage.xml
 *.cover
 *.py,cover
 .hypothesis/
+.benchmarks/
+
+# Mutation testing
+.mutmut-cache/
+html/
 
 # Type checking
 .mypy_cache/
@@ -58,27 +64,27 @@ dmypy.json
 # Linting
 .ruff_cache/
 
-# Documentation
+# Documentation build
 site/
 docs/_build/
+docs/.vitepress/cache/
+docs/.vitepress/dist/
 
-# Build
-*.manifest
-*.spec
+# Node (docs site)
+docs/node_modules/
 
-# Exports
+# Exports & generated files
 *.json
 !package.json
-!pyproject.toml
+!package-lock.json
+!tsconfig.json
 
 # Backups
 backup_*.json
-jira_backup_*.json
+*_backup_*.json
 
 # Logs
 *.log
 
 # Jupyter
 .ipynb_checkpoints/
-
-IMPROVEMENTS.md

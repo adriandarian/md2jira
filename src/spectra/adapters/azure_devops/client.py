@@ -18,7 +18,7 @@ from typing import Any, Optional
 import requests
 from requests.adapters import HTTPAdapter
 
-from ...core.ports.issue_tracker import (
+from spectra.core.ports.issue_tracker import (
     IssueTrackerError,
     AuthenticationError,
     NotFoundError,

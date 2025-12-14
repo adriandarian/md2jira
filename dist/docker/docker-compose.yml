@@ -1,0 +1,59 @@
+# ==============================================================================
+# spectra Docker Compose
+# Example setup for containerized usage with environment configuration
+# ==============================================================================
+#
+# Usage:
+#   1. Copy .env.example to .env and fill in your Jira credentials
+#   2. Place your markdown file in the current directory
+#   3. Run: docker compose run --rm spectra --markdown EPIC.md --epic PROJ-123
+#
+# ==============================================================================
+
+services:
+  spectra:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: spectra:latest
+    
+    # Mount current directory as workspace for markdown files
+    volumes:
+      - .:/workspace:ro
+      # Optional: persist backups between runs
+      - spectra-backups:/home/spectra/.spectra/backups
+    
+    # Load environment from .env file
+    env_file:
+      - .env
+    
+    # Override with explicit environment variables if needed
+    environment:
+      - JIRA_URL=${JIRA_URL:-}
+      - JIRA_EMAIL=${JIRA_EMAIL:-}
+      - JIRA_API_TOKEN=${JIRA_API_TOKEN:-}
+    
+    # Working directory inside container
+    working_dir: /workspace
+
+  # Convenience service for dry-run mode
+  spectra-dry-run:
+    extends:
+      service: spectra
+    # Default to showing help; override with your command
+    command: ["--help"]
+
+  # Convenience service for executing syncs
+  spectra-sync:
+    extends:
+      service: spectra
+    # Mount as read-write for backup/export operations
+    volumes:
+      - .:/workspace
+      - spectra-backups:/home/spectra/.spectra/backups
+    command: ["--execute", "--no-confirm"]
+
+volumes:
+  spectra-backups:
+    name: spectra-backups
+

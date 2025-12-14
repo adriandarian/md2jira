@@ -14,16 +14,16 @@ from typing import Any, Optional, Union
 
 import yaml
 
-from ...core.ports.document_parser import DocumentParserPort, ParserError
-from ...core.domain.entities import Epic, UserStory, Subtask
-from ...core.domain.value_objects import (
+from spectra.core.ports.document_parser import DocumentParserPort, ParserError
+from spectra.core.domain.entities import Epic, UserStory, Subtask
+from spectra.core.domain.value_objects import (
     StoryId,
     IssueKey,
     CommitRef,
     Description,
     AcceptanceCriteria,
 )
-from ...core.domain.enums import Status, Priority
+from spectra.core.domain.enums import Status, Priority
 
 
 class YamlParser(DocumentParserPort):

@@ -19,7 +19,7 @@ try:
 except ImportError:
     AIOHTTP_AVAILABLE = False
 
-from ...core.ports.issue_tracker import (
+from spectra.core.ports.issue_tracker import (
     IssueTrackerError,
     AuthenticationError,
     NotFoundError,

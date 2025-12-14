@@ -20,7 +20,7 @@ from typing import Any
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .client import JiraApiClient
-from ...core.ports.issue_tracker import IssueTrackerError
+from spectra.core.ports.issue_tracker import IssueTrackerError
 
 
 @dataclass

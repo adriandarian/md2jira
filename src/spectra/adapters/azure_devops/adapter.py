@@ -16,7 +16,7 @@ import logging
 import re
 from typing import Any, Optional
 
-from ...core.ports.issue_tracker import (
+from spectra.core.ports.issue_tracker import (
     IssueTrackerPort,
     IssueData,
     IssueTrackerError,

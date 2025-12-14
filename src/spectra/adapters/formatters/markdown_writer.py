@@ -7,9 +7,9 @@ and converts them back to markdown format for bidirectional sync.
 
 from datetime import datetime
 
-from ...core.domain.entities import Epic, UserStory, Subtask
-from ...core.domain.value_objects import CommitRef
-from ...core.domain.enums import Status
+from spectra.core.domain.entities import Epic, UserStory, Subtask
+from spectra.core.domain.value_objects import CommitRef
+from spectra.core.domain.enums import Status
 
 
 class MarkdownWriter:

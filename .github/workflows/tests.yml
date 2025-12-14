@@ -37,7 +37,7 @@ jobs:
       - name: Run tests with coverage
         run: |
           # Target: 80%+ coverage. Current baseline: ~72%. Increase as coverage improves.
-          pytest --cov=src/md2jira --cov-report=xml --cov-report=term-missing --cov-fail-under=70
+          pytest --cov=src/spectra --cov-report=xml --cov-report=term-missing --cov-fail-under=70
 
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.12'
