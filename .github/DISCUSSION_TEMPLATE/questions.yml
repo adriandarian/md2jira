@@ -1,0 +1,72 @@
+title: "❓ Question: "
+labels:
+  - question
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Ask a Question ❓
+        
+        Have a question about using Spectra? Ask away!
+        
+        Before asking, please check:
+        - [Documentation](https://adriandarian.github.io/spectra)
+        - [Existing discussions](https://github.com/adriandarian/spectra/discussions)
+        - [FAQ section](https://adriandarian.github.io/spectra/guide/faq)
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: What would you like to know?
+      placeholder: |
+        How do I...?
+        What's the difference between...?
+        Is it possible to...?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What are you trying to accomplish? (helps us give better answers)
+      placeholder: |
+        I'm trying to set up Spectra for my team. We use Jira Cloud and...
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: What have you tried?
+      description: What approaches have you already attempted?
+      placeholder: |
+        I tried running `spectra sync ...` but...
+        I looked at the docs but couldn't find...
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - Getting Started / Installation
+        - Configuration
+        - Syncing Issues
+        - Jira Integration
+        - GitHub Integration
+        - Azure DevOps Integration
+        - Linear Integration
+        - CI/CD Setup
+        - Docker / Containers
+        - Editor Extensions
+        - Plugins
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Spectra Version
+      description: Output of `spectra --version` (if applicable)
+      placeholder: "1.0.0"
+

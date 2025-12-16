@@ -1,0 +1,61 @@
+title: "🎉 Show & Tell: "
+labels:
+  - show-and-tell
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Show & Tell 🎉
+        
+        Built something cool with Spectra? Share it with the community!
+        
+        We love seeing how people use Spectra in their workflows.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What did you build?
+      description: Tell us about your project, workflow, or integration
+      placeholder: |
+        I set up Spectra to sync our product roadmap from Notion to Jira...
+        I built a custom plugin that...
+        I integrated Spectra with our CI/CD pipeline to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: how
+    attributes:
+      label: How does it work?
+      description: Share the technical details (config, code snippets, etc.)
+      placeholder: |
+        Here's my configuration:
+        ```yaml
+        ...
+        ```
+
+  - type: textarea
+    id: results
+    attributes:
+      label: What were the results?
+      description: What impact did this have? Time saved? Problems solved?
+      placeholder: |
+        This saves our team about 2 hours per sprint...
+        We no longer have to manually update...
+
+  - type: textarea
+    id: lessons
+    attributes:
+      label: Lessons learned
+      description: Any tips or gotchas for others trying something similar?
+      placeholder: |
+        If you're doing something similar, make sure to...
+        One thing I wish I knew earlier was...
+
+  - type: input
+    id: repo
+    attributes:
+      label: Repository / Resources
+      description: Link to code, blog post, or other resources (optional)
+      placeholder: "https://github.com/..."
+

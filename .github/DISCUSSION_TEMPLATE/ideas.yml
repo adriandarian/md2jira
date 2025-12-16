@@ -1,0 +1,65 @@
+title: "💡 Idea: "
+labels:
+  - idea
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Share Your Idea! 💡
+        
+        Have an idea for improving Spectra? We'd love to hear it!
+        This is the place to brainstorm and discuss new features before they become issues.
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: What's your idea?
+      description: Describe your idea in detail
+      placeholder: |
+        I think it would be great if Spectra could...
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: What pain point or use case would this address?
+      placeholder: |
+        Currently, when I try to... I have to... which is frustrating because...
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: How might this work?
+      description: Any thoughts on implementation? (optional)
+      placeholder: |
+        One way this could work is...
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of Spectra does this relate to?
+      options:
+        - CLI / User Experience
+        - Issue Tracker Support (Jira, GitHub, etc.)
+        - Input Formats (Markdown, YAML, etc.)
+        - Performance
+        - Documentation
+        - Editor Integrations
+        - CI/CD & Automation
+        - Plugin System
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I'd be interested in helping implement this
+        - label: I'd be interested in testing this
+        - label: I'd be interested in documenting this
+

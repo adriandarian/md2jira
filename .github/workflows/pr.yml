@@ -1,0 +1,529 @@
+name: 🔍 Pull Request
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+
+# Cancel in-progress runs for the same PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+env:
+  PYTHON_VERSION_PRIMARY: '3.11'
+  NODE_VERSION: '20'
+
+jobs:
+  # ============================================================================
+  # Quick Checks (Fast Feedback)
+  # ============================================================================
+  quick-checks:
+    name: ⚡ Quick Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION_PRIMARY }}
+          cache: 'pip'
+
+      - name: 📦 Install Dependencies
+        run: pip install -e ".[dev]"
+
+      - name: 🔍 Check for Debug Code
+        run: |
+          # Fail if debug code is present
+          if grep -rn "breakpoint()" src/ tests/ --include="*.py"; then
+            echo "❌ Found breakpoint() calls"
+            exit 1
+          fi
+          if grep -rn "import pdb" src/ tests/ --include="*.py"; then
+            echo "❌ Found pdb imports"
+            exit 1
+          fi
+          if grep -rn "print(" src/spectra/ --include="*.py" | grep -v "# noqa"; then
+            echo "⚠️ Warning: Found print() statements (consider using logging)"
+          fi
+          echo "✅ No debug code found"
+
+      - name: 📋 Check Commit Messages
+        if: github.event_name == 'pull_request'
+        run: |
+          # Check conventional commits format (optional warning)
+          git log --oneline origin/main..HEAD | while read line; do
+            if ! echo "$line" | grep -qE "^[a-f0-9]+ (feat|fix|docs|style|refactor|test|chore|build|ci|perf|revert)(\(.+\))?: .+"; then
+              echo "⚠️ Non-conventional commit: $line"
+            fi
+          done
+          echo "✅ Commit message check complete"
+
+      - name: 📁 Check File Permissions
+        run: |
+          # Ensure no executable Python files
+          find src tests -name "*.py" -executable -type f | while read f; do
+            echo "❌ Executable Python file: $f"
+            exit 1
+          done
+          echo "✅ File permissions OK"
+
+  # ============================================================================
+  # Code Quality
+  # ============================================================================
+  lint:
+    name: 🧹 Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION_PRIMARY }}
+          cache: 'pip'
+
+      - name: 📦 Install Dependencies
+        run: pip install -e ".[dev]"
+
+      - name: 🔍 Ruff Lint
+        run: ruff check src/ tests/ --output-format=github
+
+      - name: 🔍 Ruff Format Check
+        run: ruff format --check src/ tests/
+
+      - name: 🔍 Black Format Check
+        run: black --check src/ tests/
+
+  typecheck:
+    name: 🏷️ Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION_PRIMARY }}
+          cache: 'pip'
+
+      - name: 📦 Install Dependencies
+        run: pip install -e ".[dev]"
+
+      - name: 🔍 MyPy
+        run: mypy src/spectra/ --pretty
+
+  # ============================================================================
+  # Security
+  # ============================================================================
+  security:
+    name: 🔒 Security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION_PRIMARY }}
+          cache: 'pip'
+
+      - name: 📦 Install Dependencies
+        run: pip install -e ".[dev]" bandit safety pip-audit
+
+      - name: 🔍 Bandit Security Scan
+        run: bandit -r src/spectra/ -ll -ii -x "*/tests/*"
+        continue-on-error: true
+
+      - name: 🔍 Pip Audit
+        run: pip-audit --strict --desc
+        continue-on-error: true
+
+      - name: 🔍 Check for Secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: --only-verified
+        continue-on-error: true
+
+  # ============================================================================
+  # Unit Tests (Matrix)
+  # ============================================================================
+  test:
+    name: 🧪 Test (Python ${{ matrix.python-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ['3.10', '3.11', '3.12']
+        exclude:
+          # Reduce matrix size - only test all Python versions on Ubuntu
+          - os: macos-latest
+            python-version: '3.10'
+          - os: windows-latest
+            python-version: '3.10'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: 📦 Install Dependencies
+        run: pip install -e ".[dev,async]"
+
+      - name: 🧪 Run Tests
+        run: pytest tests/ -v --tb=short --junitxml=test-results-${{ matrix.os }}-${{ matrix.python-version }}.xml
+
+      - name: 📤 Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.os }}-${{ matrix.python-version }}
+          path: test-results-*.xml
+
+  # ============================================================================
+  # Coverage
+  # ============================================================================
+  coverage:
+    name: 📊 Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION_PRIMARY }}
+          cache: 'pip'
+
+      - name: 📦 Install Dependencies
+        run: pip install -e ".[dev,async]"
+
+      - name: 🧪 Run Tests with Coverage
+        run: |
+          pytest tests/ \
+            --cov=src/spectra \
+            --cov-report=xml \
+            --cov-report=html \
+            --cov-report=term-missing \
+            --cov-fail-under=70
+
+      - name: 📤 Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: htmlcov/
+
+      - name: 📊 Coverage Comment
+        if: github.event_name == 'pull_request'
+        uses: py-cov-action/python-coverage-comment-action@v3
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MINIMUM_GREEN: 80
+          MINIMUM_ORANGE: 60
+
+  # ============================================================================
+  # Integration Tests
+  # ============================================================================
+  integration:
+    name: 🔗 Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION_PRIMARY }}
+          cache: 'pip'
+
+      - name: 📦 Install Dependencies
+        run: pip install -e ".[dev,async]"
+
+      - name: 🔗 Run Integration Tests
+        run: pytest tests/integration/ -v --tb=short -m "not slow"
+
+  # ============================================================================
+  # Property-Based Tests
+  # ============================================================================
+  property-tests:
+    name: 🎲 Property Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION_PRIMARY }}
+          cache: 'pip'
+
+      - name: 📦 Install Dependencies
+        run: pip install -e ".[dev]"
+
+      - name: 🎲 Run Property Tests
+        run: pytest tests/property/ -v --hypothesis-show-statistics
+
+  # ============================================================================
+  # Build Verification
+  # ============================================================================
+  build:
+    name: 📦 Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION_PRIMARY }}
+
+      - name: 📦 Install Build Tools
+        run: pip install build twine
+
+      - name: 🏗️ Build Package
+        run: python -m build
+
+      - name: ✅ Verify Package
+        run: twine check dist/*
+
+      - name: 📤 Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: 🧪 Test Installation
+        run: |
+          pip install dist/*.whl
+          spectra --help
+          spectra --version
+
+  # ============================================================================
+  # Docker Build
+  # ============================================================================
+  docker:
+    name: 🐳 Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🏗️ Build Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: dist/docker/Dockerfile
+          push: false
+          tags: spectra:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: 🧪 Test Docker Image
+        run: |
+          docker run --rm spectra:test --help
+          docker run --rm spectra:test --version
+
+  # ============================================================================
+  # Documentation Build
+  # ============================================================================
+  docs:
+    name: 📚 Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 📦 Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: docs/package-lock.json
+
+      - name: 📦 Install Dependencies
+        working-directory: docs
+        run: npm ci
+
+      - name: 🔍 Lint Markdown
+        run: |
+          npm install -g markdownlint-cli
+          markdownlint "**/*.md" --ignore node_modules --ignore docs/node_modules || true
+
+      - name: 🏗️ Build Documentation
+        working-directory: docs
+        run: npm run build
+
+      - name: 🔍 Check for Broken Links
+        working-directory: docs
+        run: |
+          npm install -g broken-link-checker
+          # Start local server and check links (optional, can be slow)
+          # npx serve .vitepress/dist &
+          # sleep 5
+          # blc http://localhost:3000 -ro
+        continue-on-error: true
+
+  # ============================================================================
+  # VS Code Extension
+  # ============================================================================
+  vscode-extension:
+    name: 🆚 VS Code Extension
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: integrations/vscode
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 📦 Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 📦 Install Dependencies
+        run: npm ci
+
+      - name: 🔍 Lint
+        run: npm run lint || true
+
+      - name: 🏗️ Build
+        run: npm run compile
+
+      - name: 📦 Package
+        run: npx vsce package --no-dependencies
+
+  # ============================================================================
+  # API Compatibility (for breaking changes)
+  # ============================================================================
+  api-compat:
+    name: 🔄 API Compatibility
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION_PRIMARY }}
+          cache: 'pip'
+
+      - name: 📦 Install Dependencies
+        run: pip install -e ".[dev]" griffe
+
+      - name: 🔍 Check API Changes
+        run: |
+          # Generate API signature for current branch
+          griffe dump src/spectra -o api-current.json
+          
+          # Get main branch API (if exists)
+          git checkout origin/main -- . 2>/dev/null || exit 0
+          pip install -e ".[dev]"
+          griffe dump src/spectra -o api-main.json 2>/dev/null || exit 0
+          
+          # Compare (informational only)
+          echo "📋 API changes detected (review required for breaking changes)"
+        continue-on-error: true
+
+  # ============================================================================
+  # Size Check
+  # ============================================================================
+  size-check:
+    name: 📏 Size Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION_PRIMARY }}
+
+      - name: 📦 Build Package
+        run: |
+          pip install build
+          python -m build
+
+      - name: 📏 Check Package Size
+        run: |
+          WHEEL=$(ls dist/*.whl)
+          SIZE=$(stat -f%z "$WHEEL" 2>/dev/null || stat -c%s "$WHEEL")
+          SIZE_MB=$(echo "scale=2; $SIZE / 1048576" | bc)
+          
+          echo "📦 Package size: ${SIZE_MB} MB"
+          
+          # Warn if package is too large (> 5MB)
+          if [ $(echo "$SIZE_MB > 5" | bc) -eq 1 ]; then
+            echo "⚠️ Warning: Package is larger than 5MB"
+          fi
+
+  # ============================================================================
+  # Final Status Check (Required for branch protection)
+  # ============================================================================
+  status-check:
+    name: ✅ Status Check
+    needs:
+      - quick-checks
+      - lint
+      - typecheck
+      - security
+      - test
+      - coverage
+      - integration
+      - property-tests
+      - build
+      - docker
+      - docs
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: 📋 Check All Jobs
+        run: |
+          echo "## PR Validation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Quick Checks | ${{ needs.quick-checks.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint | ${{ needs.lint.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Type Check | ${{ needs.typecheck.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security | ${{ needs.security.result == 'success' && '✅' || '⚠️' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit Tests | ${{ needs.test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Coverage | ${{ needs.coverage.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Integration | ${{ needs.integration.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Property Tests | ${{ needs.property-tests.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ${{ needs.build.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker | ${{ needs.docker.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docs | ${{ needs.docs.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: ❌ Fail if Required Checks Failed
+        if: |
+          needs.quick-checks.result != 'success' ||
+          needs.lint.result != 'success' ||
+          needs.typecheck.result != 'success' ||
+          needs.test.result != 'success' ||
+          needs.coverage.result != 'success' ||
+          needs.build.result != 'success'
+        run: |
+          echo "❌ One or more required checks failed"
+          exit 1
+
+      - name: ✅ All Checks Passed
+        run: echo "✅ All required checks passed!"
+

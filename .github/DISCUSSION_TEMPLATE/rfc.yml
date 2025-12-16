@@ -1,0 +1,126 @@
+title: "📋 RFC: "
+labels:
+  - rfc
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Request for Comments (RFC) 📋
+        
+        Proposing a significant change to Spectra? Use this template to start a structured discussion.
+        
+        RFCs are for substantial changes like:
+        - New major features
+        - Breaking API changes
+        - Architectural decisions
+        - Process changes
+
+  - type: input
+    id: title
+    attributes:
+      label: RFC Title
+      description: A short, descriptive title
+      placeholder: "Add support for X"
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One paragraph explaining the proposal
+      placeholder: |
+        This RFC proposes adding support for X, which would allow users to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why should we do this? What problem does it solve?
+      placeholder: |
+        Currently, users cannot...
+        This is a problem because...
+        By implementing this, we can...
+    validations:
+      required: true
+
+  - type: textarea
+    id: detailed-design
+    attributes:
+      label: Detailed Design
+      description: Explain the design in enough detail for implementation
+      placeholder: |
+        ## Overview
+        ...
+        
+        ## API Changes
+        ...
+        
+        ## Implementation
+        ...
+        
+        ## Migration
+        ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: drawbacks
+    attributes:
+      label: Drawbacks
+      description: What are the downsides of this proposal?
+      placeholder: |
+        - Increases complexity
+        - May break existing...
+        - Requires...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: What other approaches did you consider?
+      placeholder: |
+        1. Alternative A: ...
+           - Pros: ...
+           - Cons: ...
+        
+        2. Alternative B: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: unresolved
+    attributes:
+      label: Unresolved Questions
+      description: What questions need to be answered before implementing?
+      placeholder: |
+        - Should we...?
+        - How should we handle...?
+        - What's the best way to...?
+
+  - type: dropdown
+    id: breaking
+    attributes:
+      label: Breaking Change?
+      options:
+        - "No - Backwards compatible"
+        - "Yes - Minor breaking change"
+        - "Yes - Major breaking change"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: RFC Checklist
+      options:
+        - label: I have searched for existing RFCs/issues on this topic
+          required: true
+        - label: I have considered backwards compatibility
+          required: true
+        - label: I am willing to help implement this (or find someone who will)
+

@@ -1,0 +1,71 @@
+title: "🆘 Help Wanted: "
+labels:
+  - help-wanted
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Need Help? 🆘
+        
+        Stuck on something? The community is here to help!
+        
+        For bugs, please use the [bug report template](https://github.com/adriandarian/spectra/issues/new?template=bug_report.yml) instead.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's the problem?
+      description: Describe what you're struggling with
+      placeholder: |
+        I'm trying to set up Spectra with my Jira instance but I keep getting...
+        I can't figure out how to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What are you trying to achieve?
+      description: What's your end goal?
+      placeholder: |
+        I want to sync my markdown specs to Jira every time I push to main...
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment Details
+      description: Help us understand your setup
+      placeholder: |
+        - Spectra version: 1.0.0
+        - OS: macOS 14.0
+        - Python: 3.11
+        - Issue Tracker: Jira Cloud
+        - Running in: Docker / Local / CI
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Error Messages
+      description: Any relevant output (use `--verbose` for more detail)
+      render: shell
+      placeholder: |
+        $ spectra sync --epic PROJ-123 --verbose
+        ...
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration
+      description: Share your config (remove sensitive data!)
+      render: yaml
+      placeholder: |
+        # .spectra.yaml (with secrets redacted)
+        tracker: jira
+        jira:
+          url: https://company.atlassian.net
+          project: PROJ
+
