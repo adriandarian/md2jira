@@ -11,6 +11,7 @@ Notion exports markdown files with specific formatting:
 - Nested page structure
 """
 
+import contextlib
 import csv
 import logging
 import re
@@ -205,10 +206,8 @@ class NotionParser(DocumentParserPort):
             # Check if it's a file path or content
             is_file_path = False
             if "\n" not in source and len(source) < 4096:
-                try:
+                with contextlib.suppress(OSError):
                     is_file_path = Path(source).exists()
-                except OSError:
-                    pass
             if not is_file_path:
                 # Extract first heading from content
                 match = re.search(r"^#\s+(.+)$", source, re.MULTILINE)

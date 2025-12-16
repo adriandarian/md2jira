@@ -2,6 +2,7 @@
 Tests for webhook receiver - receive Jira webhooks for reverse sync.
 """
 
+import contextlib
 import json
 import time
 from http.client import HTTPConnection
@@ -206,10 +207,8 @@ class TestWebhookServer:
 
         # Cleanup all created servers
         for server in servers:
-            try:
+            with contextlib.suppress(Exception):
                 server.stop()
-            except Exception:
-                pass
 
     def test_initialization(self, webhook_server):
         """Test server initialization."""
@@ -350,10 +349,8 @@ class TestWebhookServerHTTP:
 
         # Cleanup all created servers
         for server in servers:
-            try:
+            with contextlib.suppress(Exception):
                 server.stop()
-            except Exception:
-                pass
 
     def test_health_endpoint(self, webhook_server):
         """Test health check endpoint."""
