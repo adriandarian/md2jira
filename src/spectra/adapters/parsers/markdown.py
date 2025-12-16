@@ -247,8 +247,17 @@ class MarkdownParser(DocumentParserPort):
         """Get content from file path or string."""
         if isinstance(source, Path):
             return source.read_text(encoding="utf-8")
-        if isinstance(source, str) and Path(source).exists():
-            return Path(source).read_text(encoding="utf-8")
+        if isinstance(source, str):
+            # Only try to treat as file path if it's short enough and doesn't contain newlines
+            # (file paths don't have newlines and have OS-specific length limits)
+            if "\n" not in source and len(source) < 4096:
+                try:
+                    path = Path(source)
+                    if path.exists():
+                        return path.read_text(encoding="utf-8")
+                except OSError:
+                    # Invalid path characters or other OS-level path issues
+                    pass
         return source
 
     def _parse_all_stories(self, content: str) -> list[UserStory]:

@@ -561,13 +561,15 @@ class TestMainFunction:
 
     def test_main_validate_mode(self):
         """Test main in validate mode."""
+        from spectra.cli.exit_codes import ExitCode
+
         with (
             patch(
                 "sys.argv", ["spectra", "--markdown", "test.md", "--epic", "PROJ-123", "--validate"]
             ),
             patch("spectra.cli.app.validate_markdown") as mock_validate,
         ):
-            mock_validate.return_value = True
+            mock_validate.return_value = ExitCode.SUCCESS
             result = main()
             assert result == ExitCode.SUCCESS
             mock_validate.assert_called_once()

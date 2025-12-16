@@ -167,13 +167,20 @@ class NotionParser(DocumentParserPort):
             if source.is_dir():
                 return self._parse_notion_folder(source)
             content = source.read_text(encoding="utf-8")
-        elif isinstance(source, str) and Path(source).exists():
-            path = Path(source)
-            if path.suffix.lower() == ".csv":
-                return self._parse_database_csv(path)
-            if path.is_dir():
-                return self._parse_notion_folder(path)
-            content = path.read_text(encoding="utf-8")
+        elif isinstance(source, str):
+            content = source
+            # Only try to treat as file path if it's short enough and doesn't contain newlines
+            if "\n" not in source and len(source) < 4096:
+                try:
+                    path = Path(source)
+                    if path.exists():
+                        if path.suffix.lower() == ".csv":
+                            return self._parse_database_csv(path)
+                        if path.is_dir():
+                            return self._parse_notion_folder(path)
+                        content = path.read_text(encoding="utf-8")
+                except OSError:
+                    pass
         else:
             content = source
 
@@ -194,11 +201,19 @@ class NotionParser(DocumentParserPort):
             epic_title = source.stem
             # Remove Notion UUID suffix if present
             epic_title = re.sub(r"\s+[a-f0-9]{32}$", "", epic_title)
-        elif isinstance(source, str) and not Path(source).exists():
-            # Extract first heading
-            match = re.search(r"^#\s+(.+)$", source, re.MULTILINE)
-            if match:
-                epic_title = match.group(1).strip()
+        elif isinstance(source, str):
+            # Check if it's a file path or content
+            is_file_path = False
+            if "\n" not in source and len(source) < 4096:
+                try:
+                    is_file_path = Path(source).exists()
+                except OSError:
+                    pass
+            if not is_file_path:
+                # Extract first heading from content
+                match = re.search(r"^#\s+(.+)$", source, re.MULTILINE)
+                if match:
+                    epic_title = match.group(1).strip()
 
         return Epic(
             key=IssueKey("EPIC-0"),
@@ -224,8 +239,16 @@ class NotionParser(DocumentParserPort):
                     return errors
 
                 content = source.read_text(encoding="utf-8")
-            elif isinstance(source, str) and Path(source).exists():
-                content = Path(source).read_text(encoding="utf-8")
+            elif isinstance(source, str):
+                content = source
+                # Only try to treat as file path if it's short enough and doesn't contain newlines
+                if "\n" not in source and len(source) < 4096:
+                    try:
+                        path = Path(source)
+                        if path.exists():
+                            content = path.read_text(encoding="utf-8")
+                    except OSError:
+                        pass
             else:
                 content = source
 

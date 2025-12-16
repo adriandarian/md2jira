@@ -185,8 +185,16 @@ class YamlParser(DocumentParserPort):
         try:
             if isinstance(source, Path):
                 content = source.read_text(encoding="utf-8")
-            elif isinstance(source, str) and Path(source).exists():
-                content = Path(source).read_text(encoding="utf-8")
+            elif isinstance(source, str):
+                # Only try to treat as file path if it's short enough and doesn't contain newlines
+                content = source
+                if "\n" not in source and len(source) < 4096:
+                    try:
+                        path = Path(source)
+                        if path.exists():
+                            content = path.read_text(encoding="utf-8")
+                    except OSError:
+                        pass
             else:
                 content = source
 
