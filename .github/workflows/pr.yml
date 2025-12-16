@@ -10,7 +10,7 @@ on:
 # Cancel in-progress runs for the same PR
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false  # Disabled temporarily to debug CI failures
 
 permissions:
   contents: read
