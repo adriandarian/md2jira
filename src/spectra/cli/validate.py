@@ -242,11 +242,18 @@ class MarkdownValidator:
             if isinstance(source, Path):
                 content = source.read_text(encoding="utf-8")
                 result.file_path = str(source)
-            elif isinstance(source, str) and Path(source).exists():
-                content = Path(source).read_text(encoding="utf-8")
-                result.file_path = source
+            elif isinstance(source, str):
+                # Check if it looks like content (has newlines or markdown) vs a file path
+                # A file path typically doesn't have newlines and doesn't start with #
+                is_likely_content = "\n" in source or source.startswith("#")
+                if not is_likely_content and Path(source).exists():
+                    content = Path(source).read_text(encoding="utf-8")
+                    result.file_path = source
+                else:
+                    content = source
+                    result.file_path = "<string>"
             else:
-                content = source
+                content = str(source)
                 result.file_path = "<string>"
         except FileNotFoundError:
             result.add_error(

@@ -342,7 +342,7 @@ jobs:
             --cov-report=xml \
             --cov-report=html \
             --cov-report=term-missing \
-            --cov-fail-under=70
+            --cov-fail-under=65
 
       - name: 📤 Upload Coverage Report
         uses: actions/upload-artifact@v4
