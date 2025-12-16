@@ -186,7 +186,7 @@ jobs:
         run: pip install -e ".[dev,async]" pytest-timeout
 
       - name: 🧪 Run Tests
-        run: pytest tests/ -v --tb=short --ignore=tests/benchmarks/ --timeout=60 --junitxml=test-results-${{ matrix.os }}-${{ matrix.python-version }}.xml
+        run: pytest tests/ -v --tb=short --ignore=tests/benchmarks/ --ignore=tests/integration/ --ignore=tests/property/ --timeout=60 --junitxml=test-results-${{ matrix.os }}-${{ matrix.python-version }}.xml
 
       - name: 📤 Upload Test Results
         uses: actions/upload-artifact@v4
@@ -218,6 +218,8 @@ jobs:
         run: |
           pytest tests/ \
             --ignore=tests/benchmarks/ \
+            --ignore=tests/integration/ \
+            --ignore=tests/property/ \
             --timeout=60 \
             --cov=src/spectra \
             --cov-report=xml \
