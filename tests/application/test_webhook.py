@@ -187,11 +187,33 @@ class TestWebhookServer:
         )
         return sync
 
-    def test_initialization(self, mock_reverse_sync):
+    @pytest.fixture
+    def webhook_server(self, mock_reverse_sync):
+        """Create a webhook server that is automatically cleaned up."""
+        servers = []
+
+        def _create_server(**kwargs):
+            defaults = {
+                "reverse_sync": mock_reverse_sync,
+                "host": "localhost",
+            }
+            defaults.update(kwargs)
+            server = WebhookServer(**defaults)
+            servers.append(server)
+            return server
+
+        yield _create_server
+
+        # Cleanup all created servers
+        for server in servers:
+            try:
+                server.stop()
+            except Exception:
+                pass
+
+    def test_initialization(self, webhook_server):
         """Test server initialization."""
-        server = WebhookServer(
-            reverse_sync=mock_reverse_sync,
-            host="localhost",
+        server = webhook_server(
             port=9999,
             epic_key="PROJ-100",
             output_path="/test.md",
@@ -201,13 +223,9 @@ class TestWebhookServer:
         assert server.port == 9999
         assert server.epic_key == "PROJ-100"
 
-    def test_start_async_and_stop(self, mock_reverse_sync):
+    def test_start_async_and_stop(self, webhook_server):
         """Test starting and stopping server."""
-        server = WebhookServer(
-            reverse_sync=mock_reverse_sync,
-            host="localhost",
-            port=9998,
-        )
+        server = webhook_server(port=9998)
 
         server.start_async()
         assert server._running
@@ -217,11 +235,9 @@ class TestWebhookServer:
 
         assert not server._running
 
-    def test_handle_webhook_triggers_sync(self, mock_reverse_sync):
+    def test_handle_webhook_triggers_sync(self, webhook_server):
         """Test that handling webhook triggers sync."""
-        server = WebhookServer(
-            reverse_sync=mock_reverse_sync,
-            host="localhost",
+        server = webhook_server(
             port=9997,
             epic_key="PROJ-100",
             output_path="/test.md",
@@ -250,10 +266,9 @@ class TestWebhookServer:
         assert server.stats.events_processed == 1
         assert server.stats.syncs_triggered >= 1
 
-    def test_should_sync_filters_by_epic(self, mock_reverse_sync):
+    def test_should_sync_filters_by_epic(self, webhook_server):
         """Test that should_sync filters by epic key."""
-        server = WebhookServer(
-            reverse_sync=mock_reverse_sync,
+        server = webhook_server(
             epic_key="PROJ-100",
             output_path="/test.md",
         )
@@ -274,10 +289,9 @@ class TestWebhookServer:
         )
         assert not server._should_sync(different_event)
 
-    def test_should_sync_ignores_non_issue_events(self, mock_reverse_sync):
+    def test_should_sync_ignores_non_issue_events(self, webhook_server):
         """Test that should_sync ignores non-issue events."""
-        server = WebhookServer(
-            reverse_sync=mock_reverse_sync,
+        server = webhook_server(
             epic_key="PROJ-100",
             output_path="/test.md",
         )
@@ -288,11 +302,9 @@ class TestWebhookServer:
         )
         assert not server._should_sync(comment_event)
 
-    def test_get_status(self, mock_reverse_sync):
+    def test_get_status(self, webhook_server):
         """Test getting server status."""
-        server = WebhookServer(
-            reverse_sync=mock_reverse_sync,
-            host="localhost",
+        server = webhook_server(
             port=9996,
             epic_key="PROJ-100",
         )
@@ -319,55 +331,63 @@ class TestWebhookServerHTTP:
         )
         return sync
 
-    def test_health_endpoint(self, mock_reverse_sync):
+    @pytest.fixture
+    def webhook_server(self, mock_reverse_sync):
+        """Create a webhook server that is automatically cleaned up."""
+        servers = []
+
+        def _create_server(**kwargs):
+            defaults = {
+                "reverse_sync": mock_reverse_sync,
+                "host": "localhost",
+            }
+            defaults.update(kwargs)
+            server = WebhookServer(**defaults)
+            servers.append(server)
+            return server
+
+        yield _create_server
+
+        # Cleanup all created servers
+        for server in servers:
+            try:
+                server.stop()
+            except Exception:
+                pass
+
+    def test_health_endpoint(self, webhook_server):
         """Test health check endpoint."""
-        server = WebhookServer(
-            reverse_sync=mock_reverse_sync,
-            host="localhost",
-            port=9995,
-        )
+        server = webhook_server(port=9995)
 
         server.start_async()
         time.sleep(0.2)
 
-        try:
-            conn = HTTPConnection("localhost", 9995)
-            conn.request("GET", "/health")
-            response = conn.getresponse()
+        conn = HTTPConnection("localhost", 9995)
+        conn.request("GET", "/health")
+        response = conn.getresponse()
 
-            assert response.status == 200
-            body = json.loads(response.read().decode())
-            assert body["status"] == "ok"
-        finally:
-            server.stop()
+        assert response.status == 200
+        body = json.loads(response.read().decode())
+        assert body["status"] == "ok"
 
-    def test_status_endpoint(self, mock_reverse_sync):
+    def test_status_endpoint(self, webhook_server):
         """Test status endpoint."""
-        server = WebhookServer(
-            reverse_sync=mock_reverse_sync,
-            host="localhost",
-            port=9994,
-        )
+        server = webhook_server(port=9994)
 
         server.start_async()
         time.sleep(0.2)
 
-        try:
-            conn = HTTPConnection("localhost", 9994)
-            conn.request("GET", "/status")
-            response = conn.getresponse()
+        conn = HTTPConnection("localhost", 9994)
+        conn.request("GET", "/status")
+        response = conn.getresponse()
 
-            assert response.status == 200
-            body = json.loads(response.read().decode())
-            assert body["status"] == "running"
-        finally:
-            server.stop()
+        assert response.status == 200
+        body = json.loads(response.read().decode())
+        assert body["status"] == "running"
 
-    def test_webhook_endpoint(self, mock_reverse_sync):
+    def test_webhook_endpoint(self, webhook_server):
         """Test webhook POST endpoint."""
-        server = WebhookServer(
-            reverse_sync=mock_reverse_sync,
-            host="localhost",
+        server = webhook_server(
             port=9993,
             epic_key="PROJ-100",
             output_path="/test.md",
@@ -376,56 +396,46 @@ class TestWebhookServerHTTP:
         server.start_async()
         time.sleep(0.2)
 
-        try:
-            payload = json.dumps(
-                {
-                    "webhookEvent": "jira:issue_updated",
-                    "issue": {
-                        "key": "PROJ-123",
-                        "fields": {"project": {"key": "PROJ"}},
-                    },
-                }
-            )
-
-            conn = HTTPConnection("localhost", 9993)
-            conn.request(
-                "POST",
-                "/",
-                body=payload,
-                headers={"Content-Type": "application/json"},
-            )
-            response = conn.getresponse()
-
-            assert response.status == 200
-            body = json.loads(response.read().decode())
-            assert body["status"] == "accepted"
-        finally:
-            server.stop()
-
-    def test_invalid_json(self, mock_reverse_sync):
-        """Test handling of invalid JSON."""
-        server = WebhookServer(
-            reverse_sync=mock_reverse_sync,
-            host="localhost",
-            port=9992,
+        payload = json.dumps(
+            {
+                "webhookEvent": "jira:issue_updated",
+                "issue": {
+                    "key": "PROJ-123",
+                    "fields": {"project": {"key": "PROJ"}},
+                },
+            }
         )
+
+        conn = HTTPConnection("localhost", 9993)
+        conn.request(
+            "POST",
+            "/",
+            body=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        response = conn.getresponse()
+
+        assert response.status == 200
+        body = json.loads(response.read().decode())
+        assert body["status"] == "accepted"
+
+    def test_invalid_json(self, webhook_server):
+        """Test handling of invalid JSON."""
+        server = webhook_server(port=9992)
 
         server.start_async()
         time.sleep(0.2)
 
-        try:
-            conn = HTTPConnection("localhost", 9992)
-            conn.request(
-                "POST",
-                "/",
-                body="not valid json",
-                headers={"Content-Type": "application/json"},
-            )
-            response = conn.getresponse()
+        conn = HTTPConnection("localhost", 9992)
+        conn.request(
+            "POST",
+            "/",
+            body="not valid json",
+            headers={"Content-Type": "application/json"},
+        )
+        response = conn.getresponse()
 
-            assert response.status == 400
-        finally:
-            server.stop()
+        assert response.status == 400
 
 
 class TestWebhookDisplay:
