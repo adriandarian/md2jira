@@ -3,6 +3,7 @@ File Cache - File-based persistent cache.
 
 Stores cache entries as JSON files for persistence across restarts.
 """
+
 from __future__ import annotations
 
 import contextlib

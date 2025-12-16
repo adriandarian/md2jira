@@ -9,6 +9,7 @@ Components:
 - ChangeTracker: Persists and compares fingerprints between syncs
 - IncrementalSyncResult: Results with change detection stats
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -105,9 +106,7 @@ class StoryFingerprint:
         """Check if metadata has changed."""
         return self.metadata_hash != other.metadata_hash
 
-    def get_changed_subtasks(
-        self, other: StoryFingerprint
-    ) -> tuple[set[str], set[str], set[str]]:
+    def get_changed_subtasks(self, other: StoryFingerprint) -> tuple[set[str], set[str], set[str]]:
         """
         Compare subtasks with another fingerprint.
 
