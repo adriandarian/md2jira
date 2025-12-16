@@ -250,9 +250,9 @@ class InteractiveSession:
                                 issue_key=issue_key,
                                 story_id=story_id,
                                 description=f"Sync subtask: {subtask.name}",
-                                details=f"{subtask.story_points} SP"
-                                if subtask.story_points
-                                else None,
+                                details=(
+                                    f"{subtask.story_points} SP" if subtask.story_points else None
+                                ),
                             )
                         )
             self.phases.append(subtask_phase)

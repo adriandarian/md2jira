@@ -64,7 +64,8 @@ def sample_markdown() -> str:
     - Story US-001: Complete with description, AC, subtasks, commits
     - Story US-002: Simpler story with description only
     """
-    return dedent("""
+    return dedent(
+        """
     # Epic Title
 
     ## User Stories
@@ -117,13 +118,15 @@ def sample_markdown() -> str:
     **As a** user
     **I want** another feature
     **So that** I can do more
-    """)
+    """
+    )
 
 
 @pytest.fixture
 def minimal_markdown() -> str:
     """Minimal valid markdown with one story."""
-    return dedent("""
+    return dedent(
+        """
     # Epic Title
 
     ### US-001: Single Story
@@ -133,7 +136,8 @@ def minimal_markdown() -> str:
     **As a** user
     **I want** a feature
     **So that** I benefit
-    """)
+    """
+    )
 
 
 @pytest.fixture

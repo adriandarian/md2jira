@@ -430,7 +430,8 @@ class TestRunValidate:
     def test_run_validate_valid_file(self, tmp_path):
         """Test run_validate on a valid file."""
         md_file = tmp_path / "test.md"
-        md_file.write_text("""### 📋 US-001: Valid Story
+        md_file.write_text(
+            """### 📋 US-001: Valid Story
 
 | Field | Value |
 |-------|-------|
@@ -440,7 +441,8 @@ class TestRunValidate:
 **As a** user
 **I want** to test
 **So that** it works
-""")
+"""
+        )
 
         console = Console(color=False)
         result = run_validate(console, str(md_file))
@@ -468,10 +470,12 @@ class TestRunValidate:
         """Test run_validate with strict mode."""
         md_file = tmp_path / "test.md"
         # Content that generates warnings but no errors
-        md_file.write_text("""### 📋 US-001: X
+        md_file.write_text(
+            """### 📋 US-001: X
 
 Description without points or format.
-""")
+"""
+        )
 
         console = Console(color=False)
 

@@ -20,7 +20,8 @@ class TestFileConfigProvider:
         """Test loading YAML config file."""
         config_file = tmp_path / ".spectra.yaml"
         config_file.write_text(
-            dedent("""
+            dedent(
+                """
             jira:
               url: https://example.atlassian.net
               email: user@example.com
@@ -34,7 +35,8 @@ class TestFileConfigProvider:
 
             markdown: /path/to/epic.md
             epic: PROJ-123
-        """)
+        """
+            )
         )
 
         provider = FileConfigProvider(config_path=config_file)
@@ -54,7 +56,8 @@ class TestFileConfigProvider:
         """Test loading TOML config file."""
         config_file = tmp_path / ".spectra.toml"
         config_file.write_text(
-            dedent("""
+            dedent(
+                """
             markdown = "/path/to/epic.md"
             epic = "PROJ-456"
 
@@ -66,7 +69,8 @@ class TestFileConfigProvider:
             [sync]
             verbose = false
             execute = true
-        """)
+        """
+            )
         )
 
         provider = FileConfigProvider(config_path=config_file)
@@ -84,7 +88,8 @@ class TestFileConfigProvider:
         """Test loading from pyproject.toml [tool.spectra] section."""
         config_file = tmp_path / "pyproject.toml"
         config_file.write_text(
-            dedent("""
+            dedent(
+                """
             [project]
             name = "my-project"
 
@@ -95,7 +100,8 @@ class TestFileConfigProvider:
             url = "https://test.atlassian.net"
             email = "test@test.com"
             api_token = "test-token"
-        """)
+        """
+            )
         )
 
         provider = FileConfigProvider(config_path=config_file)
@@ -118,11 +124,13 @@ class TestFileConfigProvider:
         """Test error on invalid YAML syntax."""
         config_file = tmp_path / ".spectra.yaml"
         config_file.write_text(
-            dedent("""
+            dedent(
+                """
             jira:
               url: "unclosed string
               invalid:: yaml
-        """)
+        """
+            )
         )
 
         provider = FileConfigProvider(config_path=config_file)
@@ -135,10 +143,12 @@ class TestFileConfigProvider:
         """Test error on invalid TOML syntax."""
         config_file = tmp_path / ".spectra.toml"
         config_file.write_text(
-            dedent("""
+            dedent(
+                """
             [jira
             url = invalid
-        """)
+        """
+            )
         )
 
         provider = FileConfigProvider(config_path=config_file)
@@ -150,7 +160,8 @@ class TestFileConfigProvider:
         """Test that CLI overrides take precedence over file config."""
         config_file = tmp_path / ".spectra.yaml"
         config_file.write_text(
-            dedent("""
+            dedent(
+                """
             jira:
               url: https://file.atlassian.net
               email: file@example.com
@@ -158,7 +169,8 @@ class TestFileConfigProvider:
 
             sync:
               verbose: false
-        """)
+        """
+            )
         )
 
         provider = FileConfigProvider(
@@ -175,12 +187,14 @@ class TestFileConfigProvider:
 
         config_file = tmp_path / ".spectra.yaml"
         config_file.write_text(
-            dedent("""
+            dedent(
+                """
             jira:
               url: https://auto.atlassian.net
               email: auto@example.com
               api_token: auto-token
-        """)
+        """
+            )
         )
 
         provider = FileConfigProvider()
@@ -193,11 +207,13 @@ class TestFileConfigProvider:
         """Test validation reports missing required fields."""
         config_file = tmp_path / ".spectra.yaml"
         config_file.write_text(
-            dedent("""
+            dedent(
+                """
             jira:
               url: https://example.atlassian.net
             # Missing email and api_token
-        """)
+        """
+            )
         )
 
         provider = FileConfigProvider(config_path=config_file)
@@ -229,12 +245,14 @@ class TestEnvironmentConfigProvider:
         """Test that environment variables override file config."""
         config_file = tmp_path / ".spectra.yaml"
         config_file.write_text(
-            dedent("""
+            dedent(
+                """
             jira:
               url: https://file.atlassian.net
               email: file@example.com
               api_token: file-token
-        """)
+        """
+            )
         )
 
         monkeypatch.setenv("JIRA_URL", "https://env.atlassian.net")
@@ -255,7 +273,8 @@ class TestEnvironmentConfigProvider:
         """Test that CLI args override both env and file config."""
         config_file = tmp_path / ".spectra.yaml"
         config_file.write_text(
-            dedent("""
+            dedent(
+                """
             jira:
               url: https://file.atlassian.net
               email: file@example.com
@@ -263,7 +282,8 @@ class TestEnvironmentConfigProvider:
 
             sync:
               verbose: false
-        """)
+        """
+            )
         )
 
         monkeypatch.setenv("JIRA_URL", "https://env.atlassian.net")
@@ -285,11 +305,13 @@ class TestEnvironmentConfigProvider:
 
         env_file = tmp_path / ".env"
         env_file.write_text(
-            dedent("""
+            dedent(
+                """
             JIRA_URL=https://dotenv.atlassian.net
             JIRA_EMAIL=dotenv@example.com
             JIRA_API_TOKEN=dotenv-token
-        """)
+        """
+            )
         )
 
         provider = EnvironmentConfigProvider()
@@ -302,12 +324,14 @@ class TestEnvironmentConfigProvider:
         """Test that provider name includes config file when loaded."""
         config_file = tmp_path / ".spectra.yaml"
         config_file.write_text(
-            dedent("""
+            dedent(
+                """
             jira:
               url: https://example.atlassian.net
               email: test@example.com
               api_token: token
-        """)
+        """
+            )
         )
 
         provider = EnvironmentConfigProvider(config_file=config_file)
@@ -341,7 +365,8 @@ class TestConfigPrecedence:
         # 1. Config file (lowest priority)
         config_file = tmp_path / ".spectra.yaml"
         config_file.write_text(
-            dedent("""
+            dedent(
+                """
             jira:
               url: https://file.atlassian.net
               email: file@example.com
@@ -350,7 +375,8 @@ class TestConfigPrecedence:
 
             sync:
               verbose: false
-        """)
+        """
+            )
         )
 
         monkeypatch.chdir(tmp_path)
@@ -358,10 +384,12 @@ class TestConfigPrecedence:
         # 2. .env file
         env_file = tmp_path / ".env"
         env_file.write_text(
-            dedent("""
+            dedent(
+                """
             JIRA_URL=https://dotenv.atlassian.net
             JIRA_EMAIL=dotenv@example.com
-        """)
+        """
+            )
         )
 
         # 3. Environment variables

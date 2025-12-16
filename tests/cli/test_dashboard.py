@@ -284,7 +284,8 @@ class TestLoadDashboardData:
     def test_load_with_markdown(self, tmp_path):
         """Test loading with markdown file."""
         md_file = tmp_path / "test.md"
-        md_file.write_text("""### 📋 US-001: Test Story
+        md_file.write_text(
+            """### 📋 US-001: Test Story
 
 | Field | Value |
 |-------|-------|
@@ -294,7 +295,8 @@ class TestLoadDashboardData:
 **As a** user
 **I want** to test
 **So that** it works
-""")
+"""
+        )
 
         data = load_dashboard_data(markdown_path=str(md_file))
 
@@ -333,12 +335,14 @@ class TestRunDashboard:
     def test_run_dashboard_with_markdown(self, tmp_path, capsys):
         """Test running dashboard with markdown file."""
         md_file = tmp_path / "test.md"
-        md_file.write_text("""### 📋 US-001: Test Story
+        md_file.write_text(
+            """### 📋 US-001: Test Story
 
 | **Story Points** | 5 |
 
 Description.
-""")
+"""
+        )
 
         console = Console(color=False)
         result = run_dashboard(console, markdown_path=str(md_file))

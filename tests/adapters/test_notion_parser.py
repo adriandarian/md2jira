@@ -44,7 +44,8 @@ class TestNotionParser:
 
     def test_can_parse_with_properties(self, parser):
         """Should detect Notion content with properties block."""
-        content = dedent("""
+        content = dedent(
+            """
             Status: In Progress
             Priority: High
             Story Points: 5
@@ -52,30 +53,35 @@ class TestNotionParser:
             # Story Title
 
             Description here.
-        """)
+        """
+        )
 
         assert parser.can_parse(content) is True
 
     def test_can_parse_with_callout(self, parser):
         """Should detect Notion content with emoji callout."""
-        content = dedent("""
+        content = dedent(
+            """
             # Story Title
 
             > 👤 As a user, I want to do something so that I get benefit
-        """)
+        """
+        )
 
         assert parser.can_parse(content) is True
 
     def test_can_parse_with_toggle(self, parser):
         """Should detect Notion content with toggle blocks."""
-        content = dedent("""
+        content = dedent(
+            """
             # Story Title
 
             <details>
             <summary>Toggle content</summary>
             Hidden content here.
             </details>
-        """)
+        """
+        )
 
         assert parser.can_parse(content) is True
 
@@ -91,7 +97,8 @@ class TestNotionParser:
 
     def test_parse_simple_story(self, parser):
         """Should parse a basic Notion story page."""
-        content = dedent("""
+        content = dedent(
+            """
             Status: Planned
             Priority: Medium
             Story Points: 3
@@ -101,7 +108,8 @@ class TestNotionParser:
             ## Description
 
             As a user, I want to log in so that I can access my account.
-        """)
+        """
+        )
 
         stories = parser.parse_stories(content)
 
@@ -114,11 +122,13 @@ class TestNotionParser:
 
     def test_parse_story_with_callout_description(self, parser):
         """Should parse description from emoji callout."""
-        content = dedent("""
+        content = dedent(
+            """
             # Feature Implementation
 
             > 👤 As a developer, I want automated tests so that I can catch bugs early
-        """)
+        """
+        )
 
         stories = parser.parse_stories(content)
 
@@ -131,7 +141,8 @@ class TestNotionParser:
 
     def test_parse_story_with_acceptance_criteria(self, parser):
         """Should parse acceptance criteria checkboxes."""
-        content = dedent("""
+        content = dedent(
+            """
             Status: In Progress
             Priority: High
 
@@ -142,7 +153,8 @@ class TestNotionParser:
             - [ ] First criterion not done
             - [x] Second criterion completed
             - [ ] Third criterion pending
-        """)
+        """
+        )
 
         stories = parser.parse_stories(content)
 
@@ -155,7 +167,8 @@ class TestNotionParser:
 
     def test_parse_story_with_subtasks_table(self, parser):
         """Should parse subtasks from markdown table."""
-        content = dedent("""
+        content = dedent(
+            """
             Status: Planned
 
             # Story Title
@@ -166,7 +179,8 @@ class TestNotionParser:
             |------|-------------|--------|--------|
             | Create UI | Build the form | 2 | Done |
             | Add validation | Validate inputs | 3 | In Progress |
-        """)
+        """
+        )
 
         stories = parser.parse_stories(content)
 
@@ -181,7 +195,8 @@ class TestNotionParser:
 
     def test_parse_story_with_technical_notes(self, parser):
         """Should parse technical notes section."""
-        content = dedent("""
+        content = dedent(
+            """
             Status: Planned
 
             # Story Title
@@ -190,7 +205,8 @@ class TestNotionParser:
 
             Use React for the frontend.
             Consider caching for performance.
-        """)
+        """
+        )
 
         stories = parser.parse_stories(content)
 
@@ -204,7 +220,8 @@ class TestNotionParser:
 
     def test_parse_multiple_stories_h1(self, parser):
         """Should parse multiple stories separated by H1."""
-        content = dedent("""
+        content = dedent(
+            """
             # US-001: First Story
 
             Status: Done
@@ -216,7 +233,8 @@ class TestNotionParser:
             Status: Planned
 
             Description of second story.
-        """)
+        """
+        )
 
         stories = parser.parse_stories(content)
 
@@ -226,7 +244,8 @@ class TestNotionParser:
 
     def test_parse_multiple_stories_h2(self, parser):
         """Should parse multiple stories with H2 headings."""
-        content = dedent("""
+        content = dedent(
+            """
             Status: Planned
             Priority: High
 
@@ -239,7 +258,8 @@ class TestNotionParser:
             ## US-002: Second Story
 
             Second description.
-        """)
+        """
+        )
 
         stories = parser.parse_stories(content)
 
@@ -252,7 +272,8 @@ class TestNotionParser:
 
     def test_parse_epic_from_content(self, parser):
         """Should parse epic with stories."""
-        content = dedent("""
+        content = dedent(
+            """
             # Epic: User Authentication
 
             ## US-001: Login
@@ -266,7 +287,8 @@ class TestNotionParser:
             Status: Planned
 
             > 👤 As a user, I want to log out so that my session is secure
-        """)
+        """
+        )
 
         epic = parser.parse_epic(content)
 
@@ -288,14 +310,16 @@ class TestNotionParser:
 
     def test_validate_valid_content(self, parser):
         """Should return no errors for valid Notion content."""
-        content = dedent("""
+        content = dedent(
+            """
             Status: Planned
             Priority: High
 
             # Story Title
 
             > 👤 As a user, I want something so that I benefit
-        """)
+        """
+        )
 
         errors = parser.validate(content)
 
@@ -316,14 +340,16 @@ class TestNotionParser:
 
     def test_extract_properties_block(self, parser):
         """Should extract properties from top of content."""
-        content = dedent("""
+        content = dedent(
+            """
             Status: In Progress
             Priority: High
             Story Points: 5
             Assignee: @john.doe
 
             # Story Title
-        """)
+        """
+        )
 
         properties = parser._extract_properties(content)
 
@@ -334,12 +360,14 @@ class TestNotionParser:
 
     def test_extract_properties_with_brackets(self, parser):
         """Should handle Notion-style link formatting."""
-        content = dedent("""
+        content = dedent(
+            """
             Related: [Project Link]
             Owner: @user
 
             # Title
-        """)
+        """
+        )
 
         properties = parser._extract_properties(content)
 
@@ -351,12 +379,14 @@ class TestNotionParser:
 
     def test_parse_markdown_table(self, parser):
         """Should parse markdown table correctly."""
-        table_content = dedent("""
+        table_content = dedent(
+            """
             | Name | Status | Points |
             |------|--------|--------|
             | Task 1 | Done | 2 |
             | Task 2 | Pending | 3 |
-        """)
+        """
+        )
 
         rows = parser._parse_markdown_table(table_content)
 
@@ -367,12 +397,14 @@ class TestNotionParser:
 
     def test_parse_table_with_empty_cells(self, parser):
         """Should handle tables with empty cells."""
-        table_content = dedent("""
+        table_content = dedent(
+            """
             | Task | Description | Status |
             |------|-------------|--------|
             | Task 1 | | Done |
             | Task 2 | Some desc | |
-        """)
+        """
+        )
 
         rows = parser._parse_markdown_table(table_content)
 
@@ -388,14 +420,16 @@ class TestNotionParser:
         """Should parse from actual file."""
         md_file = tmp_path / "story.md"
         md_file.write_text(
-            dedent("""
+            dedent(
+                """
             Status: Planned
             Priority: High
 
             # US-001: From File
 
             > 👤 As a user, I want file parsing so that I can import Notion exports
-        """)
+        """
+            )
         )
 
         stories = parser.parse_stories(md_file)
@@ -407,11 +441,13 @@ class TestNotionParser:
         """Should parse Notion database CSV export."""
         csv_file = tmp_path / "database.csv"
         csv_file.write_text(
-            dedent("""
+            dedent(
+                """
             Name,Status,Priority,Story Points
             "First Task",Done,High,3
             "Second Task",Planned,Medium,5
-        """).strip()
+        """
+            ).strip()
         )
 
         stories = parser.parse_stories(csv_file)
@@ -428,24 +464,28 @@ class TestNotionParser:
         folder.mkdir()
 
         (folder / "Story 1.md").write_text(
-            dedent("""
+            dedent(
+                """
             Status: Done
             Priority: High
 
             # US-001: Story One
 
             First story content.
-        """)
+        """
+            )
         )
 
         (folder / "Story 2.md").write_text(
-            dedent("""
+            dedent(
+                """
             Status: Planned
 
             # US-002: Story Two
 
             Second story content.
-        """)
+        """
+            )
         )
 
         stories = parser.parse_stories(folder)
@@ -521,7 +561,8 @@ class TestNotionParserIntegration:
 
     def test_full_notion_page_export(self):
         """Should parse a complete Notion page export."""
-        content = dedent("""
+        content = dedent(
+            """
             Status: In Progress
             Priority: High
             Story Points: 8
@@ -555,7 +596,8 @@ class TestNotionParserIntegration:
             Using bcrypt for password hashing.
             TOTP implementation with speakeasy library.
             Redis for session storage.
-        """)
+        """
+        )
 
         parser = NotionParser()
         stories = parser.parse_stories(content)
@@ -590,11 +632,13 @@ class TestNotionParserIntegration:
 
     def test_parse_minimal_notion_export(self):
         """Should handle minimal Notion exports."""
-        content = dedent("""
+        content = dedent(
+            """
             Status: Planned
 
             # Simple Task
-        """)
+        """
+        )
 
         parser = NotionParser()
         stories = parser.parse_stories(content)
@@ -605,12 +649,14 @@ class TestNotionParserIntegration:
 
     def test_parse_notion_database_export(self, tmp_path):
         """Should parse a Notion database CSV export."""
-        csv_content = dedent("""
+        csv_content = dedent(
+            """
             Name,Description,Status,Priority,Story Points,Assignee
             "User Authentication","Implement login flow",In Progress,High,5,john@example.com
             "Dashboard Design","Create main dashboard",Planned,Medium,8,jane@example.com
             "API Integration","Connect to backend",Done,High,3,john@example.com
-        """).strip()
+        """
+        ).strip()
 
         csv_file = tmp_path / "tasks.csv"
         csv_file.write_text(csv_content)

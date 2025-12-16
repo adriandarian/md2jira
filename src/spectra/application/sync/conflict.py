@@ -512,12 +512,12 @@ class ConflictDetector:
                         jira_key=jira_key,
                         field="description",
                         conflict_type=ConflictType.BOTH_MODIFIED,
-                        local_value=local_desc[:100] + "..."
-                        if len(local_desc) > 100
-                        else local_desc,
-                        remote_value=remote_desc[:100] + "..."
-                        if len(remote_desc) > 100
-                        else remote_desc,
+                        local_value=(
+                            local_desc[:100] + "..." if len(local_desc) > 100 else local_desc
+                        ),
+                        remote_value=(
+                            remote_desc[:100] + "..." if len(remote_desc) > 100 else remote_desc
+                        ),
                         base_value="[previous version]",
                     )
                 )

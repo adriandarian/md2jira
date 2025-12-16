@@ -77,11 +77,13 @@ class TestYamlParser:
 
     def test_parse_simple_story(self, parser):
         """Should parse a minimal story."""
-        content = dedent("""
+        content = dedent(
+            """
             stories:
               - id: US-001
                 title: "Simple Story"
-        """)
+        """
+        )
 
         stories = parser.parse_stories(content)
 
@@ -91,7 +93,8 @@ class TestYamlParser:
 
     def test_parse_story_with_structured_description(self, parser):
         """Should parse structured description format."""
-        content = dedent("""
+        content = dedent(
+            """
             stories:
               - id: US-001
                 title: "Story with Description"
@@ -99,7 +102,8 @@ class TestYamlParser:
                   as_a: "user"
                   i_want: "to do something"
                   so_that: "I get benefit"
-        """)
+        """
+        )
 
         stories = parser.parse_stories(content)
 
@@ -112,12 +116,14 @@ class TestYamlParser:
 
     def test_parse_story_with_string_description(self, parser):
         """Should parse string description format."""
-        content = dedent("""
+        content = dedent(
+            """
             stories:
               - id: US-001
                 title: "Story"
                 description: "As a user, I want feature so that benefit"
-        """)
+        """
+        )
 
         stories = parser.parse_stories(content)
 
@@ -129,12 +135,14 @@ class TestYamlParser:
 
     def test_parse_story_points(self, parser):
         """Should parse story points."""
-        content = dedent("""
+        content = dedent(
+            """
             stories:
               - id: US-001
                 title: "Story"
                 story_points: 5
-        """)
+        """
+        )
 
         stories = parser.parse_stories(content)
 
@@ -142,7 +150,8 @@ class TestYamlParser:
 
     def test_parse_priority(self, parser):
         """Should parse priority values."""
-        content = dedent("""
+        content = dedent(
+            """
             stories:
               - id: US-001
                 title: "High Priority"
@@ -150,7 +159,8 @@ class TestYamlParser:
               - id: US-002
                 title: "Low Priority"
                 priority: low
-        """)
+        """
+        )
 
         stories = parser.parse_stories(content)
 
@@ -159,7 +169,8 @@ class TestYamlParser:
 
     def test_parse_status(self, parser):
         """Should parse status values."""
-        content = dedent("""
+        content = dedent(
+            """
             stories:
               - id: US-001
                 title: "In Progress"
@@ -167,7 +178,8 @@ class TestYamlParser:
               - id: US-002
                 title: "Done"
                 status: done
-        """)
+        """
+        )
 
         stories = parser.parse_stories(content)
 
@@ -176,7 +188,8 @@ class TestYamlParser:
 
     def test_parse_acceptance_criteria_structured(self, parser):
         """Should parse structured acceptance criteria."""
-        content = dedent("""
+        content = dedent(
+            """
             stories:
               - id: US-001
                 title: "Story"
@@ -185,7 +198,8 @@ class TestYamlParser:
                     done: false
                   - criterion: "Second criterion"
                     done: true
-        """)
+        """
+        )
 
         stories = parser.parse_stories(content)
 
@@ -198,14 +212,16 @@ class TestYamlParser:
 
     def test_parse_acceptance_criteria_simple(self, parser):
         """Should parse simple string acceptance criteria."""
-        content = dedent("""
+        content = dedent(
+            """
             stories:
               - id: US-001
                 title: "Story"
                 acceptance_criteria:
                   - "First criterion"
                   - "Second criterion"
-        """)
+        """
+        )
 
         stories = parser.parse_stories(content)
 
@@ -216,7 +232,8 @@ class TestYamlParser:
 
     def test_parse_subtasks_structured(self, parser):
         """Should parse structured subtasks."""
-        content = dedent("""
+        content = dedent(
+            """
             stories:
               - id: US-001
                 title: "Story"
@@ -228,7 +245,8 @@ class TestYamlParser:
                   - name: "Subtask 2"
                     story_points: 3
                     status: in_progress
-        """)
+        """
+        )
 
         stories = parser.parse_stories(content)
 
@@ -242,14 +260,16 @@ class TestYamlParser:
 
     def test_parse_subtasks_simple(self, parser):
         """Should parse simple string subtasks."""
-        content = dedent("""
+        content = dedent(
+            """
             stories:
               - id: US-001
                 title: "Story"
                 subtasks:
                   - "Do first thing"
                   - "Do second thing"
-        """)
+        """
+        )
 
         stories = parser.parse_stories(content)
 
@@ -260,7 +280,8 @@ class TestYamlParser:
 
     def test_parse_commits(self, parser):
         """Should parse commit references."""
-        content = dedent("""
+        content = dedent(
+            """
             stories:
               - id: US-001
                 title: "Story"
@@ -268,7 +289,8 @@ class TestYamlParser:
                   - hash: "a1b2c3d4e5f6"
                     message: "Add feature"
                   - "b2c3d4e5"
-        """)
+        """
+        )
 
         stories = parser.parse_stories(content)
 
@@ -280,14 +302,16 @@ class TestYamlParser:
 
     def test_parse_technical_notes(self, parser):
         """Should parse technical notes."""
-        content = dedent("""
+        content = dedent(
+            """
             stories:
               - id: US-001
                 title: "Story"
                 technical_notes: |
                   Some technical details here.
                   Multi-line notes.
-        """)
+        """
+        )
 
         stories = parser.parse_stories(content)
 
@@ -295,7 +319,8 @@ class TestYamlParser:
 
     def test_parse_multiple_stories(self, parser):
         """Should parse multiple stories."""
-        content = dedent("""
+        content = dedent(
+            """
             stories:
               - id: US-001
                 title: "First Story"
@@ -306,7 +331,8 @@ class TestYamlParser:
               - id: US-003
                 title: "Third Story"
                 story_points: 8
-        """)
+        """
+        )
 
         stories = parser.parse_stories(content)
 
@@ -321,7 +347,8 @@ class TestYamlParser:
 
     def test_parse_epic_basic(self, parser):
         """Should parse basic epic structure."""
-        content = dedent("""
+        content = dedent(
+            """
             epic:
               title: "Epic Title"
               description: "Epic description"
@@ -329,7 +356,8 @@ class TestYamlParser:
             stories:
               - id: US-001
                 title: "Story"
-        """)
+        """
+        )
 
         epic = parser.parse_epic(content)
 
@@ -339,7 +367,8 @@ class TestYamlParser:
 
     def test_parse_epic_with_key(self, parser):
         """Should parse epic with existing key."""
-        content = dedent("""
+        content = dedent(
+            """
             epic:
               key: PROJ-123
               title: "Epic Title"
@@ -347,7 +376,8 @@ class TestYamlParser:
             stories:
               - id: US-001
                 title: "Story"
-        """)
+        """
+        )
 
         epic = parser.parse_epic(content)
 
@@ -356,11 +386,13 @@ class TestYamlParser:
 
     def test_parse_epic_stories_only(self, parser):
         """Should create epic from stories-only file."""
-        content = dedent("""
+        content = dedent(
+            """
             stories:
               - id: US-001
                 title: "Story"
-        """)
+        """
+        )
 
         epic = parser.parse_epic(content)
 
@@ -382,11 +414,13 @@ class TestYamlParser:
 
     def test_validate_valid_content(self, parser):
         """Should return empty errors for valid content."""
-        content = dedent("""
+        content = dedent(
+            """
             stories:
               - id: US-001
                 title: "Valid Story"
-        """)
+        """
+        )
 
         errors = parser.validate(content)
 
@@ -402,10 +436,12 @@ class TestYamlParser:
 
     def test_validate_missing_story_id(self, parser):
         """Should report missing story ID."""
-        content = dedent("""
+        content = dedent(
+            """
             stories:
               - title: "Story without ID"
-        """)
+        """
+        )
 
         errors = parser.validate(content)
 
@@ -413,10 +449,12 @@ class TestYamlParser:
 
     def test_validate_missing_story_title(self, parser):
         """Should report missing story title."""
-        content = dedent("""
+        content = dedent(
+            """
             stories:
               - id: US-001
-        """)
+        """
+        )
 
         errors = parser.validate(content)
 
@@ -424,12 +462,14 @@ class TestYamlParser:
 
     def test_validate_invalid_priority(self, parser):
         """Should report invalid priority value."""
-        content = dedent("""
+        content = dedent(
+            """
             stories:
               - id: US-001
                 title: "Story"
                 priority: invalid_priority
-        """)
+        """
+        )
 
         errors = parser.validate(content)
 
@@ -437,12 +477,14 @@ class TestYamlParser:
 
     def test_validate_invalid_status(self, parser):
         """Should report invalid status value."""
-        content = dedent("""
+        content = dedent(
+            """
             stories:
               - id: US-001
                 title: "Story"
                 status: invalid_status
-        """)
+        """
+        )
 
         errors = parser.validate(content)
 
@@ -458,12 +500,14 @@ class TestYamlParser:
 
     def test_validate_story_points_must_be_number(self, parser):
         """Should report error for non-numeric story points."""
-        content = dedent("""
+        content = dedent(
+            """
             stories:
               - id: US-001
                 title: "Story"
                 story_points: "five"
-        """)
+        """
+        )
 
         errors = parser.validate(content)
 
@@ -477,12 +521,14 @@ class TestYamlParser:
         """Should parse from actual file."""
         yaml_file = tmp_path / "stories.yaml"
         yaml_file.write_text(
-            dedent("""
+            dedent(
+                """
             stories:
               - id: US-001
                 title: "From File"
                 story_points: 3
-        """)
+        """
+            )
         )
 
         stories = parser.parse_stories(yaml_file)
@@ -575,7 +621,8 @@ class TestYamlParserIntegration:
 
     def test_full_story_roundtrip(self):
         """Should parse a complete story with all fields."""
-        content = dedent("""
+        content = dedent(
+            """
             epic:
               key: PROJ-100
               title: "Complete Epic"
@@ -610,7 +657,8 @@ class TestYamlParserIntegration:
                 technical_notes: |
                   Using pytest for testing.
                   Mock external dependencies.
-        """)
+        """
+        )
 
         parser = YamlParser()
         epic = parser.parse_epic(content)
@@ -642,12 +690,14 @@ class TestYamlParserIntegration:
 
     def test_validate_then_parse(self):
         """Should validate before parsing for safety."""
-        content = dedent("""
+        content = dedent(
+            """
             stories:
               - id: US-001
                 title: "Valid Story"
                 story_points: 5
-        """)
+        """
+        )
 
         parser = YamlParser()
 
@@ -661,7 +711,8 @@ class TestYamlParserIntegration:
 
     def test_parse_with_alternative_field_names(self):
         """Should accept alternative field name formats."""
-        content = dedent("""
+        content = dedent(
+            """
             stories:
               - id: US-001
                 title: "Story"
@@ -672,7 +723,8 @@ class TestYamlParserIntegration:
                 subtasks:
                   - title: "Subtask"
                     sp: 2
-        """)
+        """
+        )
 
         parser = YamlParser()
         stories = parser.parse_stories(content)
