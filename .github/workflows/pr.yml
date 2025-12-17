@@ -4,6 +4,11 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review, edited]
+  # pull_request_target is needed for PR title validation to access PR metadata
+  # This is safe because pr-title job does NOT checkout any code
+  pull_request_target:
+    branches: [main]
+    types: [opened, edited, reopened]
   push:
     branches: [main]
 
@@ -27,7 +32,8 @@ jobs:
   pr-title:
     name: 📝 PR Title
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    # Only run on pull_request_target to have access to PR metadata
+    if: github.event_name == 'pull_request_target'
     permissions:
       pull-requests: read
     steps:
@@ -69,8 +75,20 @@ jobs:
           wip: true
           subjectPattern: ^(?![A-Z]).+$
           subjectPatternError: |
-            The PR title "{title}" doesn't match the required format.
-            Please use Conventional Commits format: <type>(<scope>): <description>
+            The subject "{subject}" doesn't match the required format.
+            
+            ❌ Your PR title: "{title}"
+            
+            ✅ Expected format: <type>(<scope>): <lowercase description>
+            
+            Examples:
+              • feat: add new sync command
+              • fix(cli): resolve argument parsing issue
+              • docs(readme): update installation instructions
+              • ci: improve test coverage
+            
+            Valid types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert, deps
+            Valid scopes (optional): core, adapters, cli, application, plugins, docs, tests, ci, deps, vscode, github-action, config
 
   lint:
     name: 🧹 Lint & Format
@@ -152,14 +170,18 @@ jobs:
           name: coverage-report
           path: htmlcov/
 
-      - name: Coverage Comment
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11' && github.event_name == 'pull_request'
-        uses: py-cov-action/python-coverage-comment-action@v3
-        continue-on-error: true
-        with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MINIMUM_GREEN: 80
-          MINIMUM_ORANGE: 60
+      - name: Coverage Summary
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+        run: |
+          echo "## 📊 Coverage Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          # Extract coverage percentage from the XML report
+          if [ -f coverage.xml ]; then
+            COVERAGE=$(python -c "import xml.etree.ElementTree as ET; tree = ET.parse('coverage.xml'); print(f\"{float(tree.getroot().attrib['line-rate']) * 100:.1f}%\")")
+            echo "**Line Coverage:** $COVERAGE" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📁 Full coverage report available in workflow artifacts" >> $GITHUB_STEP_SUMMARY
 
   # ============================================================================
   # Stage 3: Additional Tests (after primary tests pass)
