@@ -89,3 +89,6 @@ backup_*.json
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Allow markdown files in tests/samples
+!tests/samples/*.md
