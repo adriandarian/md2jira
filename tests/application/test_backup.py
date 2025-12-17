@@ -324,6 +324,7 @@ class TestBackupManager:
     def test_backup_id_generation(self, manager):
         """Should generate unique backup IDs."""
         import time
+
         # Generate multiple IDs with small delays to ensure uniqueness
         ids = []
         for _ in range(10):

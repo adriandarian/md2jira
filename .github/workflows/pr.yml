@@ -298,6 +298,8 @@ jobs:
     name: 👥 Auto Assign
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' && !github.event.pull_request.draft && github.actor != 'dependabot[bot]'
+    permissions:
+      pull-requests: write
     steps:
       - uses: kentaro-m/auto-assign-action@v2.0.0
         with:
@@ -305,14 +307,26 @@ jobs:
       - uses: actions/github-script@v7
         with:
           script: |
-            const author = context.payload.pull_request.user.login;
-            if (!author.includes('[bot]')) {
-              await github.rest.issues.addAssignees({
-                ...context.repo,
-                issue_number: context.payload.pull_request.number,
-                assignees: [author]
-              });
+            const pr = context.payload.pull_request;
+            const author = pr.user.login;
+            
+            // Skip if author is a bot or PR already has assignees
+            if (author.includes('[bot]')) {
+              console.log('Skipping: author is a bot');
+              return;
             }
+            
+            if (pr.assignees && pr.assignees.length > 0) {
+              console.log('Skipping: PR already has assignees:', pr.assignees.map(a => a.login));
+              return;
+            }
+            
+            console.log(`Assigning ${author} to PR #${pr.number}`);
+            await github.rest.issues.addAssignees({
+              ...context.repo,
+              issue_number: pr.number,
+              assignees: [author]
+            });
 
   labeler:
     name: 🏷️ Labels
