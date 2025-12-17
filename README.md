@@ -2,8 +2,8 @@
 
 <div align="center">
 
-[![🔍 Pull Request](https://github.com/adriandarian/spectra/actions/workflows/pr.yml/badge.svg)](https://github.com/adriandarian/spectra/actions/workflows/pr.yml)
-[![🚀 Release](https://github.com/adriandarian/spectra/actions/workflows/release.yml/badge.svg)](https://github.com/adriandarian/spectra/actions/workflows/release.yml)
+[![CI](https://github.com/adriandarian/spectra/actions/workflows/pr.yml/badge.svg)](https://github.com/adriandarian/spectra/actions/workflows/pr.yml)
+[![Release](https://github.com/adriandarian/spectra/actions/workflows/release.yml/badge.svg)](https://github.com/adriandarian/spectra/actions/workflows/release.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
