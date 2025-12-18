@@ -55,7 +55,8 @@ pip install spectra
 pipx install spectra
 
 # Homebrew (macOS/Linux)
-brew install adriandarian/spectra/spectra
+brew tap adriandarian/spectra
+brew install spectra
 
 # Chocolatey (Windows)
 choco install spectra
@@ -152,7 +153,7 @@ JIRA_API_TOKEN=your-api-token
 #### Subtasks
 
 | # | Subtask | Description | SP | Status |
-|---|---------|-------------|----|---------| 
+|---|---------|-------------|----|---------|
 | 1 | Create login form | Build the login UI | 2 | ✅ Done |
 | 2 | Implement JWT auth | Add JWT token handling | 3 | ✅ Done |
 ```
@@ -284,7 +285,7 @@ class GitHubAdapter(IssueTrackerPort):
     @property
     def name(self) -> str:
         return "GitHub"
-    
+
     def get_epic_children(self, epic_key: str) -> list[IssueData]:
         # Implement GitHub API calls
         ...
