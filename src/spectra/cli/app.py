@@ -46,6 +46,21 @@ Examples:
   # Strict validation (warnings are errors)
   spectra --validate --markdown EPIC.md --strict
 
+  # Show the expected markdown format guide
+  spectra --validate --markdown EPIC.md --show-guide
+
+  # Get an AI prompt to fix validation errors (copy to ChatGPT/Claude)
+  spectra --validate --markdown EPIC.md --suggest-fix
+
+  # Auto-fix using an AI CLI tool (detects available tools)
+  spectra --validate --markdown EPIC.md --auto-fix
+
+  # Auto-fix with a specific AI tool
+  spectra --validate --markdown EPIC.md --auto-fix --ai-tool claude
+
+  # List detected AI CLI tools for auto-fix
+  spectra --list-ai-tools
+
   # Show status dashboard
   spectra --dashboard --markdown EPIC.md --epic PROJ-123
 
@@ -258,6 +273,32 @@ Environment Variables:
         "--strict",
         action="store_true",
         help="Strict validation mode: treat warnings as errors (used with --validate)",
+    )
+    parser.add_argument(
+        "--show-guide",
+        action="store_true",
+        help="Show the expected markdown format guide (used with --validate)",
+    )
+    parser.add_argument(
+        "--suggest-fix",
+        action="store_true",
+        help="Generate an AI prompt to fix format issues (copy to your AI tool)",
+    )
+    parser.add_argument(
+        "--auto-fix",
+        action="store_true",
+        help="Automatically fix format issues using an AI CLI tool",
+    )
+    parser.add_argument(
+        "--ai-tool",
+        type=str,
+        metavar="TOOL",
+        help="AI tool to use for --auto-fix (claude, ollama, aider, llm, mods, sgpt)",
+    )
+    parser.add_argument(
+        "--list-ai-tools",
+        action="store_true",
+        help="List detected AI CLI tools available for --auto-fix",
     )
     parser.add_argument(
         "--dashboard", action="store_true", help="Show TUI dashboard with sync status overview"
@@ -537,6 +578,10 @@ def validate_markdown(
     console: Console,
     markdown_path: str,
     strict: bool = False,
+    show_guide: bool = False,
+    suggest_fix: bool = False,
+    auto_fix: bool = False,
+    ai_tool: str | None = None,
 ) -> int:
     """
     Validate a markdown file's format and structure.
@@ -548,13 +593,25 @@ def validate_markdown(
         console: Console instance for output.
         markdown_path: Path to the markdown file to validate.
         strict: If True, treat warnings as errors.
+        show_guide: If True, show the format guide.
+        suggest_fix: If True, generate an AI prompt to fix issues.
+        auto_fix: If True, automatically fix using an AI tool.
+        ai_tool: Specific AI tool to use for auto-fix.
 
     Returns:
         Exit code (0 for success, non-zero for errors).
     """
     from .validate import run_validate
 
-    return run_validate(console, markdown_path, strict=strict)
+    return run_validate(
+        console,
+        markdown_path,
+        strict=strict,
+        show_guide=show_guide,
+        suggest_fix=suggest_fix,
+        auto_fix=auto_fix,
+        ai_tool=ai_tool,
+    )
 
 
 def list_sessions(state_store) -> int:
@@ -2372,9 +2429,35 @@ def main() -> int:
         args.markdown = state.markdown_path
         args.epic = state.epic_key
 
-    # Handle validate mode (only requires markdown)
-    if args.validate:
-        if not args.markdown:
+    # Handle list-ai-tools (no other args needed)
+    if getattr(args, "list_ai_tools", False):
+        from .ai_fix import detect_ai_tools, format_ai_tools_list
+
+        console = Console(color=not getattr(args, "no_color", False))
+        console.header("spectra AI Tools")
+
+        tools = detect_ai_tools()
+        if tools:
+            print(format_ai_tools_list(tools, color=console.color))
+            console.print()
+            console.info("Use with: spectra --validate --markdown FILE.md --auto-fix --ai-tool <name>")
+        else:
+            console.warning("No AI CLI tools detected on your system.")
+            console.print()
+            console.info("Install one of the following to enable auto-fix:")
+            console.info("  • claude (Anthropic): pip install anthropic")
+            console.info("  • ollama: https://ollama.ai")
+            console.info("  • aider: pip install aider-chat")
+            console.info("  • gh copilot: gh extension install github/gh-copilot")
+            console.info("  • llm: pip install llm")
+            console.info("  • sgpt: pip install shell-gpt")
+            console.info("  • mods: https://github.com/charmbracelet/mods")
+        return ExitCode.SUCCESS
+
+    # Handle validate mode (only requires markdown, unless just showing guide)
+    if args.validate or getattr(args, "show_guide", False):
+        # show_guide can work without a markdown file
+        if not args.markdown and not getattr(args, "show_guide", False):
             parser.error("--validate requires --markdown/-m to be specified")
         from .logging import setup_logging
 
@@ -2391,8 +2474,12 @@ def main() -> int:
         try:
             return validate_markdown(
                 console,
-                args.markdown,
+                args.markdown or "",
                 strict=getattr(args, "strict", False),
+                show_guide=getattr(args, "show_guide", False),
+                suggest_fix=getattr(args, "suggest_fix", False),
+                auto_fix=getattr(args, "auto_fix", False),
+                ai_tool=getattr(args, "ai_tool", None),
             )
         except KeyboardInterrupt:
             console.print()

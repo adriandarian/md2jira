@@ -664,6 +664,10 @@ def run_validate(
     markdown_path: str,
     strict: bool = False,
     show_all: bool = False,
+    show_guide: bool = False,
+    suggest_fix: bool = False,
+    auto_fix: bool = False,
+    ai_tool: str | None = None,
 ) -> int:
     """
     Run comprehensive validation on a markdown file.
@@ -673,11 +677,32 @@ def run_validate(
         markdown_path: Path to markdown file.
         strict: Treat warnings as errors.
         show_all: Show all issues including info.
+        show_guide: Show the format guide.
+        suggest_fix: Show AI prompt for fixing issues.
+        auto_fix: Automatically fix using AI tool.
+        ai_tool: Specific AI tool to use for auto-fix.
 
     Returns:
         Exit code.
     """
+    from .ai_fix import (
+        detect_ai_tools,
+        format_fix_suggestion,
+        generate_copy_paste_prompt,
+        generate_format_guide,
+        get_tool_by_name,
+        run_ai_fix,
+        select_ai_tool,
+    )
+
     console.header(f"spectra Validate {Symbols.CHECK}")
+
+    # Show format guide if requested
+    if show_guide:
+        guide = generate_format_guide()
+        print(guide)
+        if not Path(markdown_path).exists():
+            return ExitCode.SUCCESS
 
     # Check file exists
     if not Path(markdown_path).exists():
@@ -698,6 +723,103 @@ def run_validate(
     # Format and display result
     formatted = format_validation_result(result, color=console.color)
     print(formatted)
+
+    # If validation failed or has issues, offer AI assistance
+    if not result.valid or result.warnings:
+        # Collect error and warning messages
+        error_msgs = [f"[{e.code}] {e.message}" for e in result.errors]
+        warning_msgs = [f"[{w.code}] {w.message}" for w in result.warnings]
+
+        # Handle suggest-fix: show the prompt for manual copy-paste
+        if suggest_fix:
+            console.print()
+            console.section("AI Fix Prompt")
+            console.print()
+            prompt = generate_copy_paste_prompt(markdown_path, error_msgs, warning_msgs)
+            print(prompt)
+            console.print()
+            console.info("Copy the prompt above into your AI tool, then paste your file content.")
+            console.info("The AI will return a corrected version of your markdown.")
+            return ExitCode.VALIDATION_ERROR if not result.valid else ExitCode.SUCCESS
+
+        # Handle auto-fix: run an AI tool to fix the file
+        if auto_fix:
+            console.print()
+            console.section("AI Auto-Fix")
+
+            # Detect available tools
+            tools = detect_ai_tools()
+
+            if not tools:
+                console.error("No AI CLI tools detected on your system.")
+                console.print()
+                console.info("Install one of the following:")
+                console.info("  • claude (Anthropic): pip install anthropic")
+                console.info("  • ollama: https://ollama.ai")
+                console.info("  • aider: pip install aider-chat")
+                console.info("  • llm: pip install llm")
+                return ExitCode.CONFIG_ERROR
+
+            # Select tool
+            if ai_tool:
+                selected = get_tool_by_name(ai_tool, tools)
+                if not selected:
+                    console.error(f"AI tool '{ai_tool}' not found or not installed.")
+                    console.info("Available tools: " + ", ".join(t.tool.value for t in tools))
+                    return ExitCode.CONFIG_ERROR
+            else:
+                selected = select_ai_tool(tools, console)
+                if not selected:
+                    console.warning("Cancelled by user")
+                    return ExitCode.CANCELLED
+
+            console.info(f"Using {selected.display_name} to fix formatting issues...")
+            console.print()
+
+            # Run the fix
+            fix_result = run_ai_fix(
+                tool=selected,
+                file_path=markdown_path,
+                errors=error_msgs,
+                warnings=warning_msgs,
+                dry_run=False,
+            )
+
+            if fix_result.success:
+                if fix_result.fixed_content:
+                    # Write the fixed content back to the file
+                    try:
+                        Path(markdown_path).write_text(fix_result.fixed_content, encoding="utf-8")
+                        console.success("File has been fixed!")
+                        console.info("Run validation again to verify: spectra --validate --markdown " + markdown_path)
+                    except Exception as e:
+                        console.error(f"Failed to write fixed content: {e}")
+                        console.print()
+                        console.info("Fixed content (copy manually):")
+                        print(fix_result.fixed_content[:2000])  # Truncate for display
+                        if len(fix_result.fixed_content) > 2000:
+                            console.info("... (truncated)")
+                elif fix_result.output:
+                    console.success("AI processing complete!")
+                    console.print()
+                    print(fix_result.output)
+            else:
+                console.error(f"AI fix failed: {fix_result.error}")
+                return ExitCode.ERROR
+
+            return ExitCode.SUCCESS
+
+        # If validation failed and no fix options specified, show fix suggestions
+        if not result.valid:
+            tools = detect_ai_tools()
+            suggestion = format_fix_suggestion(
+                file_path=markdown_path,
+                errors=error_msgs,
+                warnings=warning_msgs,
+                tools=tools if tools else None,
+                color=console.color,
+            )
+            print(suggestion)
 
     # Return appropriate exit code
     if not result.valid or (result.warnings and strict):
