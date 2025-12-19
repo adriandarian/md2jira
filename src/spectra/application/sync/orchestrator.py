@@ -389,6 +389,7 @@ class SyncOrchestrator:
         result.stories_matched = len(self._matches)
         result.matched_stories = list(self._matches.items())
         result.unmatched_stories = analyze_result.unmatched_stories
+        result.wrong_type_issues = analyze_result.wrong_type_issues
 
         # Phase 1a: Update epic issue itself
         if self.config.sync_epic:
@@ -568,13 +569,14 @@ class SyncOrchestrator:
                 self.logger.debug(f"Matched {md_story.id} -> {matched_issue.key}")
 
                 # Check if issue type is correct
-                current_type = getattr(matched_issue, "issue_type", None)
+                current_type = getattr(matched_issue, "issue_type", "") or ""
+                self.logger.debug(f"Issue {matched_issue.key} type: '{current_type}'")
                 if current_type and current_type != expected_type:
                     result.wrong_type_issues.append(
                         (matched_issue.key, current_type, expected_type)
                     )
-                    self.logger.debug(
-                        f"Issue {matched_issue.key} has wrong type: {current_type} (expected {expected_type})"
+                    self.logger.info(
+                        f"Issue {matched_issue.key} has wrong type: '{current_type}' (expected '{expected_type}')"
                     )
             else:
                 result.unmatched_stories.append(str(md_story.id))
