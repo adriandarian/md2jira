@@ -287,6 +287,10 @@ class JiraAdapter(IssueTrackerPort):
         current = self.get_subtask_details(issue_key)
         current_points = current.get("story_points")
 
+        # Normalize story points for comparison (Jira returns float, we use int)
+        current_points_int = int(current_points) if current_points is not None else None
+        new_points_int = int(story_points) if story_points is not None else None
+
         # Determine what actually needs updating
         changes: list[str] = []
         fields: dict[str, Any] = {}
@@ -299,10 +303,10 @@ class JiraAdapter(IssueTrackerPort):
             changes.append("description")
 
         if story_points is not None:
-            # Compare story points
-            if current_points != story_points:
+            # Compare story points (using normalized int values)
+            if current_points_int != new_points_int:
                 fields[self.STORY_POINTS_FIELD] = float(story_points)
-                changes.append(f"points {current_points or 0}→{story_points}")
+                changes.append(f"points {current_points_int or 0}→{new_points_int}")
 
         if assignee is not None:
             current_assignee = current.get("assignee")

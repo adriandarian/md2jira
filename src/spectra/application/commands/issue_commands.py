@@ -217,9 +217,7 @@ class UpdateSubtaskCommand(Command):
             return CommandResult.fail(error)
 
         try:
-            if self.dry_run:
-                return CommandResult.ok(True, dry_run=True)
-
+            # Always call tracker - it handles dry-run with proper value comparison
             success = self.tracker.update_subtask(
                 issue_key=self.issue_key,
                 description=self.description,
@@ -227,7 +225,7 @@ class UpdateSubtaskCommand(Command):
                 assignee=self.assignee,
             )
 
-            return CommandResult.ok(success)
+            return CommandResult.ok(success, dry_run=self.dry_run)
 
         except IssueTrackerError as e:
             return CommandResult.fail(str(e))

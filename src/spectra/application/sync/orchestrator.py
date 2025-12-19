@@ -1044,11 +1044,15 @@ class SyncOrchestrator:
         result: SyncResult,
     ) -> None:
         """Update an existing subtask."""
+        # Only pass story_points if explicitly set in markdown (non-zero)
+        # 0 means "not specified" and shouldn't overwrite Jira values
+        story_points = md_subtask.story_points if md_subtask.story_points else None
+
         update_cmd = UpdateSubtaskCommand(
             tracker=self.tracker,
             issue_key=existing.key,
             description=md_subtask.description,
-            story_points=md_subtask.story_points,
+            story_points=story_points,
             event_bus=self.event_bus,
             dry_run=self.config.dry_run,
         )
