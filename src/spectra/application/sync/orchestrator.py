@@ -552,7 +552,8 @@ class SyncOrchestrator:
             result: SyncResult to update with matching results.
         """
         self._matches = {}
-        expected_type = "User Story"
+        # Accept both "Story" and "User Story" as valid - varies by Jira project
+        valid_types = {"Story", "User Story"}
 
         for md_story in self._md_stories:
             matched_issue = None
@@ -568,15 +569,15 @@ class SyncOrchestrator:
                 result.matched_stories.append((str(md_story.id), matched_issue.key))
                 self.logger.debug(f"Matched {md_story.id} -> {matched_issue.key}")
 
-                # Check if issue type is correct
+                # Check if issue type is correct (accept Story or User Story)
                 current_type = getattr(matched_issue, "issue_type", "") or ""
                 self.logger.debug(f"Issue {matched_issue.key} type: '{current_type}'")
-                if current_type and current_type != expected_type:
+                if current_type and current_type not in valid_types:
                     result.wrong_type_issues.append(
-                        (matched_issue.key, current_type, expected_type)
+                        (matched_issue.key, current_type, "Story")
                     )
                     self.logger.info(
-                        f"Issue {matched_issue.key} has wrong type: '{current_type}' (expected '{expected_type}')"
+                        f"Issue {matched_issue.key} has unexpected type: '{current_type}'"
                     )
             else:
                 result.unmatched_stories.append(str(md_story.id))
