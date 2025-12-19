@@ -282,14 +282,19 @@ class JiraAdapter(IssueTrackerPort):
         description: Any | None = None,
         story_points: int | None = None,
         assignee: str | None = None,
+        priority_id: str | None = None,
     ) -> bool:
         # Get current values to compare
         current = self.get_subtask_details(issue_key)
         current_points = current.get("story_points")
+        current_priority = current.get("priority")
 
         # Normalize story points for comparison (Jira returns float, we use int)
         current_points_int = int(current_points) if current_points is not None else None
         new_points_int = int(story_points) if story_points is not None else None
+
+        # Get current priority ID for comparison
+        current_priority_id = current_priority.get("id") if current_priority else None
 
         # Determine what actually needs updating
         changes: list[str] = []
@@ -316,6 +321,13 @@ class JiraAdapter(IssueTrackerPort):
             if current_assignee_id != assignee:
                 fields["assignee"] = {"accountId": assignee}
                 changes.append("assignee")
+
+        if priority_id is not None:
+            # Compare priority IDs
+            if current_priority_id != priority_id:
+                fields[JiraField.PRIORITY] = {"id": priority_id}
+                current_name = current_priority.get("name", "None") if current_priority else "None"
+                changes.append(f"priority {current_name}→{priority_id}")
 
         if self._dry_run:
             if changes:
@@ -564,7 +576,7 @@ class JiraAdapter(IssueTrackerPort):
         """Get full details of a subtask."""
         data = self._client.get(
             f"issue/{issue_key}",
-            params={"fields": f"summary,description,assignee,status,{self.STORY_POINTS_FIELD}"},
+            params={"fields": f"summary,description,assignee,status,priority,{self.STORY_POINTS_FIELD}"},
         )
 
         fields = data.get("fields", {})
@@ -575,6 +587,7 @@ class JiraAdapter(IssueTrackerPort):
             "assignee": fields.get("assignee"),
             "story_points": fields.get(self.STORY_POINTS_FIELD),
             "status": fields.get("status", {}).get("name", ""),
+            "priority": fields.get("priority"),
         }
 
     # -------------------------------------------------------------------------

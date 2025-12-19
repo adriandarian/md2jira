@@ -183,6 +183,7 @@ class UpdateSubtaskCommand(Command):
     description: Any | None = None
     story_points: int | None = None
     assignee: str | None = None
+    priority_id: str | None = None
 
     def __init__(
         self,
@@ -191,6 +192,7 @@ class UpdateSubtaskCommand(Command):
         description: Any | None = None,
         story_points: int | None = None,
         assignee: str | None = None,
+        priority_id: str | None = None,
         event_bus: EventBus | None = None,
         dry_run: bool = True,
     ):
@@ -199,6 +201,7 @@ class UpdateSubtaskCommand(Command):
         self.description = description
         self.story_points = story_points
         self.assignee = assignee
+        self.priority_id = priority_id
 
     @property
     def name(self) -> str:
@@ -207,7 +210,7 @@ class UpdateSubtaskCommand(Command):
     def validate(self) -> str | None:
         if not self.issue_key:
             return "Issue key is required"
-        if not any([self.description, self.story_points, self.assignee]):
+        if not any([self.description, self.story_points, self.assignee, self.priority_id]):
             return "At least one field to update is required"
         return None
 
@@ -223,6 +226,7 @@ class UpdateSubtaskCommand(Command):
                 description=self.description,
                 story_points=self.story_points,
                 assignee=self.assignee,
+                priority_id=self.priority_id,
             )
 
             return CommandResult.ok(success, dry_run=self.dry_run)

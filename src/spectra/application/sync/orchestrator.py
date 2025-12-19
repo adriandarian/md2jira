@@ -1021,7 +1021,7 @@ class SyncOrchestrator:
         try:
             if subtask_name_lower in existing_subtasks:
                 self._update_existing_subtask(
-                    md_subtask, existing_subtasks[subtask_name_lower], story_id, result
+                    md_subtask, existing_subtasks[subtask_name_lower], story_id, result, priority
                 )
             else:
                 self._create_new_subtask(
@@ -1042,17 +1042,28 @@ class SyncOrchestrator:
         existing: IssueData,
         story_id: str,
         result: SyncResult,
+        priority: str | None = None,
     ) -> None:
         """Update an existing subtask."""
         # Only pass story_points if explicitly set in markdown (non-zero)
         # 0 means "not specified" and shouldn't overwrite Jira values
         story_points = md_subtask.story_points if md_subtask.story_points else None
 
+        # Get priority ID if priority name is provided
+        priority_id = None
+        if priority and hasattr(self.tracker, "get_priorities"):
+            # Extract project key from existing issue
+            project_key = existing.key.split("-")[0] if "-" in existing.key else None
+            priorities = self.tracker.get_priorities(project_key)
+            priority_lookup = {p["name"].lower(): p["id"] for p in priorities}
+            priority_id = priority_lookup.get(priority.lower())
+
         update_cmd = UpdateSubtaskCommand(
             tracker=self.tracker,
             issue_key=existing.key,
             description=md_subtask.description,
             story_points=story_points,
+            priority_id=priority_id,
             event_bus=self.event_bus,
             dry_run=self.config.dry_run,
         )
