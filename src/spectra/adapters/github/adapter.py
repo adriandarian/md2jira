@@ -269,6 +269,7 @@ class GitHubAdapter(IssueTrackerPort):
         project_key: str,
         story_points: int | None = None,
         assignee: str | None = None,
+        priority: str | None = None,
     ) -> str | None:
         """
         Create a subtask.
@@ -348,6 +349,7 @@ class GitHubAdapter(IssueTrackerPort):
         description: Any | None = None,
         story_points: int | None = None,
         assignee: str | None = None,
+        priority_id: str | None = None,
     ) -> bool:
         if self._dry_run:
             self.logger.info(f"[DRY-RUN] Would update subtask {issue_key}")
@@ -718,7 +720,10 @@ class GitHubAdapter(IssueTrackerPort):
             (r"\*\*Relates to[:\s]*\*\*\s*((?:#\d+(?:\s*,\s*)?)+)", LinkType.RELATES_TO),
             (r"\*\*Depends on[:\s]*\*\*\s*((?:#\d+(?:\s*,\s*)?)+)", LinkType.DEPENDS_ON),
             (r"\*\*Duplicates[:\s]*\*\*\s*((?:#\d+(?:\s*,\s*)?)+)", LinkType.DUPLICATES),
-            (r"\*\*Is duplicated by[:\s]*\*\*\s*((?:#\d+(?:\s*,\s*)?)+)", LinkType.IS_DUPLICATED_BY),
+            (
+                r"\*\*Is duplicated by[:\s]*\*\*\s*((?:#\d+(?:\s*,\s*)?)+)",
+                LinkType.IS_DUPLICATED_BY,
+            ),
         ]
 
         for pattern, link_type in link_patterns:
@@ -738,7 +743,10 @@ class GitHubAdapter(IssueTrackerPort):
         # Also check for cross-repo links (owner/repo#123)
         cross_repo_patterns = [
             (r"\*\*Blocks[:\s]*\*\*\s*((?:[\w-]+/[\w-]+#\d+(?:\s*,\s*)?)+)", LinkType.BLOCKS),
-            (r"\*\*Related to[:\s]*\*\*\s*((?:[\w-]+/[\w-]+#\d+(?:\s*,\s*)?)+)", LinkType.RELATES_TO),
+            (
+                r"\*\*Related to[:\s]*\*\*\s*((?:[\w-]+/[\w-]+#\d+(?:\s*,\s*)?)+)",
+                LinkType.RELATES_TO,
+            ),
         ]
 
         for pattern, link_type in cross_repo_patterns:

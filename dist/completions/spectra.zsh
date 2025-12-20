@@ -15,7 +15,7 @@
 _spectra() {
     local curcontext="$curcontext" state line
     typeset -A opt_args
-    
+
     local -a phases
     phases=(
         'all:Run all sync phases'
@@ -24,18 +24,20 @@ _spectra() {
         'comments:Sync comments only'
         'statuses:Sync statuses only'
     )
-    
+
     local -a shells
     shells=(
         'bash:Generate Bash completion script'
         'zsh:Generate Zsh completion script'
         'fish:Generate Fish completion script'
     )
-    
+
     _arguments -C \
-        '(-m --markdown)'{-m,--markdown}'[Path to markdown epic file]:markdown file:_files -g "*.md"' \
+        '(-f --input)'{-f,--input}'[Path to input file (markdown, yaml, json, etc.)]:input file:_files -g "*.md"' \
+        '(-d --input-dir)'{-d,--input-dir}'[Path to directory containing story files]:directory:_files -/' \
         '(-e --epic)'{-e,--epic}'[Jira epic key (e.g., PROJ-123)]:epic key:' \
         '(-x --execute)'{-x,--execute}'[Execute changes (default is dry-run)]' \
+        '(-n --dry-run)'{-n,--dry-run}'[Preview changes without executing]' \
         '--no-confirm[Skip confirmation prompts]' \
         '--phase[Which phase to run]:phase:->phases' \
         '--story[Filter to specific story ID]:story id:' \
@@ -52,11 +54,13 @@ _spectra() {
         '--resume[Resume an interrupted sync session]' \
         '--resume-session[Resume a specific sync session by ID]:session id:' \
         '--list-sessions[List all resumable sync sessions]' \
+        '--update-source[Write tracker info back to source file after sync]' \
+        '--list-files[List which files would be processed from --input-dir]' \
         '--version[Show version and exit]' \
         '--completions[Generate shell completion script]:shell:->shells' \
         '(-h --help)'{-h,--help}'[Show help message]' \
         '*:markdown file:_files -g "*.md"'
-    
+
     case "$state" in
         phases)
             _describe -t phases 'sync phase' phases

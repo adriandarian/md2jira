@@ -1,6 +1,6 @@
 #!/bin/bash
 # Bash completion script for spectra
-# 
+#
 # Installation:
 #   Option 1: Source directly in ~/.bashrc
 #     source /path/to/spectra/completions/spectra.bash
@@ -16,20 +16,25 @@ _spectra_completions() {
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    
+
     # All available options
-    opts="--markdown -m --epic -e --execute -x --no-confirm --phase --story --config -c --jira-url --project --verbose -v --quiet -q --output -o --no-color --export --validate --interactive -i --resume --resume-session --list-sessions --version --help -h --completions"
-    
+    opts="--input -f --input-dir -d --epic -e --execute -x --dry-run -n --no-confirm --phase --story --config -c --jira-url --project --verbose -v --quiet -q --output -o --no-color --export --validate --interactive -i --resume --resume-session --list-sessions --update-source --list-files --version --help -h --completions"
+
     # Phase choices
     phases="all descriptions subtasks comments statuses"
-    
+
     # Handle option-specific completions
     case "${prev}" in
-        --markdown|-m)
+        --input|-f)
             # Complete markdown files
             COMPREPLY=( $(compgen -f -X '!*.md' -- "${cur}") )
             # Also complete directories for navigation
             COMPREPLY+=( $(compgen -d -- "${cur}") )
+            return 0
+            ;;
+        --input-dir|-d)
+            # Complete directories only
+            COMPREPLY=( $(compgen -d -- "${cur}") )
             return 0
             ;;
         --config|-c)
@@ -78,13 +83,13 @@ _spectra_completions() {
             return 0
             ;;
     esac
-    
+
     # Complete options if starting with -
     if [[ "${cur}" == -* ]]; then
         COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
         return 0
     fi
-    
+
     # Default: complete files
     COMPREPLY=( $(compgen -f -- "${cur}") )
 }

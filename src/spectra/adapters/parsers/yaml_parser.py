@@ -230,8 +230,11 @@ class YamlParser(DocumentParserPort):
     # -------------------------------------------------------------------------
 
     def _parse_story(self, data: dict[str, Any]) -> UserStory | None:
-        """Parse a single story from YAML data."""
-        story_id = data.get("id", "US-000")
+        """Parse a single story from YAML data.
+
+        Accepts any PREFIX-NUMBER format for story IDs (e.g., US-001, EU-042, PROJ-123).
+        """
+        story_id = data.get("id", "STORY-000")
         title = data.get("title", "Untitled Story")
 
         # Parse description

@@ -13,13 +13,17 @@
 # Disable file completions by default (we'll enable them for specific options)
 complete -c spectra -f
 
-# Required arguments
-complete -c spectra -s m -l markdown -d 'Path to markdown epic file' -r -F -a '*.md'
+# Input arguments
+complete -c spectra -s f -l input -d 'Path to input file (markdown, yaml, json, etc.)' -r -F -a '*.md'
+complete -c spectra -s d -l input-dir -d 'Path to directory containing story files' -r -a '(__fish_complete_directories)'
 complete -c spectra -s e -l epic -d 'Jira epic key (e.g., PROJ-123)' -x
 
 # Execution mode
 complete -c spectra -s x -l execute -d 'Execute changes (default is dry-run)'
+complete -c spectra -s n -l dry-run -d 'Preview changes without executing'
 complete -c spectra -l no-confirm -d 'Skip confirmation prompts'
+complete -c spectra -l update-source -d 'Write tracker info back to source file after sync'
+complete -c spectra -l list-files -d 'List which files would be processed from --input-dir'
 
 # Phase control
 complete -c spectra -l phase -d 'Which phase to run' -x -a '
@@ -57,7 +61,7 @@ complete -c spectra -s h -l help -d 'Show help message'
 # Shell completions
 complete -c spectra -l completions -d 'Generate shell completion script' -x -a '
     bash\t"Generate Bash completion script"
-    zsh\t"Generate Zsh completion script"  
+    zsh\t"Generate Zsh completion script"
     fish\t"Generate Fish completion script"
 '
 

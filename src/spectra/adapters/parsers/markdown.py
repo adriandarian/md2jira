@@ -5,8 +5,10 @@ Implements the DocumentParserPort interface.
 Supports both single-epic and multi-epic formats.
 """
 
+import contextlib
 import logging
 import re
+from datetime import datetime
 from pathlib import Path
 
 from spectra.core.domain.entities import Epic, Subtask, UserStory
@@ -25,11 +27,12 @@ class MarkdownParser(DocumentParserPort):
     """
     Parser for markdown epic files.
 
-    Supports multiple markdown formats with auto-detection:
+    Supports multiple markdown formats with auto-detection.
+    Story IDs can use any PREFIX-NUMBER format (e.g., US-001, EU-042, PROJ-123, FEAT-001).
 
     FORMAT A (Table-based metadata):
     --------------------------------
-    ### [emoji] US-XXX: Title
+    ### [emoji] PROJ-001: Title
 
     | Field | Value |
     |-------|-------|
@@ -44,7 +47,7 @@ class MarkdownParser(DocumentParserPort):
 
     FORMAT B (Inline metadata):
     ---------------------------
-    ### US-XXX: Title
+    ### PROJ-001: Title
 
     **Priority**: P0
     **Story Points**: 5
@@ -55,36 +58,69 @@ class MarkdownParser(DocumentParserPort):
     > **I want** feature,
     > **So that** benefit.
 
+    FORMAT C (Standalone file with h1 header and blockquote metadata):
+    ------------------------------------------------------------------
+    # PROJ-001: Title [emoji]
+
+    > **Story ID**: PROJ-001
+    > **Status**: ✅ Done
+    > **Points**: 8
+    > **Priority**: P0 - Critical
+
+    ## User Story
+    **As a** role
+    **I want** feature
+    **So that** benefit
+
     Multi-Epic Format (both formats):
     ---------------------------------
     # Project: Project Title
 
     ## Epic: PROJ-100 - Epic Title 1
-    ### US-XXX: Title
+    ### PROJ-001: Title
     ...
 
-    Common sections (both formats):
-    - #### Acceptance Criteria
-    - #### Subtasks
+    Multi-File Format:
+    ------------------
+    A directory containing:
+    - EPIC.md (optional, with epic metadata)
+    - PROJ-001-*.md, PROJ-002-*.md, etc. (individual story files)
+
+    Common sections (all formats):
+    - #### Acceptance Criteria / ## Acceptance Criteria
+    - #### Subtasks / ## Subtasks
     - #### Related Commits
-    - #### Technical Notes
-    - #### Dependencies
+    - #### Technical Notes / ## Technical Notes
+    - #### Dependencies / ## Dependencies
     """
 
     # Format detection patterns
     FORMAT_TABLE = "table"  # Table-based metadata
     FORMAT_INLINE = "inline"  # Inline key: value metadata
+    FORMAT_BLOCKQUOTE = "blockquote"  # Blockquote metadata (> **Field**: Value)
+    FORMAT_STANDALONE = "standalone"  # Standalone file with h1 header
 
-    # Story patterns - flexible to match both formats
-    # Matches: ### ✅ US-001: Title  OR  ### US-001: Title
-    STORY_PATTERN = r"### (?:[^\n]+ )?(US-\d+): ([^\n]+)\n"
-    STORY_PATTERN_FLEXIBLE = r"### (?:.*?)?(US-\d+):\s*([^\n]+)\n"
+    # Generic story ID pattern: PREFIX-NUMBER (e.g., US-001, EU-042, PROJ-123, FEAT-001)
+    # Allows any alphanumeric prefix followed by hyphen and digits
+    STORY_ID_PATTERN = r"[A-Z]+-\d+"
+
+    # Story patterns - flexible to match multiple header levels and formats
+    # Matches: ### ✅ PROJ-001: Title  OR  ### US-001: Title (h3)
+    STORY_PATTERN = rf"### (?:[^\n]+ )?({STORY_ID_PATTERN}): ([^\n]+)\n"
+    STORY_PATTERN_FLEXIBLE = rf"### (?:.*?)?({STORY_ID_PATTERN}):\s*([^\n]+)\n"
+
+    # Standalone story pattern for h1 headers: # PROJ-001: Title [emoji] or # US-001: Title
+    STORY_PATTERN_H1 = rf"^#\s+(?:.*?)?({STORY_ID_PATTERN}):\s*([^\n]+?)(?:\s*[✅🔲🟡⏸️]+)?\s*$"
+
     EPIC_TITLE_PATTERN = r"^#\s+[^\n]+\s+([^\n]+)$"
     # Multi-epic pattern: ## Epic: PROJ-100 - Epic Title or ## Epic: PROJ-100
     MULTI_EPIC_PATTERN = r"^##\s+Epic:\s*([A-Z]+-\d+)(?:\s*[-–—]\s*(.+))?$"
 
     # Inline metadata patterns (Format B)
     INLINE_FIELD_PATTERN = r"\*\*{field}\*\*:\s*(.+?)(?:\s*$|\s{2,})"
+
+    # Blockquote metadata pattern (Format C): > **Field**: Value
+    BLOCKQUOTE_FIELD_PATTERN = r">\s*\*\*{field}\*\*:\s*(.+?)(?:\s*$)"
 
     def __init__(self, story_pattern: str | None = None):
         """
@@ -117,8 +153,7 @@ class MarkdownParser(DocumentParserPort):
 
         # Check if content looks like markdown with either pattern
         return bool(
-            re.search(self.STORY_PATTERN, source)
-            or re.search(self.STORY_PATTERN_FLEXIBLE, source)
+            re.search(self.STORY_PATTERN, source) or re.search(self.STORY_PATTERN_FLEXIBLE, source)
         )
 
     def _detect_format(self, content: str) -> str:
@@ -129,27 +164,165 @@ class MarkdownParser(DocumentParserPort):
             content: Markdown content to analyze
 
         Returns:
-            FORMAT_TABLE or FORMAT_INLINE
+            FORMAT_TABLE, FORMAT_INLINE, FORMAT_BLOCKQUOTE, or FORMAT_STANDALONE
         """
+        # Check for standalone file format (h1 header with PREFIX-NUMBER story ID)
+        has_h1_story = bool(re.search(self.STORY_PATTERN_H1, content, re.MULTILINE))
+
+        # Look for blockquote metadata (> **Field**: Value)
+        has_blockquote_metadata = bool(
+            re.search(r">\s*\*\*(?:Priority|Points|Status|Story\s*ID)\*\*:\s*", content)
+        )
+
         # Look for table-based metadata (| **Field** | Value |)
-        has_table_metadata = bool(re.search(r"\|\s*\*\*Story Points\*\*\s*\|", content))
+        has_table_metadata = bool(
+            re.search(r"\|\s*\*\*(?:Story\s*)?Points\*\*\s*\|", content, re.IGNORECASE)
+        )
 
-        # Look for inline metadata (**Field**: Value)
-        has_inline_metadata = bool(re.search(r"\*\*(?:Priority|Story Points|Status)\*\*:\s*", content))
+        # Look for inline metadata (**Field**: Value) - not in blockquotes
+        has_inline_metadata = bool(
+            re.search(
+                r"^(?!>)\s*\*\*(?:Priority|Story\s*Points|Points|Status)\*\*:\s*",
+                content,
+                re.MULTILINE,
+            )
+        )
 
+        if has_h1_story and has_blockquote_metadata:
+            return self.FORMAT_STANDALONE
+        if has_blockquote_metadata and not has_table_metadata:
+            return self.FORMAT_BLOCKQUOTE
         if has_table_metadata and not has_inline_metadata:
             return self.FORMAT_TABLE
-        if has_inline_metadata and not has_table_metadata:
+        if has_inline_metadata:
             return self.FORMAT_INLINE
 
         # Default to table format for backward compatibility
         return self.FORMAT_TABLE
 
     def parse_stories(self, source: str | Path) -> list[UserStory]:
+        # Handle directory input - parse all US-*.md files
+        source_path = Path(source) if isinstance(source, str) else source
+        if isinstance(source_path, Path) and source_path.is_dir():
+            return self._parse_stories_from_directory(source_path)
+
         content = self._get_content(source)
         self._detected_format = self._detect_format(content)
         self.logger.debug(f"Detected markdown format: {self._detected_format}")
         return self._parse_all_stories(content)
+
+    def _is_story_file(self, file_path: Path) -> bool:
+        """
+        Detect if a markdown file contains user story content.
+
+        Uses both filename patterns and content detection for reliability.
+
+        Args:
+            file_path: Path to the markdown file.
+
+        Returns:
+            True if the file appears to be a user story file.
+        """
+        name_lower = file_path.name.lower()
+
+        # Skip known non-story files
+        skip_patterns = {
+            "readme.md",
+            "changelog.md",
+            "contributing.md",
+            "license.md",
+            "architecture.md",
+            "development.md",
+            "setup.md",
+            "index.md",
+            "summary.md",
+            "glossary.md",
+            "faq.md",
+            "troubleshooting.md",
+        }
+        if name_lower in skip_patterns:
+            return False
+
+        # Filename pattern match (fast path) - any PREFIX-NUMBER format
+        # Matches: us-001.md, eu-042.md, proj-123.md, story-001.md, etc.
+        if re.match(r"^[a-z]+-\d+", name_lower):
+            return True
+
+        # Content-based detection (slower but more reliable)
+        try:
+            content = file_path.read_text(encoding="utf-8")
+            # Check for story header patterns
+            story_markers = [
+                r"^#{1,3}\s+.*(?:US-\d+|[A-Z]+-\d+):",  # Story ID header
+                r"\*\*As a\*\*.*\*\*I want\*\*",  # User story format
+                r">\s*\*\*Story ID\*\*:",  # Blockquote metadata
+                r"\|\s*\*\*Story Points\*\*\s*\|",  # Table metadata
+            ]
+            for pattern in story_markers:
+                if re.search(pattern, content, re.MULTILINE | re.IGNORECASE):
+                    return True
+        except Exception:
+            pass
+
+        return False
+
+    def _parse_stories_from_directory(self, directory: Path) -> list[UserStory]:
+        """
+        Parse all user story files from a directory.
+
+        Uses smart detection to find story files:
+        1. EPIC.md - parsed for epic info + inline story summaries
+        2. US-*.md or story-*.md - explicit story files (filename match)
+        3. Other .md files - checked for story content markers
+
+        Args:
+            directory: Path to directory containing markdown files.
+
+        Returns:
+            List of UserStory entities from all files.
+        """
+        all_stories: list[UserStory] = []
+        story_by_id: dict[str, UserStory] = {}
+
+        # First parse EPIC.md if it exists (may contain inline story summaries)
+        epic_file = directory / "EPIC.md"
+        if epic_file.exists():
+            content = epic_file.read_text(encoding="utf-8")
+            self._detected_format = self._detect_format(content)
+            epic_stories = self._parse_all_stories(content)
+            for story in epic_stories:
+                story_id = str(story.id) if story.id else ""
+                if story_id:
+                    story_by_id[story_id] = story
+            self.logger.debug(f"Parsed {len(epic_stories)} stories from EPIC.md")
+
+        # Find story files using smart detection
+        story_files = sorted(
+            f
+            for f in directory.glob("*.md")
+            if f.name.lower() != "epic.md" and self._is_story_file(f)
+        )
+
+        for story_file in story_files:
+            content = story_file.read_text(encoding="utf-8")
+            self._detected_format = self._detect_format(content)
+            stories_in_file = self._parse_all_stories(content)
+
+            for story in stories_in_file:
+                story_id = str(story.id) if story.id else ""
+                if story_id:
+                    # Individual file takes precedence over EPIC.md
+                    story_by_id[story_id] = story
+                else:
+                    # No ID, just add it
+                    all_stories.append(story)
+
+            self.logger.debug(f"Parsed {len(stories_in_file)} stories from {story_file.name}")
+
+        # Combine: stories with IDs from dict + stories without IDs
+        all_stories = list(story_by_id.values()) + all_stories
+        self.logger.debug(f"Total: {len(all_stories)} unique stories from directory")
+        return all_stories
 
     def parse_epic(self, source: str | Path) -> Epic | None:
         content = self._get_content(source)
@@ -259,12 +432,134 @@ class MarkdownParser(DocumentParserPort):
         matches = re.findall(self.MULTI_EPIC_PATTERN, content, re.MULTILINE)
         return [match[0] for match in matches]
 
+    def parse_directory(self, directory: str | Path) -> list[UserStory]:
+        """
+        Parse all user story files from a directory.
+
+        Looks for files matching patterns:
+        - US-*.md (individual story files)
+        - EPIC.md (optional, for epic metadata)
+
+        The EPIC.md file, if present, is parsed first to extract any inline
+        story summaries, but individual US-*.md files take precedence.
+
+        Args:
+            directory: Path to directory containing markdown files
+
+        Returns:
+            List of UserStory entities from all files
+        """
+        dir_path = Path(directory) if isinstance(directory, str) else directory
+
+        if not dir_path.is_dir():
+            self.logger.error(f"Not a directory: {dir_path}")
+            return []
+
+        stories: list[UserStory] = []
+        story_ids_seen: set[str] = set()
+
+        # Find all US-*.md files
+        story_files = sorted(dir_path.glob("US-*.md"))
+        self.logger.info(f"Found {len(story_files)} story files in {dir_path}")
+
+        # Parse each story file
+        for story_file in story_files:
+            self.logger.debug(f"Parsing {story_file.name}")
+            file_stories = self.parse_stories(story_file)
+
+            for story in file_stories:
+                if str(story.id) not in story_ids_seen:
+                    stories.append(story)
+                    story_ids_seen.add(str(story.id))
+                else:
+                    self.logger.warning(
+                        f"Duplicate story {story.id} in {story_file.name}, skipping"
+                    )
+
+        # If no individual story files found, try EPIC.md
+        if not stories:
+            epic_file = dir_path / "EPIC.md"
+            if epic_file.exists():
+                self.logger.info("No US-*.md files found, parsing EPIC.md")
+                stories = self.parse_stories(epic_file)
+
+        self.logger.info(f"Parsed {len(stories)} stories from directory")
+        return stories
+
+    def parse_epic_directory(self, directory: str | Path) -> Epic | None:
+        """
+        Parse an epic and its stories from a directory.
+
+        Looks for:
+        - EPIC.md for epic metadata (title, description)
+        - US-*.md files for individual stories
+
+        Args:
+            directory: Path to directory containing markdown files
+
+        Returns:
+            Epic entity with all parsed stories, or None if no stories found
+        """
+        dir_path = Path(directory) if isinstance(directory, str) else directory
+
+        if not dir_path.is_dir():
+            self.logger.error(f"Not a directory: {dir_path}")
+            return None
+
+        # Try to parse epic metadata from EPIC.md
+        epic_title = "Untitled Epic"
+        epic_key = IssueKey("EPIC-0")
+        epic_summary = ""
+        epic_description = ""
+
+        epic_file = dir_path / "EPIC.md"
+        if epic_file.exists():
+            content = epic_file.read_text(encoding="utf-8")
+
+            # Extract epic title from first heading
+            title_match = re.search(r"^#\s+(?:Epic:\s*)?(.+)$", content, re.MULTILINE)
+            if title_match:
+                epic_title = title_match.group(1).strip()
+
+            # Try to extract epic ID from metadata
+            # Format: > **Epic ID**: NDP-OC-001 or **Epic ID**: NDP-OC-001
+            id_match = re.search(r"(?:>\s*)?\*\*Epic\s*ID\*\*:\s*(\S+)", content, re.IGNORECASE)
+            if id_match:
+                epic_key = IssueKey(id_match.group(1).strip())
+
+            # Extract Epic Name as summary
+            name_match = re.search(
+                r"(?:>\s*)?\*\*Epic\s*Name\*\*:\s*(.+?)(?:\s*$|\n)", content, re.IGNORECASE
+            )
+            if name_match:
+                epic_summary = name_match.group(1).strip()
+
+            # Extract Epic Description section (everything between ## Epic Description and next ##)
+            desc_match = re.search(
+                r"##\s*Epic\s*Description\s*\n(.*?)(?=\n##\s|\Z)",
+                content,
+                re.IGNORECASE | re.DOTALL,
+            )
+            if desc_match:
+                epic_description = desc_match.group(1).strip()
+
+        # Parse all stories from directory
+        stories = self.parse_directory(dir_path)
+
+        if not stories:
+            return None
+
+        return Epic(
+            key=epic_key,
+            title=epic_title,
+            summary=epic_summary,
+            description=epic_description,
+            stories=stories,
+        )
+
     def validate(self, source: str | Path) -> list[str]:
         content = self._get_content(source)
         errors = []
-
-        # Detect format for appropriate validation
-        detected_format = self._detect_format(content)
 
         # Check for story pattern using flexible pattern
         story_matches = list(re.finditer(self.STORY_PATTERN_FLEXIBLE, content))
@@ -272,7 +567,10 @@ class MarkdownParser(DocumentParserPort):
             story_matches = list(re.finditer(self.STORY_PATTERN, content))
 
         if not story_matches:
-            errors.append("No user stories found matching pattern '### [emoji] US-XXX: Title' or '### US-XXX: Title'")
+            errors.append(
+                "No user stories found matching pattern '### [emoji] PREFIX-001: Title' "
+                "(e.g., US-001, EU-042, PROJ-123)"
+            )
 
         # Validate each story
         for i, match in enumerate(story_matches):
@@ -282,7 +580,9 @@ class MarkdownParser(DocumentParserPort):
             story_content = content[start:end]
 
             # Check for required fields - both formats accepted
-            has_story_points_table = bool(re.search(r"\|\s*\*\*Story Points\*\*\s*\|", story_content))
+            has_story_points_table = bool(
+                re.search(r"\|\s*\*\*Story Points\*\*\s*\|", story_content)
+            )
             has_story_points_inline = bool(re.search(r"\*\*Story Points\*\*:\s*\d+", story_content))
             if not has_story_points_table and not has_story_points_inline:
                 errors.append(f"{story_id}: Missing Story Points field")
@@ -319,12 +619,40 @@ class MarkdownParser(DocumentParserPort):
         """Parse all stories from content."""
         stories = []
 
-        # Try flexible pattern first, then fall back to strict pattern
+        # Detect format to choose appropriate pattern
+        detected_format = self._detect_format(content)
+
+        # For standalone files with h1 headers, try h1 pattern first
+        if detected_format == self.FORMAT_STANDALONE:
+            story_matches = list(re.finditer(self.STORY_PATTERN_H1, content, re.MULTILINE))
+            if story_matches:
+                self.logger.debug(f"Found {len(story_matches)} stories using h1 pattern")
+                for match in story_matches:
+                    story_id = match.group(1)
+                    title = match.group(2).strip()
+                    # Remove trailing emoji/status indicators from title
+                    title = re.sub(r"\s*[✅🔲🟡⏸️]+\s*$", "", title).strip()
+
+                    # For h1 files, content is everything after the header
+                    start = match.end()
+                    end = len(content)  # h1 stories are typically one per file
+                    story_content = content[start:end]
+
+                    try:
+                        story = self._parse_story(story_id, title, story_content)
+                        if story:
+                            stories.append(story)
+                    except Exception as e:
+                        self.logger.warning(f"Failed to parse {story_id}: {e}")
+
+                return stories
+
+        # Try flexible h3 pattern first, then fall back to strict pattern
         story_matches = list(re.finditer(self.STORY_PATTERN_FLEXIBLE, content))
         if not story_matches:
             story_matches = list(re.finditer(self.STORY_PATTERN, content))
 
-        self.logger.debug(f"Found {len(story_matches)} stories")
+        self.logger.debug(f"Found {len(story_matches)} stories using h3 pattern")
 
         for i, match in enumerate(story_matches):
             story_id = match.group(1)
@@ -372,6 +700,11 @@ class MarkdownParser(DocumentParserPort):
         # Extract comments
         comments = self._extract_comments(content)
 
+        # Extract tracker info (external key, URL, sync metadata)
+        external_key, external_url, last_synced, sync_status, content_hash = (
+            self._extract_tracker_info(content)
+        )
+
         return UserStory(
             id=StoryId(story_id),
             title=title,
@@ -385,26 +718,48 @@ class MarkdownParser(DocumentParserPort):
             commits=commits,
             links=links,
             comments=comments,
+            external_key=IssueKey(external_key) if external_key else None,
+            external_url=external_url,
+            last_synced=last_synced,
+            sync_status=sync_status,
+            content_hash=content_hash,
         )
 
     def _extract_field(self, content: str, field_name: str, default: str = "") -> str:
         """
-        Extract field value from markdown - supports both table and inline formats.
+        Extract field value from markdown - supports table, inline, and blockquote formats.
 
         Format A (Table): | **Field** | Value |
         Format B (Inline): **Field**: Value
+        Format C (Blockquote): > **Field**: Value
         """
-        # Try table format first: | **Field** | Value |
-        table_pattern = rf"\|\s*\*\*{field_name}\*\*\s*\|\s*([^|]+)\s*\|"
-        match = re.search(table_pattern, content)
-        if match:
-            return match.group(1).strip()
+        # Build list of field name variants to try
+        field_variants = [field_name]
 
-        # Try inline format: **Field**: Value or **Field**: Value (with trailing spaces)
-        inline_pattern = rf"\*\*{field_name}\*\*:\s*(.+?)(?:\s*$|\s{{2,}}|\n)"
-        match = re.search(inline_pattern, content, re.MULTILINE)
-        if match:
-            return match.group(1).strip()
+        # Add alias for Story Points -> Points
+        if field_name == "Story Points":
+            field_variants.append("Points")
+        elif field_name == "Points":
+            field_variants.append("Story Points")
+
+        for variant in field_variants:
+            # Try table format first: | **Field** | Value |
+            table_pattern = rf"\|\s*\*\*{variant}\*\*\s*\|\s*([^|]+)\s*\|"
+            match = re.search(table_pattern, content, re.IGNORECASE)
+            if match:
+                return match.group(1).strip()
+
+            # Try blockquote format: > **Field**: Value
+            blockquote_pattern = rf">\s*\*\*{variant}\*\*:\s*(.+?)(?:\s*$)"
+            match = re.search(blockquote_pattern, content, re.MULTILINE | re.IGNORECASE)
+            if match:
+                return match.group(1).strip()
+
+            # Try inline format: **Field**: Value (not in blockquote)
+            inline_pattern = rf"(?<!>)\s*\*\*{variant}\*\*:\s*(.+?)(?:\s*$|\s{{2,}}|\n)"
+            match = re.search(inline_pattern, content, re.MULTILINE | re.IGNORECASE)
+            if match:
+                return match.group(1).strip()
 
         return default
 
@@ -418,9 +773,7 @@ class MarkdownParser(DocumentParserPort):
         - User Story section: #### User Story with blockquotes
         """
         # First try to find a dedicated User Story section (Format B)
-        user_story_section = re.search(
-            r"#### User Story\n([\s\S]*?)(?=####|\n---|\Z)", content
-        )
+        user_story_section = re.search(r"#### User Story\n([\s\S]*?)(?=####|\n---|\Z)", content)
 
         search_content = user_story_section.group(1) if user_story_section else content
 
@@ -477,30 +830,61 @@ class MarkdownParser(DocumentParserPort):
         return None
 
     def _extract_acceptance_criteria(self, content: str) -> AcceptanceCriteria:
-        """Extract acceptance criteria checkboxes."""
+        """Extract acceptance criteria checkboxes.
+
+        Supports multiple section header levels:
+        - #### Acceptance Criteria (h4)
+        - ### Acceptance Criteria (h3)
+        - ## Acceptance Criteria (h2)
+        """
         items = []
         checked = []
 
-        section = re.search(r"#### Acceptance Criteria\n([\s\S]*?)(?=####|\n---|\Z)", content)
+        # Try different header levels (h4, h3, h2)
+        section = None
+        for pattern in [
+            r"#{2,4}\s*Acceptance Criteria\n([\s\S]*?)(?=#{2,4}|\n---|\Z)",
+        ]:
+            section = re.search(pattern, content, re.IGNORECASE)
+            if section:
+                break
 
         if section:
-            for match in re.finditer(r"- \[([ x])\]\s*(.+)", section.group(1)):
+            for match in re.finditer(r"- \[([ xX])\]\s*(.+)", section.group(1)):
                 checked.append(match.group(1).lower() == "x")
                 items.append(match.group(2).strip())
 
         return AcceptanceCriteria.from_list(items, checked)
 
     def _extract_subtasks(self, content: str) -> list[Subtask]:
-        """Extract subtasks from table."""
+        """Extract subtasks from table.
+
+        Supports multiple table formats:
+        - Format A: | # | Subtask | Description | SP | Status |
+        - Format B: | ID | Task | Status | Deliverable |
+        - Format C: | ID | Task | Status | Notes |
+        """
         subtasks = []
 
-        section = re.search(r"#### Subtasks\n([\s\S]*?)(?=####|\n---|\Z)", content)
+        # Try different header levels (h4, h3, h2)
+        section = None
+        for pattern in [
+            r"#{2,4}\s*Subtasks\n([\s\S]*?)(?=#{2,4}|\n---|\Z)",
+        ]:
+            section = re.search(pattern, content, re.IGNORECASE)
+            if section:
+                break
 
-        if section:
-            # Parse table rows: | # | Subtask | Description | SP | Status |
-            pattern = r"\|\s*(\d+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*(\d+)\s*\|\s*([^|]+)\s*\|"
+        if not section:
+            return subtasks
 
-            for match in re.finditer(pattern, section.group(1)):
+        section_content = section.group(1)
+
+        # Format A: | # | Subtask | Description | SP | Status |
+        pattern_a = r"\|\s*(\d+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*(\d+)\s*\|\s*([^|]+)\s*\|"
+        matches_a = list(re.finditer(pattern_a, section_content))
+        if matches_a:
+            for match in matches_a:
                 subtasks.append(
                     Subtask(
                         number=int(match.group(1)),
@@ -510,6 +894,47 @@ class MarkdownParser(DocumentParserPort):
                         status=Status.from_string(match.group(5)),
                     )
                 )
+            return subtasks
+
+        # Format B: | ID | Task | Status | Est. | (Est. is story points)
+        # ID format: US-001-01 or just 01
+        # Check if header contains "Est" to detect this format
+        has_est_column = re.search(r"\|\s*Est\.?\s*\|", section_content, re.IGNORECASE)
+        pattern_b = r"\|\s*(?:US-\d+-)?(\d+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|"
+        matches_b = list(re.finditer(pattern_b, section_content))
+        if matches_b:
+            for match in matches_b:
+                number_str = match.group(1)
+                # Skip header row (if number is not numeric)
+                if not number_str.isdigit():
+                    continue
+
+                col4 = match.group(4).strip()
+
+                # Determine if 4th column is story points or description
+                if has_est_column and col4.isdigit():
+                    # Est. column = story points
+                    subtasks.append(
+                        Subtask(
+                            number=int(number_str),
+                            name=match.group(2).strip(),
+                            description="",  # No description in this format
+                            story_points=int(col4),
+                            status=Status.from_string(match.group(3)),
+                        )
+                    )
+                else:
+                    # Notes/Deliverable column = description
+                    subtasks.append(
+                        Subtask(
+                            number=int(number_str),
+                            name=match.group(2).strip(),
+                            description=col4,
+                            story_points=0,
+                            status=Status.from_string(match.group(3)),
+                        )
+                    )
+            return subtasks
 
         return subtasks
 
@@ -612,8 +1037,9 @@ class MarkdownParser(DocumentParserPort):
         Returns:
             List of Comment objects
         """
-        from spectra.core.domain.entities import Comment
         from datetime import datetime
+
+        from spectra.core.domain.entities import Comment
 
         comments = []
 
@@ -660,10 +1086,8 @@ class MarkdownParser(DocumentParserPort):
                 author = header_match.group(1).strip()
                 date_str = header_match.group(2)
                 if date_str:
-                    try:
+                    with contextlib.suppress(ValueError):
                         created_at = datetime.strptime(date_str, "%Y-%m-%d")
-                    except ValueError:
-                        pass
                 body = header_match.group(3).strip()
             else:
                 # Check for simpler format: @username: comment
@@ -683,6 +1107,114 @@ class MarkdownParser(DocumentParserPort):
                 )
 
         return comments
+
+    def _extract_tracker_info(
+        self, content: str
+    ) -> tuple[str | None, str | None, datetime | None, str | None, str | None]:
+        """
+        Extract tracker information from story content.
+
+        Parses external issue key, URL, and sync metadata from blockquote metadata.
+
+        Supported formats:
+        - > **Tracker:** jira
+          > **Issue:** [PROJ-123](https://company.atlassian.net/browse/PROJ-123)
+          > **Last Synced:** 2025-01-15 14:30 UTC
+          > **Sync Status:** ✅ Synced
+          > **Content Hash:** `a1b2c3d4`
+        - > **Jira:** [PROJ-123](https://url)  (legacy/shorthand)
+        - > **GitHub:** [#123](https://url)
+        - > **Linear:** [TEAM-123](https://url)
+        - > **Azure:** [123](https://url)
+
+        Args:
+            content: Story content block to parse.
+
+        Returns:
+            Tuple of (issue_key, issue_url, last_synced, sync_status, content_hash)
+            Missing values are None.
+        """
+        issue_key: str | None = None
+        issue_url: str | None = None
+        last_synced: datetime | None = None
+        sync_status: str | None = None
+        content_hash: str | None = None
+
+        # Pattern 1: Explicit Issue field with markdown link
+        # > **Issue:** [PROJ-123](https://url)
+        # Note: colon is inside the bold markers (**Issue:**)
+        issue_match = re.search(
+            r">\s*\*\*Issue:\*\*\s*\[([^\]]+)\]\(([^)]+)\)",
+            content,
+            re.IGNORECASE,
+        )
+        if issue_match:
+            issue_key = issue_match.group(1).strip()
+            issue_url = issue_match.group(2).strip()
+
+        # Pattern 2: Tracker-specific shorthand (Jira, GitHub, Linear, Azure)
+        # > **Jira:** [PROJ-123](https://url)
+        # Note: colon is inside the bold markers (**Jira:**)
+        if not issue_key:
+            tracker_shorthand = re.search(
+                r">\s*\*\*(?:Jira|GitHub|Linear|Azure(?:\s*DevOps)?):\*\*\s*\[([^\]]+)\]\(([^)]+)\)",
+                content,
+                re.IGNORECASE,
+            )
+            if tracker_shorthand:
+                issue_key = tracker_shorthand.group(1).strip()
+                issue_url = tracker_shorthand.group(2).strip()
+
+        # Pattern 3: Just the issue key without link (for manual entries)
+        # > **Issue:** PROJ-123
+        if not issue_key:
+            key_only_match = re.search(
+                r">\s*\*\*Issue:\*\*\s*([A-Z]+-\d+|#?\d+)",
+                content,
+                re.IGNORECASE,
+            )
+            if key_only_match:
+                issue_key = key_only_match.group(1).strip()
+
+        # Extract Last Synced timestamp
+        # > **Last Synced:** 2025-01-15 14:30 UTC
+        synced_match = re.search(
+            r">\s*\*\*Last Synced:\*\*\s*(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}(?:\s*UTC)?)",
+            content,
+            re.IGNORECASE,
+        )
+        if synced_match:
+            try:
+                timestamp_str = synced_match.group(1).strip()
+                # Parse with or without UTC suffix
+                if "UTC" in timestamp_str.upper():
+                    timestamp_str = timestamp_str.replace("UTC", "").replace("utc", "").strip()
+                last_synced = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M")
+            except ValueError:
+                pass  # Invalid timestamp format
+
+        # Extract Sync Status
+        # > **Sync Status:** ✅ Synced
+        # Match optional emoji(s) followed by status word
+        status_match = re.search(
+            r">\s*\*\*Sync Status:\*\*\s*(?:\S+\s+)?(\w+)",
+            content,
+            re.IGNORECASE,
+        )
+        if status_match:
+            sync_status = status_match.group(1).strip().lower()
+
+        # Extract Content Hash
+        # > **Content Hash:** `a1b2c3d4`
+        hash_match = re.search(
+            r">\s*\*\*Content Hash:\*\*\s*`([a-f0-9]+)`",
+            content,
+            re.IGNORECASE,
+        )
+        if hash_match:
+            content_hash = hash_match.group(1).strip()
+
+        return issue_key, issue_url, last_synced, sync_status, content_hash
 
     def _extract_attachments(self, content: str) -> list[str]:
         """
@@ -708,4 +1240,3 @@ class MarkdownParser(DocumentParserPort):
                 attachments.append(path)
 
         return attachments
-

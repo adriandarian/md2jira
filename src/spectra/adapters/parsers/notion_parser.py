@@ -21,7 +21,6 @@ from spectra.core.domain.entities import Comment, Epic, Subtask, UserStory
 from spectra.core.domain.enums import Priority, Status
 from spectra.core.domain.value_objects import (
     AcceptanceCriteria,
-    CommitRef,
     Description,
     IssueKey,
     StoryId,
@@ -87,9 +86,9 @@ class NotionParser(DocumentParserPort):
     ```
     """
 
-    # Story ID patterns (flexible)
+    # Story ID patterns (flexible) - supports any PREFIX-NUMBER format
     STORY_ID_PATTERNS = [
-        r"(?:US|STORY|S)-?\d{3,}",  # US-001, STORY-123, S001
+        r"[A-Z]+-\d+",  # Any PREFIX-NUMBER: US-001, EU-042, PROJ-123, FEAT-001
         r"#\d+",  # #123
         r"\[([A-Z]+-\d+)\]",  # [PROJ-123]
     ]
@@ -413,17 +412,19 @@ class NotionParser(DocumentParserPort):
         return title.strip(), story_id
 
     def _extract_story_id(self, content: str) -> str:
-        """Extract story ID from content."""
+        """Extract story ID from content.
+
+        Accepts any PREFIX-NUMBER format (e.g., US-001, EU-042, PROJ-123).
+        """
         for pattern in self.STORY_ID_PATTERNS:
             match = re.search(pattern, content, re.IGNORECASE)
             if match:
-                id_str = match.group(0).strip("[]#").upper()
-                if not id_str.startswith("US-") and not id_str.startswith("STORY-"):
-                    id_str = f"US-{id_str.lstrip('S-')}"
-                return id_str
+                # Get the matched ID, handling capture groups
+                matched = match.group(1) if match.lastindex else match.group(0)
+                return matched.strip("[]#").upper()
 
-        # Generate ID from title hash
-        return f"US-{abs(hash(content[:100])) % 1000:03d}"
+        # Generate fallback ID from content hash
+        return f"STORY-{abs(hash(content[:100])) % 1000:03d}"
 
     def _extract_properties(self, content: str) -> dict[str, str]:
         """Extract Notion property block."""
@@ -628,10 +629,8 @@ class NotionParser(DocumentParserPort):
                 author = header_match.group(1).strip()
                 date_str = header_match.group(2)
                 if date_str:
-                    try:
+                    with contextlib.suppress(ValueError):
                         created_at = datetime.strptime(date_str, "%Y-%m-%d")
-                    except ValueError:
-                        pass
                 body = header_match.group(3).strip()
             else:
                 # Check for simpler format: @username: comment
@@ -652,9 +651,7 @@ class NotionParser(DocumentParserPort):
 
         return comments
 
-    def _extract_links(
-        self, content: str, properties: dict[str, str]
-    ) -> list[tuple[str, str]]:
+    def _extract_links(self, content: str, properties: dict[str, str]) -> list[tuple[str, str]]:
         """
         Extract issue links from Notion content.
 
@@ -815,10 +812,10 @@ class NotionParser(DocumentParserPort):
         if not title:
             return None
 
-        # Get ID
-        story_id = row.get("id", row.get("story id", f"US-{index + 1:03d}"))
-        if not story_id.startswith("US-"):
-            story_id = f"US-{story_id}"
+        # Get ID - accept any PREFIX-NUMBER format or use fallback
+        story_id = row.get("id", row.get("story id", ""))
+        if not story_id:
+            story_id = f"STORY-{index + 1:03d}"
 
         # Parse fields
         story_points = self._parse_int(

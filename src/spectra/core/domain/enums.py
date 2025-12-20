@@ -121,6 +121,16 @@ class Priority(Enum):
         }[self]
 
     @property
+    def jira_name(self) -> str:
+        """Get Jira-compatible priority name."""
+        return {
+            Priority.CRITICAL: "Highest",
+            Priority.HIGH: "High",
+            Priority.MEDIUM: "Medium",
+            Priority.LOW: "Low",
+        }[self]
+
+    @property
     def display_name(self) -> str:
         """Human-readable name."""
         return self.name.capitalize()

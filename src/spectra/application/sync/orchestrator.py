@@ -29,7 +29,7 @@ from spectra.application.commands import (
 )
 from spectra.core.domain.entities import UserStory
 from spectra.core.domain.events import EventBus, SyncCompleted, SyncStarted
-from spectra.core.ports.config_provider import SyncConfig
+from spectra.core.ports.config_provider import SyncConfig, ValidationConfig
 from spectra.core.ports.document_formatter import DocumentFormatterPort
 from spectra.core.ports.document_parser import DocumentParserPort
 
@@ -268,6 +268,7 @@ class SyncOrchestrator:
         event_bus: EventBus | None = None,
         state_store: StateStore | None = None,
         backup_manager: BackupManager | None = None,
+        validation_config: ValidationConfig | None = None,
     ):
         """
         Initialize the orchestrator.
@@ -280,11 +281,13 @@ class SyncOrchestrator:
             event_bus: Optional event bus
             state_store: Optional state store for persistence
             backup_manager: Optional backup manager for pre-sync backups
+            validation_config: Optional validation configuration for constraints
         """
         self.tracker = tracker
         self.parser = parser
         self.formatter = formatter
         self.config = config
+        self.validation_config = validation_config or ValidationConfig()
         self.event_bus = event_bus or EventBus()
         self.state_store = state_store
         self.backup_manager = backup_manager
@@ -295,6 +298,9 @@ class SyncOrchestrator:
         self._matches: dict[str, str] = {}  # story_id -> issue_key
         self._state: SyncState | None = None
         self._last_backup: Backup | None = None
+
+        # Cached priority lookup (project_key -> {priority_name_lower: priority_id})
+        self._priority_cache: dict[str | None, dict[str, str]] = {}
 
         # Incremental sync support
         self._change_tracker: ChangeTracker | None = None
@@ -308,6 +314,83 @@ class SyncOrchestrator:
     # -------------------------------------------------------------------------
     # Main Entry Points
     # -------------------------------------------------------------------------
+
+    def validate_sync_prerequisites(
+        self,
+        markdown_path: str,
+        epic_key: str,
+    ) -> list[str]:
+        """
+        Validate prerequisites before sync.
+
+        Checks:
+        - Markdown path exists and can be parsed
+        - Epic exists in Jira
+        - Required priorities are available (and warns about unmapped ones)
+
+        Args:
+            markdown_path: Path to markdown file
+            epic_key: Jira epic key
+
+        Returns:
+            List of validation error messages (empty if valid)
+        """
+        errors: list[str] = []
+        warnings: list[str] = []
+
+        # Check markdown path
+        from pathlib import Path
+
+        md_path = Path(markdown_path)
+        if not md_path.exists():
+            errors.append(f"Markdown path not found: {markdown_path}")
+        elif md_path.is_file() and md_path.suffix.lower() != ".md":
+            warnings.append(f"File may not be markdown: {markdown_path}")
+
+        # Check epic exists
+        try:
+            epic_data = self.tracker.get_issue(epic_key)
+            if not epic_data:
+                errors.append(f"Epic {epic_key} not found in Jira")
+        except Exception as e:
+            errors.append(f"Failed to access epic {epic_key}: {e}")
+
+        # Check priority mapping
+        project_key = epic_key.split("-")[0] if "-" in epic_key else None
+        if hasattr(self.tracker, "get_priorities"):
+            try:
+                available = self.tracker.get_priorities(project_key)
+                available_names = [p["name"].lower() for p in available]
+
+                # Check if our priority names can be mapped
+                mappings = {
+                    "CRITICAL": ["highest", "critical", "blocker", "urgent", "p0"],
+                    "HIGH": ["high", "major", "p1"],
+                    "MEDIUM": ["medium", "normal", "default", "p2"],
+                    "LOW": ["low", "minor", "lowest", "trivial", "p3"],
+                }
+
+                unmapped = []
+                for enum_name, candidates in mappings.items():
+                    if not any(c in available_names for c in candidates):
+                        unmapped.append(enum_name)
+
+                if unmapped:
+                    warnings.append(
+                        f"Priorities {unmapped} cannot be mapped to Jira. "
+                        f"Available: {[p['name'] for p in available]}"
+                    )
+
+                # Cache for later use
+                self._priority_cache[project_key] = {p["name"].lower(): p["id"] for p in available}
+            except Exception as e:
+                warnings.append(f"Could not fetch priorities: {e}")
+
+        # Log warnings
+        for warning in warnings:
+            self.logger.warning(f"Validation warning: {warning}")
+
+        return errors
 
     def analyze(
         self,
@@ -431,6 +514,16 @@ class SyncOrchestrator:
             and result.success
         ):
             self._change_tracker.save(epic_key, markdown_path)
+
+        # Phase N: Update source file with tracker info
+        if self.config.update_source_file:
+            self._report_progress(
+                progress_callback, "Updating source file", total_phases - 1, total_phases
+            )
+            self._update_source_file_with_tracker_info(markdown_path, result, epic_key=epic_key)
+
+        # Final phase: Complete (100%)
+        self._report_progress(progress_callback, "Complete", total_phases, total_phases)
 
         # Publish complete event
         self.event_bus.publish(
@@ -1020,6 +1113,127 @@ class SyncOrchestrator:
         self.logger.info(f"Backup created: {backup.backup_id} ({backup.issue_count} issues)")
 
         return backup
+
+    # -------------------------------------------------------------------------
+    # Source File Update
+    # -------------------------------------------------------------------------
+
+    def _update_source_file_with_tracker_info(
+        self,
+        markdown_path: str,
+        result: SyncResult,
+        epic_key: str | None = None,
+    ) -> None:
+        """
+        Update the source markdown file with tracker information.
+
+        Writes the external issue key, URL, and sync metadata back to the
+        markdown file for each successfully synced story. Also updates
+        epic-level tracking if epic_key is provided.
+
+        Args:
+            markdown_path: Path to the markdown file.
+            result: SyncResult (used for adding warnings if update fails).
+            epic_key: Optional epic key to write to document header.
+        """
+        from pathlib import Path
+
+        from spectra.core.ports.config_provider import TrackerType
+
+        from .source_updater import SourceFileUpdater
+
+        # Determine tracker type and base URL from the adapter
+        # Default to Jira if we can't determine
+        tracker_type = TrackerType.JIRA
+        base_url = getattr(self.tracker, "base_url", "") or getattr(self.tracker, "_base_url", "")
+
+        # Try to detect tracker type from adapter class name
+        adapter_name = type(self.tracker).__name__.lower()
+        if "github" in adapter_name:
+            tracker_type = TrackerType.GITHUB
+        elif "linear" in adapter_name:
+            tracker_type = TrackerType.LINEAR
+        elif "azure" in adapter_name:
+            tracker_type = TrackerType.AZURE_DEVOPS
+
+        if not base_url:
+            result.add_warning("Could not determine tracker base URL for source update")
+            return
+
+        # Prepare stories with external keys populated from matches
+        synced_stories = []
+        for story in self._md_stories:
+            story_id = str(story.id)
+            if story_id in self._matches:
+                # Update story's external_key with the matched issue key
+                story.external_key = self._matches[story_id]
+                # Build URL if not already set
+                if not story.external_url:
+                    story.external_url = self._build_issue_url(
+                        tracker_type, base_url, self._matches[story_id]
+                    )
+                synced_stories.append(story)
+
+        if not synced_stories:
+            self.logger.debug("No synced stories to update in source file")
+            return
+
+        # Create updater and update the file
+        updater = SourceFileUpdater(
+            tracker_type=tracker_type,
+            base_url=base_url,
+        )
+
+        file_path = Path(markdown_path)
+        if file_path.is_dir():
+            # Directory-based project
+            update_results = updater.update_directory(
+                directory=file_path,
+                stories=synced_stories,
+                epic_key=epic_key,
+                dry_run=self.config.dry_run,
+            )
+            for ur in update_results:
+                if not ur.success:
+                    for error in ur.errors:
+                        result.add_warning(f"Source update failed: {error}")
+                else:
+                    self.logger.info(ur.summary)
+        else:
+            # Single file
+            update_result = updater.update_file(
+                file_path=file_path,
+                stories=synced_stories,
+                epic_key=epic_key,
+                dry_run=self.config.dry_run,
+            )
+            if not update_result.success:
+                for error in update_result.errors:
+                    result.add_warning(f"Source update failed: {error}")
+            else:
+                self.logger.info(update_result.summary)
+
+    def _build_issue_url(
+        self,
+        tracker_type: TrackerType,
+        base_url: str,
+        issue_key: str,
+    ) -> str:
+        """Build issue URL based on tracker type."""
+        from spectra.core.ports.config_provider import TrackerType
+
+        base_url = base_url.rstrip("/")
+
+        if tracker_type == TrackerType.JIRA:
+            return f"{base_url}/browse/{issue_key}"
+        if tracker_type == TrackerType.GITHUB:
+            issue_num = issue_key.lstrip("#")
+            return f"{base_url}/issues/{issue_num}"
+        if tracker_type == TrackerType.LINEAR:
+            return f"{base_url}/issue/{issue_key}"
+        if tracker_type == TrackerType.AZURE_DEVOPS:
+            return f"{base_url}/_workitems/edit/{issue_key}"
+        return f"{base_url}/{issue_key}"
 
     # -------------------------------------------------------------------------
     # Helpers

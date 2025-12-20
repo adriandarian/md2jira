@@ -134,7 +134,9 @@ class ToonParser(DocumentParserPort):
                 if story:
                     stories.append(story)
             except Exception as e:
-                story_id = story_data.get("id", "unknown") if isinstance(story_data, dict) else "unknown"
+                story_id = (
+                    story_data.get("id", "unknown") if isinstance(story_data, dict) else "unknown"
+                )
                 self.logger.warning(f"Failed to parse story {story_id}: {e}")
 
         return stories
@@ -145,7 +147,11 @@ class ToonParser(DocumentParserPort):
 
         epic_data = data.get("epic", {})
         epic_key = epic_data.get("key", "EPIC-0") if isinstance(epic_data, dict) else "EPIC-0"
-        epic_title = epic_data.get("title", "Untitled Epic") if isinstance(epic_data, dict) else "Untitled Epic"
+        epic_title = (
+            epic_data.get("title", "Untitled Epic")
+            if isinstance(epic_data, dict)
+            else "Untitled Epic"
+        )
         epic_description = epic_data.get("description", "") if isinstance(epic_data, dict) else ""
 
         stories = self.parse_stories(source)
@@ -246,6 +252,7 @@ class ToonParser(DocumentParserPort):
     def _parse_yaml_style(self, content: str) -> dict[str, Any]:
         """Parse YAML-style TOON content."""
         import yaml
+
         try:
             data = yaml.safe_load(content)
             if isinstance(data, dict):
@@ -276,7 +283,7 @@ class ToonParser(DocumentParserPort):
             if end == -1:
                 raise ParserError(f"Unmatched bracket for key '{key}'")
 
-            inner = content[start + 1:end].strip()
+            inner = content[start + 1 : end].strip()
 
             if bracket_type == "{":
                 result[key] = self._parse_inline_object(inner)
@@ -308,9 +315,8 @@ class ToonParser(DocumentParserPort):
                     depth += 1
                 elif char == close_char:
                     depth -= 1
-            else:
-                if char == string_char and content[pos - 1] != "\\":
-                    in_string = False
+            elif char == string_char and content[pos - 1] != "\\":
+                in_string = False
 
             pos += 1
 
@@ -347,7 +353,7 @@ class ToonParser(DocumentParserPort):
             if content[pos] == "{":
                 end = self._find_matching_bracket(content, pos)
                 if end != -1:
-                    inner = content[pos + 1:end].strip()
+                    inner = content[pos + 1 : end].strip()
                     result.append(self._parse_inline_object(inner))
                     pos = end + 1
                 else:
@@ -380,8 +386,9 @@ class ToonParser(DocumentParserPort):
             pass
 
         # String (remove quotes if present)
-        if (value.startswith('"') and value.endswith('"')) or \
-           (value.startswith("'") and value.endswith("'")):
+        if (value.startswith('"') and value.endswith('"')) or (
+            value.startswith("'") and value.endswith("'")
+        ):
             return value[1:-1]
 
         return value
@@ -395,11 +402,14 @@ class ToonParser(DocumentParserPort):
     # -------------------------------------------------------------------------
 
     def _parse_story(self, data: dict[str, Any]) -> UserStory | None:
-        """Parse a single story from TOON data."""
+        """Parse a single story from TOON data.
+
+        Accepts any PREFIX-NUMBER format for story IDs (e.g., US-001, EU-042, PROJ-123).
+        """
         if not isinstance(data, dict):
             return None
 
-        story_id = data.get("id", "US-000")
+        story_id = data.get("id", "STORY-000")
         title = data.get("title", "Untitled Story")
 
         description = self._parse_description(data.get("description"))
@@ -636,4 +646,3 @@ class ToonParser(DocumentParserPort):
                 errors.append(f"{prefix}.status: must be one of {valid_statuses}")
 
         return errors
-

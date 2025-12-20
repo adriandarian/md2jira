@@ -374,13 +374,13 @@ class TestCLIIntegration:
         args = cli_parser.parse_args(
             [
                 "--dashboard",
-                "--markdown",
+                "--input",
                 "epic.md",
             ]
         )
 
         assert args.dashboard is True
-        assert args.markdown == "epic.md"
+        assert args.input == "epic.md"
 
     def test_dashboard_with_epic(self, cli_parser):
         """Test --dashboard with epic."""
@@ -401,7 +401,7 @@ class TestCLIIntegration:
         args = cli_parser.parse_args(["--dashboard"])
 
         assert args.dashboard is True
-        assert args.markdown is None
+        assert args.input is None
         assert args.epic is None
 
 

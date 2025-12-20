@@ -11,13 +11,11 @@ import csv
 import io
 import logging
 from pathlib import Path
-from typing import Any
 
 from spectra.core.domain.entities import Comment, Epic, Subtask, UserStory
 from spectra.core.domain.enums import Priority, Status
 from spectra.core.domain.value_objects import (
     AcceptanceCriteria,
-    CommitRef,
     Description,
     IssueKey,
     StoryId,
@@ -64,7 +62,13 @@ class CsvParser(DocumentParserPort):
         "status": ["status", "state", "stage"],
         "acceptance_criteria": ["acceptance_criteria", "acceptance criteria", "ac", "criteria"],
         "subtasks": ["subtasks", "tasks", "sub_tasks", "sub-tasks"],
-        "technical_notes": ["technical_notes", "technical notes", "notes", "tech_notes", "tech notes"],
+        "technical_notes": [
+            "technical_notes",
+            "technical notes",
+            "notes",
+            "tech_notes",
+            "tech notes",
+        ],
         "links": ["links", "related", "dependencies", "relations"],
         "comments": ["comments", "notes", "discussion"],
         "assignee": ["assignee", "assigned", "owner", "assigned_to"],
@@ -227,10 +231,13 @@ class CsvParser(DocumentParserPort):
         return normalized
 
     def _parse_row(self, row: dict[str, str], index: int) -> UserStory | None:
-        """Parse a single CSV row into a UserStory."""
-        story_id = row.get("id", f"US-{index + 1:03d}")
-        if not story_id.upper().startswith(("US-", "STORY-")):
-            story_id = f"US-{story_id}"
+        """Parse a single CSV row into a UserStory.
+
+        Accepts any PREFIX-NUMBER format for story IDs (e.g., US-001, EU-042, PROJ-123).
+        """
+        story_id = row.get("id", "")
+        if not story_id:
+            story_id = f"STORY-{index + 1:03d}"
 
         title = row.get("title", "").strip()
         if not title:
@@ -280,6 +287,7 @@ class CsvParser(DocumentParserPort):
             return None
 
         import re
+
         pattern = r"As a[n]?\s+(.+?),?\s+I want\s+(.+?),?\s+so that\s+(.+)"
         match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
         if match:
@@ -366,10 +374,10 @@ class CsvParser(DocumentParserPort):
             return 0
 
         import re
+
         cleaned = re.sub(r"[^\d-]", "", str(value))
 
         try:
             return int(cleaned) if cleaned else 0
         except ValueError:
             return 0
-

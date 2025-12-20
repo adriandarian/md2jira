@@ -12,6 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+
 try:
     import tomllib  # Python 3.11+
 except ImportError:
@@ -219,11 +220,15 @@ class TomlParser(DocumentParserPort):
     def _is_valid_key(self, key: str) -> bool:
         """Check if a string is a valid issue key."""
         import re
+
         return bool(re.match(r"^[A-Z]+-\d+$", str(key).upper()))
 
     def _parse_story(self, data: dict[str, Any]) -> UserStory | None:
-        """Parse a single story from TOML data."""
-        story_id = data.get("id", "US-000")
+        """Parse a single story from TOML data.
+
+        Accepts any PREFIX-NUMBER format for story IDs (e.g., US-001, EU-042, PROJ-123).
+        """
+        story_id = data.get("id", "STORY-000")
         title = data.get("title", "Untitled Story")
 
         description = self._parse_description(data.get("description"))
@@ -260,6 +265,7 @@ class TomlParser(DocumentParserPort):
 
         if isinstance(data, str):
             import re
+
             pattern = r"As a[n]?\s+(.+?),?\s+I want\s+(.+?),?\s+so that\s+(.+)"
             match = re.search(pattern, data, re.IGNORECASE | re.DOTALL)
             if match:
@@ -445,4 +451,3 @@ class TomlParser(DocumentParserPort):
                 errors.append(f"{prefix}.status: must be one of {valid_statuses}")
 
         return errors
-

@@ -62,6 +62,60 @@ class TestStoryId:
         sid = StoryId("US-042")
         assert sid.number == 42
 
+    def test_prefix_property(self):
+        """Test extracting prefix from story ID."""
+        sid = StoryId("PROJ-123")
+        assert sid.prefix == "PROJ"
+
+    def test_flexible_prefix_eu(self):
+        """Test EU- prefix for regional stories."""
+        sid = StoryId.from_string("EU-042")
+        assert str(sid) == "EU-042"
+        assert sid.prefix == "EU"
+        assert sid.number == 42
+
+    def test_flexible_prefix_proj(self):
+        """Test PROJ- prefix for project-based stories."""
+        sid = StoryId.from_string("proj-123")
+        assert str(sid) == "PROJ-123"
+        assert sid.prefix == "PROJ"
+
+    def test_flexible_prefix_feat(self):
+        """Test FEAT- prefix for feature-based stories."""
+        sid = StoryId.from_string("FEAT-001")
+        assert str(sid) == "FEAT-001"
+        assert sid.prefix == "FEAT"
+
+    def test_flexible_prefix_na(self):
+        """Test NA- prefix for North America stories."""
+        sid = StoryId("NA-999")
+        assert str(sid) == "NA-999"
+        assert sid.prefix == "NA"
+        assert sid.number == 999
+
+    def test_flexible_prefix_long(self):
+        """Test long prefix."""
+        sid = StoryId("VERYLONGPREFIX-12345")
+        assert str(sid) == "VERYLONGPREFIX-12345"
+        assert sid.prefix == "VERYLONGPREFIX"
+        assert sid.number == 12345
+
+    def test_flexible_prefix_short(self):
+        """Test single-letter prefix."""
+        sid = StoryId("A-1")
+        assert str(sid) == "A-1"
+        assert sid.prefix == "A"
+        assert sid.number == 1
+
+    def test_normalizes_to_uppercase(self):
+        """Test that story IDs are normalized to uppercase."""
+        sid = StoryId.from_string("proj-123")
+        assert str(sid) == "PROJ-123"
+
+        sid2 = StoryId("feat-042")
+        # Post-init normalizes
+        assert str(sid2) == "FEAT-042"
+
 
 class TestIssueKey:
     """Tests for IssueKey value object."""

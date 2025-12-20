@@ -17,23 +17,37 @@ class StoryId:
     """
     Unique identifier for a story within a markdown document.
 
-    Format: US-XXX (e.g., US-001, US-042)
+    Format: PREFIX-NUMBER (e.g., US-001, EU-042, PROJ-123, FEAT-001)
+
+    Accepts any alphanumeric prefix followed by a hyphen and number.
+    This allows organizations to use their own naming conventions.
     """
 
     value: str
 
+    # Pattern for valid story IDs: one or more uppercase letters, hyphen, one or more digits
+    PATTERN = re.compile(r"^[A-Z]+-\d+$", re.IGNORECASE)
+
     def __post_init__(self) -> None:
-        if not re.match(r"^US-\d{3,}$", self.value):
-            # Allow flexible formats but normalize
-            pass
+        # Normalize to uppercase
+        normalized = self.value.strip().upper()
+        if normalized != self.value:
+            object.__setattr__(self, "value", normalized)
 
     @classmethod
     def from_string(cls, value: str) -> StoryId:
-        """Parse a story ID from string."""
-        value = value.strip().upper()
-        if not value.startswith("US-"):
-            value = f"US-{value}"
-        return cls(value)
+        """Parse a story ID from string.
+
+        Accepts any PREFIX-NUMBER format (e.g., US-001, EU-042, PROJ-123).
+        """
+        return cls(value.strip().upper())
+
+    @property
+    def prefix(self) -> str:
+        """Extract the prefix portion (e.g., 'US' from 'US-001')."""
+        if "-" in self.value:
+            return self.value.split("-")[0]
+        return ""
 
     @property
     def number(self) -> int:

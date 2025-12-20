@@ -14,7 +14,7 @@ Endpoints:
 
 Usage:
     # Enable via CLI
-    spectra --health --health-port 8080 --markdown EPIC.md --epic PROJ-123
+    spectra --health --health-port 8080 --input EPIC.md --epic PROJ-123
 
     # Check health
     curl http://localhost:8080/health

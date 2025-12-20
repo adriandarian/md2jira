@@ -40,108 +40,120 @@ Examples:
   # Preview generated template before writing
   spectra --generate --epic PROJ-123 --preview
 
-  # Validate markdown file format
-  spectra --validate --markdown EPIC.md
+  # Validate file format
+  spectra --validate --input EPIC.md
 
   # Strict validation (warnings are errors)
-  spectra --validate --markdown EPIC.md --strict
+  spectra --validate -f EPIC.md --strict
 
-  # Show the expected markdown format guide
-  spectra --validate --markdown EPIC.md --show-guide
+  # Show the expected format guide
+  spectra --validate -f EPIC.md --show-guide
 
   # Get an AI prompt to fix validation errors (copy to ChatGPT/Claude)
-  spectra --validate --markdown EPIC.md --suggest-fix
+  spectra --validate -f EPIC.md --suggest-fix
 
   # Auto-fix using an AI CLI tool (detects available tools)
-  spectra --validate --markdown EPIC.md --auto-fix
+  spectra --validate -f EPIC.md --auto-fix
 
   # Auto-fix with a specific AI tool
-  spectra --validate --markdown EPIC.md --auto-fix --ai-tool claude
+  spectra --validate -f EPIC.md --auto-fix --ai-tool claude
 
   # List detected AI CLI tools for auto-fix
   spectra --list-ai-tools
 
   # Show status dashboard
-  spectra --dashboard --markdown EPIC.md --epic PROJ-123
+  spectra --dashboard -f EPIC.md --epic PROJ-123
 
   # Enable OpenTelemetry tracing
-  spectra --otel-enable --otel-endpoint http://localhost:4317 --markdown EPIC.md --epic PROJ-123
+  spectra --otel-enable --otel-endpoint http://localhost:4317 -f EPIC.md -e PROJ-123
 
   # Enable Prometheus metrics (exposed on :9090/metrics)
-  spectra --prometheus --prometheus-port 9090 --markdown EPIC.md --epic PROJ-123
+  spectra --prometheus --prometheus-port 9090 -f EPIC.md -e PROJ-123
 
   # Enable health check endpoint (for Kubernetes/Docker)
-  spectra --health --health-port 8080 --markdown EPIC.md --epic PROJ-123
+  spectra --health --health-port 8080 -f EPIC.md -e PROJ-123
 
   # Enable anonymous usage analytics (opt-in)
-  spectra --analytics --markdown EPIC.md --epic PROJ-123
+  spectra --analytics -f EPIC.md -e PROJ-123
 
   # Show/clear analytics data
   spectra --analytics-show
   spectra --analytics-clear
 
-  # Analyze without making changes (dry-run)
-  spectra --markdown EPIC.md --epic PROJ-123
+  # Preview changes without executing (dry-run is default)
+  spectra -f EPIC.md -e PROJ-123 --dry-run
+
+  # Analyze without making changes (same as above, --dry-run is optional)
+  spectra -f EPIC.md -e PROJ-123
 
   # Execute sync with confirmations
-  spectra --markdown EPIC.md --epic PROJ-123 --execute
+  spectra -f EPIC.md -e PROJ-123 --execute
 
   # Full sync without prompts
-  spectra --markdown EPIC.md --epic PROJ-123 --execute --no-confirm
+  spectra -f EPIC.md -e PROJ-123 --execute --no-confirm
 
   # Interactive mode - step-by-step guided sync
-  spectra --markdown EPIC.md --epic PROJ-123 --interactive
+  spectra -f EPIC.md -e PROJ-123 --interactive
 
   # Sync only descriptions
-  spectra --markdown EPIC.md --epic PROJ-123 --execute --phase descriptions
+  spectra -f EPIC.md -e PROJ-123 --execute --phase descriptions
 
   # Verbose output for debugging
-  spectra --markdown EPIC.md --epic PROJ-123 -v
+  spectra -f EPIC.md -e PROJ-123 -v
 
-  # Pull from Jira to markdown (reverse sync)
-  spectra --pull --epic PROJ-123 --pull-output EPIC.md --execute
+  # Pull from Jira to file (reverse sync)
+  spectra --pull -e PROJ-123 --pull-output EPIC.md --execute
 
   # Preview what would be pulled from Jira
-  spectra --pull --epic PROJ-123 --preview
+  spectra --pull -e PROJ-123 --preview
 
-  # Update existing markdown from Jira
-  spectra --pull --epic PROJ-123 --markdown EPIC.md --update-existing --execute
+  # Update existing file from Jira
+  spectra --pull -e PROJ-123 -f EPIC.md --update-existing --execute
 
   # Watch mode - auto-sync on file changes
-  spectra --watch --markdown EPIC.md --epic PROJ-123 --execute
+  spectra --watch -f EPIC.md -e PROJ-123 --execute
 
   # Watch mode with custom debounce (5 seconds between syncs)
-  spectra --watch --markdown EPIC.md --epic PROJ-123 --execute --debounce 5
+  spectra --watch -f EPIC.md -e PROJ-123 --execute --debounce 5
 
   # Scheduled sync - every 5 minutes
-  spectra --schedule 5m --markdown EPIC.md --epic PROJ-123 --execute
+  spectra --schedule 5m -f EPIC.md -e PROJ-123 --execute
 
   # Scheduled sync - daily at 9:00 AM
-  spectra --schedule daily:09:00 --markdown EPIC.md --epic PROJ-123 --execute
+  spectra --schedule daily:09:00 -f EPIC.md -e PROJ-123 --execute
 
   # Scheduled sync - run immediately, then every hour
-  spectra --schedule 1h --markdown EPIC.md --epic PROJ-123 --execute --run-now
+  spectra --schedule 1h -f EPIC.md -e PROJ-123 --execute --run-now
 
   # Webhook server - receive Jira webhooks for auto reverse sync
-  spectra --webhook --epic PROJ-123 --pull-output EPIC.md --execute
+  spectra --webhook -e PROJ-123 --pull-output EPIC.md --execute
 
   # Webhook server on custom port with secret
-  spectra --webhook --webhook-port 9000 --webhook-secret mysecret --epic PROJ-123 --pull-output EPIC.md --execute
+  spectra --webhook --webhook-port 9000 --webhook-secret mysecret -e PROJ-123 --pull-output EPIC.md --execute
 
   # Multi-epic sync - sync all epics from one file
-  spectra --multi-epic --markdown ROADMAP.md --execute
+  spectra --multi-epic -f ROADMAP.md --execute
 
   # Multi-epic with filter - sync only specific epics
-  spectra --multi-epic --markdown ROADMAP.md --epic-filter PROJ-100,PROJ-200 --execute
+  spectra --multi-epic -f ROADMAP.md --epic-filter PROJ-100,PROJ-200 --execute
 
   # List epics in a multi-epic file
-  spectra --list-epics --markdown ROADMAP.md
+  spectra --list-epics -f ROADMAP.md
 
-  # Sync cross-project links from markdown
-  spectra --sync-links --markdown EPIC.md --epic PROJ-123 --execute
+  # Sync cross-project links
+  spectra --sync-links -f EPIC.md -e PROJ-123 --execute
 
   # Analyze links without syncing
-  spectra --analyze-links --markdown EPIC.md --epic PROJ-123
+  spectra --analyze-links -f EPIC.md -e PROJ-123
+
+  # Directory mode - sync all story files from a directory
+  spectra -d ./docs/plan -e PROJ-123 --dry-run
+
+  # Preview which files would be processed from a directory
+  spectra -d ./docs/plan --list-files
+
+  # Execute directory sync
+  spectra -d ./docs/plan -e PROJ-123 --execute
 
 Environment Variables:
   JIRA_URL         Jira instance URL (e.g., https://company.atlassian.net)
@@ -150,13 +162,36 @@ Environment Variables:
         """,
     )
 
-    # Required arguments (conditionally required - not needed for --completions)
-    parser.add_argument("--markdown", "-m", type=str, help="Path to markdown epic file")
+    # Input arguments - supports multiple file types (markdown, yaml, json, csv, etc.)
+    parser.add_argument(
+        "--input",
+        "-f",
+        type=str,
+        help="Path to input file (markdown, yaml, json, csv, asciidoc, excel, toml)",
+    )
+    parser.add_argument(
+        "--input-dir",
+        "-d",
+        type=str,
+        metavar="DIR",
+        help="Path to directory containing story files (auto-detects file types)",
+    )
+    parser.add_argument(
+        "--list-files",
+        action="store_true",
+        help="List which files would be processed from --input-dir (useful for preview)",
+    )
     parser.add_argument("--epic", "-e", type=str, help="Jira epic key (e.g., PROJ-123)")
 
     # Execution mode
     parser.add_argument(
         "--execute", "-x", action="store_true", help="Execute changes (default is dry-run)"
+    )
+    parser.add_argument(
+        "--dry-run",
+        "-n",
+        action="store_true",
+        help="Preview changes without executing (this is the default, use for explicit clarity)",
     )
     parser.add_argument("--no-confirm", action="store_true", help="Skip confirmation prompts")
     parser.add_argument(
@@ -166,6 +201,11 @@ Environment Variables:
         "--force-full-sync",
         action="store_true",
         help="Force full sync even when --incremental is set",
+    )
+    parser.add_argument(
+        "--update-source",
+        action="store_true",
+        help="Write tracker info (issue key, URL) back to source markdown file after sync",
     )
 
     # Phase control
@@ -582,6 +622,7 @@ def validate_markdown(
     suggest_fix: bool = False,
     auto_fix: bool = False,
     ai_tool: str | None = None,
+    input_dir: str | None = None,
 ) -> int:
     """
     Validate a markdown file's format and structure.
@@ -597,6 +638,7 @@ def validate_markdown(
         suggest_fix: If True, generate an AI prompt to fix issues.
         auto_fix: If True, automatically fix using an AI tool.
         ai_tool: Specific AI tool to use for auto-fix.
+        input_dir: Path to directory containing US-*.md files.
 
     Returns:
         Exit code (0 for success, non-zero for errors).
@@ -611,6 +653,7 @@ def validate_markdown(
         suggest_fix=suggest_fix,
         auto_fix=auto_fix,
         ai_tool=ai_tool,
+        input_dir=input_dir,
     )
 
 
@@ -1129,7 +1172,7 @@ def run_sync_links(args) -> int:
         quiet=getattr(args, "quiet", False),
     )
 
-    markdown_path = args.markdown
+    markdown_path = args.input
     epic_key = args.epic
     dry_run = not getattr(args, "execute", False)
     analyze_only = getattr(args, "analyze_links", False)
@@ -1301,7 +1344,7 @@ def run_multi_epic(args) -> int:
         quiet=getattr(args, "quiet", False),
     )
 
-    markdown_path = args.markdown
+    markdown_path = args.input
     dry_run = not getattr(args, "execute", False)
     list_only = getattr(args, "list_epics", False)
     epic_filter_str = getattr(args, "epic_filter", None)
@@ -1595,7 +1638,7 @@ def run_schedule(args) -> int:
         quiet=getattr(args, "quiet", False),
     )
 
-    markdown_path = args.markdown
+    markdown_path = args.input
     epic_key = args.epic
     schedule_spec = args.schedule
     run_now = getattr(args, "run_now", False)
@@ -1733,7 +1776,7 @@ def run_watch(args) -> int:
         quiet=getattr(args, "quiet", False),
     )
 
-    markdown_path = args.markdown
+    markdown_path = args.input
     epic_key = args.epic
     debounce = getattr(args, "debounce", 2.0)
     poll_interval = getattr(args, "poll_interval", 1.0)
@@ -2088,11 +2131,20 @@ def run_sync(
 
     config = config_provider.load()
 
-    # Validate markdown exists
-    markdown_path = Path(args.markdown)
-    if not markdown_path.exists():
-        console.error_rich(FileNotFoundError(markdown_path))
-        return ExitCode.FILE_NOT_FOUND
+    # Handle markdown source (file or directory)
+    input_dir = getattr(args, "input_dir", None)
+    is_directory_mode = bool(input_dir)
+
+    if is_directory_mode:
+        markdown_path = Path(input_dir)
+        if not markdown_path.is_dir():
+            console.error_rich(FileNotFoundError(f"Directory not found: {input_dir}"))
+            return ExitCode.FILE_NOT_FOUND
+    else:
+        markdown_path = Path(args.input)
+        if not markdown_path.exists():
+            console.error_rich(FileNotFoundError(markdown_path))
+            return ExitCode.FILE_NOT_FOUND
 
     # Show header
     console.header(f"spectra {Symbols.ROCKET}")
@@ -2104,7 +2156,14 @@ def run_sync(
     if config_provider.config_file_path:
         console.info(f"Config: {config_provider.config_file_path}")
 
-    console.info(f"Markdown: {markdown_path}")
+    if is_directory_mode:
+        # Count files in directory
+        story_files = [f for f in markdown_path.glob("*.md") if f.name.lower().startswith("us-")]
+        has_epic = (markdown_path / "EPIC.md").exists()
+        console.info(f"Directory: {markdown_path}")
+        console.info(f"Files: {len(story_files)} stories" + (" + EPIC.md" if has_epic else ""))
+    else:
+        console.info(f"Markdown: {markdown_path}")
     console.info(f"Epic: {args.epic}")
     console.info(f"Mode: {'Execute' if args.execute else 'Dry-run'}")
     if getattr(args, "incremental", False):
@@ -2169,6 +2228,9 @@ def run_sync(
     config.sync.incremental = getattr(args, "incremental", False)
     config.sync.force_full_sync = getattr(args, "force_full_sync", False)
 
+    # Configure source file update (writeback tracker info)
+    config.sync.update_source_file = getattr(args, "update_source", False)
+
     # Create state store for persistence
     from spectra.application.sync import StateStore
 
@@ -2218,6 +2280,14 @@ def run_sync(
         elif args.resume:
             console.info("No resumable session found, starting fresh")
 
+    # Pre-sync validation
+    validation_errors = orchestrator.validate_sync_prerequisites(str(markdown_path), args.epic)
+    if validation_errors:
+        console.error("Pre-sync validation failed:")
+        for error in validation_errors:
+            console.item(error, "fail")
+        return ExitCode.VALIDATION_ERROR
+
     # Confirmation
     if args.execute and not args.no_confirm:
         action = "Resume sync" if resume_state else "Proceed with sync"
@@ -2231,13 +2301,27 @@ def run_sync(
 
     console.section("Running Sync")
 
+    # Suppress noisy logs during progress bar display (unless verbose mode)
+    from .logging import suppress_logs_for_progress
+
     # Use resumable sync for state persistence
-    result = orchestrator.sync_resumable(
-        markdown_path=str(markdown_path),
-        epic_key=args.epic,
-        progress_callback=progress_callback,
-        resume_state=resume_state,
-    )
+    if args.verbose:
+        # Verbose mode: show all logs
+        result = orchestrator.sync_resumable(
+            markdown_path=str(markdown_path),
+            epic_key=args.epic,
+            progress_callback=progress_callback,
+            resume_state=resume_state,
+        )
+    else:
+        # Normal mode: suppress INFO logs for clean progress bar
+        with suppress_logs_for_progress():
+            result = orchestrator.sync_resumable(
+                markdown_path=str(markdown_path),
+                epic_key=args.epic,
+                progress_callback=progress_callback,
+                resume_state=resume_state,
+            )
 
     # Show results
     console.sync_result(result)
@@ -2386,14 +2470,14 @@ def main() -> int:
 
     # Handle watch mode
     if args.watch:
-        if not args.markdown or not args.epic:
-            parser.error("--watch requires --markdown/-m and --epic/-e to be specified")
+        if not args.input or not args.epic:
+            parser.error("--watch requires --input/-i and --epic/-e to be specified")
         return run_watch(args)
 
     # Handle scheduled sync
     if args.schedule:
-        if not args.markdown or not args.epic:
-            parser.error("--schedule requires --markdown/-m and --epic/-e to be specified")
+        if not args.input or not args.epic:
+            parser.error("--schedule requires --input/-i and --epic/-e to be specified")
         return run_schedule(args)
 
     # Handle webhook server
@@ -2404,15 +2488,15 @@ def main() -> int:
 
     # Handle multi-epic sync
     if args.multi_epic or args.list_epics:
-        if not args.markdown:
-            parser.error("--multi-epic and --list-epics require --markdown/-m to be specified")
+        if not args.input:
+            parser.error("--multi-epic and --list-epics require --input/-i to be specified")
         return run_multi_epic(args)
 
     # Handle link sync
     if args.sync_links or args.analyze_links:
-        if not args.markdown or not args.epic:
+        if not args.input or not args.epic:
             parser.error(
-                "--sync-links and --analyze-links require --markdown/-m and --epic/-e to be specified"
+                "--sync-links and --analyze-links require --input/-i and --epic/-e to be specified"
             )
         return run_sync_links(args)
 
@@ -2426,7 +2510,7 @@ def main() -> int:
             print(f"Error: Session '{args.resume_session}' not found")
             return ExitCode.FILE_NOT_FOUND
         # Override args from session
-        args.markdown = state.markdown_path
+        args.input = state.markdown_path
         args.epic = state.epic_key
 
     # Handle list-ai-tools (no other args needed)
@@ -2440,7 +2524,7 @@ def main() -> int:
         if tools:
             print(format_ai_tools_list(tools, color=console.color))
             console.print()
-            console.info("Use with: spectra --validate --markdown FILE.md --auto-fix --ai-tool <name>")
+            console.info("Use with: spectra --validate --input FILE.md --auto-fix --ai-tool <name>")
         else:
             console.warning("No AI CLI tools detected on your system.")
             console.print()
@@ -2454,11 +2538,69 @@ def main() -> int:
             console.info("  • mods: https://github.com/charmbracelet/mods")
         return ExitCode.SUCCESS
 
-    # Handle validate mode (only requires markdown, unless just showing guide)
+    # Handle --list-files mode (preview which files would be processed)
+    if getattr(args, "list_files", False):
+        input_dir = getattr(args, "input_dir", None)
+        if not input_dir:
+            parser.error("--list-files requires --input-dir to be specified")
+        from pathlib import Path
+
+        console = Console(
+            color=not args.no_color,
+            verbose=args.verbose,
+            quiet=args.quiet,
+            json_mode=(args.output == "json"),
+        )
+        dir_path = Path(input_dir)
+        if not dir_path.is_dir():
+            console.error(f"Directory not found: {input_dir}")
+            return ExitCode.FILE_NOT_FOUND
+
+        # Find files that would be processed using the parser's detection logic
+        from spectra.adapters.parsers import MarkdownParser
+
+        parser = MarkdownParser()
+        epic_file = None
+        story_files: list[Path] = []
+        ignored_files: list[Path] = []
+
+        for md_file in sorted(dir_path.glob("*.md")):
+            name_lower = md_file.name.lower()
+            if name_lower == "epic.md":
+                epic_file = md_file
+            elif parser._is_story_file(md_file):
+                story_files.append(md_file)
+            else:
+                ignored_files.append(md_file)
+
+        console.header("Files to Process")
+        if epic_file:
+            console.success(f"Epic: {epic_file.name}")
+        else:
+            console.warning("No EPIC.md found")
+
+        if story_files:
+            console.info(f"\nUser Stories ({len(story_files)} files):")
+            for sf in story_files:
+                console.info(f"  ✓ {sf.name}")
+        else:
+            console.warning("No US-*.md files found")
+
+        if ignored_files:
+            console.info(f"\nIgnored ({len(ignored_files)} files):")
+            for ig in ignored_files:
+                console.info(f"  ○ {ig.name}")
+
+        total = (1 if epic_file else 0) + len(story_files)
+        console.info(f"\nTotal: {total} file(s) will be processed")
+        return ExitCode.SUCCESS
+
+    # Handle validate mode (only requires markdown or markdown-dir, unless just showing guide)
     if args.validate or getattr(args, "show_guide", False):
         # show_guide can work without a markdown file
-        if not args.markdown and not getattr(args, "show_guide", False):
-            parser.error("--validate requires --markdown/-m to be specified")
+        input_dir = getattr(args, "input_dir", None)
+        if not args.input and not input_dir and not getattr(args, "show_guide", False):
+            parser.error("--validate requires --input/-i or --input-dir to be specified")
         from .logging import setup_logging
 
         setup_logging(
@@ -2474,12 +2616,13 @@ def main() -> int:
         try:
             return validate_markdown(
                 console,
-                args.markdown or "",
+                args.input or "",
                 strict=getattr(args, "strict", False),
                 show_guide=getattr(args, "show_guide", False),
                 suggest_fix=getattr(args, "suggest_fix", False),
                 auto_fix=getattr(args, "auto_fix", False),
                 ai_tool=getattr(args, "ai_tool", None),
+                input_dir=input_dir,
             )
         except KeyboardInterrupt:
             console.print()
@@ -2505,7 +2648,7 @@ def main() -> int:
         )
         return run_dashboard(
             console,
-            markdown_path=args.markdown,
+            markdown_path=args.input,
             epic_key=args.epic,
         )
 
@@ -2539,8 +2682,11 @@ def main() -> int:
         return ExitCode.ERROR
 
     # Validate required arguments for other modes
-    if not args.markdown or not args.epic:
-        parser.error("the following arguments are required: --markdown/-m, --epic/-e")
+    input_dir = getattr(args, "input_dir", None)
+    if not args.input and not input_dir:
+        parser.error("one of the following arguments is required: --input/-i or --input-dir")
+    if not args.epic:
+        parser.error("the following argument is required: --epic/-e")
 
     # Setup logging with optional JSON format
     from .logging import setup_logging

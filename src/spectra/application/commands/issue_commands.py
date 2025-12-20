@@ -101,6 +101,7 @@ class CreateSubtaskCommand(Command):
     description: Any = None
     story_points: int | None = None
     assignee: str | None = None
+    priority: str | None = None
 
     def __init__(
         self,
@@ -111,6 +112,7 @@ class CreateSubtaskCommand(Command):
         description: Any = None,
         story_points: int | None = None,
         assignee: str | None = None,
+        priority: str | None = None,
         event_bus: EventBus | None = None,
         dry_run: bool = True,
     ):
@@ -121,6 +123,7 @@ class CreateSubtaskCommand(Command):
         self.description = description
         self.story_points = story_points
         self.assignee = assignee
+        self.priority = priority
 
     @property
     def name(self) -> str:
@@ -151,6 +154,7 @@ class CreateSubtaskCommand(Command):
                 project_key=self.project_key,
                 story_points=self.story_points,
                 assignee=self.assignee,
+                priority=self.priority,
             )
 
             if new_key:
@@ -179,6 +183,7 @@ class UpdateSubtaskCommand(Command):
     description: Any | None = None
     story_points: int | None = None
     assignee: str | None = None
+    priority_id: str | None = None
 
     def __init__(
         self,
@@ -187,6 +192,7 @@ class UpdateSubtaskCommand(Command):
         description: Any | None = None,
         story_points: int | None = None,
         assignee: str | None = None,
+        priority_id: str | None = None,
         event_bus: EventBus | None = None,
         dry_run: bool = True,
     ):
@@ -195,6 +201,7 @@ class UpdateSubtaskCommand(Command):
         self.description = description
         self.story_points = story_points
         self.assignee = assignee
+        self.priority_id = priority_id
 
     @property
     def name(self) -> str:
@@ -203,7 +210,7 @@ class UpdateSubtaskCommand(Command):
     def validate(self) -> str | None:
         if not self.issue_key:
             return "Issue key is required"
-        if not any([self.description, self.story_points, self.assignee]):
+        if not any([self.description, self.story_points, self.assignee, self.priority_id]):
             return "At least one field to update is required"
         return None
 
@@ -213,17 +220,16 @@ class UpdateSubtaskCommand(Command):
             return CommandResult.fail(error)
 
         try:
-            if self.dry_run:
-                return CommandResult.ok(True, dry_run=True)
-
+            # Always call tracker - it handles dry-run with proper value comparison
             success = self.tracker.update_subtask(
                 issue_key=self.issue_key,
                 description=self.description,
                 story_points=self.story_points,
                 assignee=self.assignee,
+                priority_id=self.priority_id,
             )
 
-            return CommandResult.ok(success)
+            return CommandResult.ok(success, dry_run=self.dry_run)
 
         except IssueTrackerError as e:
             return CommandResult.fail(str(e))

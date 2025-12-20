@@ -124,7 +124,7 @@ class TestMarkdownParser:
 class TestMarkdownParserInlineFormat:
     """Tests for inline metadata format parsing (Format B)."""
 
-    INLINE_FORMAT_MARKDOWN = '''
+    INLINE_FORMAT_MARKDOWN = """
 # SpaceMouse Integration User Stories
 
 **Epic**: UPP-57735 - Pathologist Using a Space Mouse
@@ -175,7 +175,7 @@ Create detailed technical documentation.
 
 - [ ] Can request device connection
 - [ ] Handles disconnection gracefully
-'''
+"""
 
     def test_detect_inline_format(self, markdown_parser):
         """Test format detection identifies inline format."""
@@ -268,7 +268,7 @@ Create detailed technical documentation.
 class TestMarkdownParserFormatDetection:
     """Tests for format detection and mixed scenarios."""
 
-    TABLE_FORMAT_SAMPLE = '''
+    TABLE_FORMAT_SAMPLE = """
 ### ✅ US-001: Table Format Story
 
 | Field | Value |
@@ -282,9 +282,9 @@ class TestMarkdownParserFormatDetection:
 **As a** developer
 **I want** table format
 **So that** it works
-'''
+"""
 
-    INLINE_FORMAT_SAMPLE = '''
+    INLINE_FORMAT_SAMPLE = """
 ### US-001: Inline Format Story
 
 **Priority**: P0
@@ -296,7 +296,7 @@ class TestMarkdownParserFormatDetection:
 > **As a** user,
 > **I want** inline format,
 > **So that** it also works.
-'''
+"""
 
     def test_detect_table_format(self, markdown_parser):
         """Test detecting table-based metadata format."""
@@ -324,7 +324,7 @@ class TestMarkdownParserFormatDetection:
 class TestCommentsExtraction:
     """Tests for comments section parsing."""
 
-    COMMENTS_SAMPLE = '''
+    COMMENTS_SAMPLE = """
 ### US-001: Story With Comments
 
 | Field | Value |
@@ -349,7 +349,7 @@ class TestCommentsExtraction:
 > Thanks! Will add in next iteration.
 
 > Simple comment without author
-'''
+"""
 
     def test_extract_comments_with_author_and_date(self, markdown_parser):
         """Test extracting comments with full metadata."""
@@ -390,3 +390,146 @@ class TestCommentsExtraction:
         # Should return empty list, not error
         assert stories[0].comments == []
 
+
+class TestFlexibleStoryIdPrefixes:
+    """Test that the parser accepts various story ID prefixes.
+
+    Story IDs can use any PREFIX-NUMBER format to support different
+    organizational naming conventions (e.g., US-001, EU-042, PROJ-123, FEAT-001).
+    """
+
+    def test_parse_eu_prefix(self, markdown_parser):
+        """Test parsing stories with EU- prefix (regional)."""
+        content = """# Test Epic
+
+### 🔧 EU-001: European Story
+
+| Field | Value |
+|-------|-------|
+| **Story Points** | 5 |
+| **Priority** | 🔴 High |
+| **Status** | 📋 Planned |
+
+#### Description
+**As a** European user
+**I want** localized features
+**So that** I get a better experience
+"""
+        stories = markdown_parser.parse_stories(content)
+        assert len(stories) == 1
+        assert str(stories[0].id) == "EU-001"
+        assert stories[0].title == "European Story"
+
+    def test_parse_proj_prefix(self, markdown_parser):
+        """Test parsing stories with PROJ- prefix (project-based)."""
+        content = """# Test Epic
+
+### PROJ-123: Project Story
+
+| **Story Points** | 3 |
+| **Priority** | Medium |
+| **Status** | In Progress |
+
+**As a** developer
+**I want** project tracking
+**So that** I can manage work
+"""
+        stories = markdown_parser.parse_stories(content)
+        assert len(stories) == 1
+        assert str(stories[0].id) == "PROJ-123"
+
+    def test_parse_feat_prefix(self, markdown_parser):
+        """Test parsing stories with FEAT- prefix (feature-based)."""
+        content = """# Test Epic
+
+### ✨ FEAT-042: New Feature
+
+| **Story Points** | 8 |
+| **Priority** | Critical |
+| **Status** | Planned |
+
+**As a** product manager
+**I want** new features
+**So that** customers are happy
+"""
+        stories = markdown_parser.parse_stories(content)
+        assert len(stories) == 1
+        assert str(stories[0].id) == "FEAT-042"
+
+    def test_parse_mixed_prefixes(self, markdown_parser):
+        """Test parsing multiple stories with different prefixes."""
+        content = """# Test Epic
+
+### US-001: US Story
+
+| **Story Points** | 5 |
+
+**As a** user **I want** features **So that** I'm happy
+
+---
+
+### EU-002: EU Story
+
+| **Story Points** | 3 |
+
+**As a** user **I want** features **So that** I'm happy
+
+---
+
+### NA-003: North America Story
+
+| **Story Points** | 8 |
+
+**As a** user **I want** features **So that** I'm happy
+"""
+        stories = markdown_parser.parse_stories(content)
+        assert len(stories) == 3
+        assert str(stories[0].id) == "US-001"
+        assert str(stories[1].id) == "EU-002"
+        assert str(stories[2].id) == "NA-003"
+
+    def test_parse_short_prefix(self, markdown_parser):
+        """Test parsing stories with short prefix (single letter)."""
+        content = """# Test Epic
+
+### A-1: Minimal Story
+
+| **Story Points** | 1 |
+
+**As a** user **I want** something **So that** it works
+"""
+        stories = markdown_parser.parse_stories(content)
+        assert len(stories) == 1
+        assert str(stories[0].id) == "A-1"
+
+    def test_parse_long_prefix(self, markdown_parser):
+        """Test parsing stories with long prefix."""
+        content = """# Test Epic
+
+### VERYLONGPREFIX-99999: Long Prefix Story
+
+| **Story Points** | 13 |
+
+**As a** user **I want** flexibility **So that** any format works
+"""
+        stories = markdown_parser.parse_stories(content)
+        assert len(stories) == 1
+        assert str(stories[0].id) == "VERYLONGPREFIX-99999"
+
+    def test_h1_header_flexible_prefix(self, markdown_parser):
+        """Test h1 header format accepts flexible prefixes."""
+        content = """# PROJ-001: Standalone Story ✅
+
+> **Story ID**: PROJ-001
+> **Status**: ✅ Done
+> **Points**: 5
+> **Priority**: P1 - High
+
+## User Story
+**As a** developer
+**I want** h1 format support
+**So that** standalone files work
+"""
+        stories = markdown_parser.parse_stories(content)
+        assert len(stories) == 1
+        assert str(stories[0].id) == "PROJ-001"

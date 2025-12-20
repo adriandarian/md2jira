@@ -390,7 +390,8 @@ class Console:
         """
         Print an updating progress bar.
 
-        Uses carriage return to update in place. Prints newline when complete.
+        Uses carriage return to update in place in interactive terminals.
+        Falls back to simple line output for non-interactive terminals.
 
         Args:
             current: Current progress value.
@@ -399,17 +400,28 @@ class Console:
         """
         if self.quiet:
             return
+
         width = 30
         filled = int(width * current / total)
         bar = "█" * filled + "░" * (width - filled)
         pct = int(100 * current / total)
 
-        line = f"\r  [{bar}] {pct}% {message}"
-        sys.stdout.write(line)
-        sys.stdout.flush()
-
-        if current >= total:
-            self.print()
+        # Check if running in interactive terminal
+        if sys.stdout.isatty():
+            # Interactive: update in place with carriage return
+            padded_message = f"{message:<25}"
+            line = f"\r  [{bar}] {pct:>3}% {padded_message}"
+            sys.stdout.write(line)
+            sys.stdout.flush()
+            if current >= total:
+                self.print()
+        else:
+            # Non-interactive: print each phase once (track with instance variable)
+            if not hasattr(self, "_last_progress_message"):
+                self._last_progress_message = ""
+            if message != self._last_progress_message:
+                self._last_progress_message = message
+                self.print(f"  [{bar}] {pct:>3}% {message}")
 
     def dry_run_banner(self) -> None:
         """
@@ -497,29 +509,77 @@ class Console:
                 print(f"ERROR: {e}")
             return
 
-        self.section("Sync Summary")
+        # Clear the progress line with a newline
+        self.print()
+        self.section("Sync Complete")
         self.print()
 
+        # Mode indicator
         if result.dry_run:
-            self.info("Mode: DRY-RUN (no changes made)")
+            mode_text = f"{Symbols.GEAR} Mode: DRY-RUN (no changes made)"
+            if self.color:
+                self.print(f"  {Colors.YELLOW}{mode_text}{Colors.RESET}")
+            else:
+                self.print(f"  {mode_text}")
         else:
-            self.info("Mode: LIVE EXECUTION")
+            mode_text = f"{Symbols.CHECK} Mode: LIVE EXECUTION"
+            if self.color:
+                self.print(f"  {Colors.GREEN}{mode_text}{Colors.RESET}")
+            else:
+                self.print(f"  {mode_text}")
 
         self.print()
 
-        # Stats table
+        # Human-readable summary line
+        epic_updated = getattr(result, "epic_updated", False)
+        actions = []
+        if epic_updated:
+            actions.append("epic")
+        if result.stories_updated > 0:
+            actions.append(f"{result.stories_updated} stories")
+        if result.subtasks_created > 0:
+            actions.append(f"{result.subtasks_created} new subtasks")
+        if result.subtasks_updated > 0:
+            actions.append(f"{result.subtasks_updated} subtasks")
+        if result.comments_added > 0:
+            actions.append(f"{result.comments_added} comments")
+        if result.statuses_updated > 0:
+            actions.append(f"{result.statuses_updated} status changes")
+
+        if actions:
+            summary = "  Updated: " + ", ".join(actions)
+            if self.color:
+                self.print(f"{Colors.CYAN}{summary}{Colors.RESET}")
+            else:
+                self.print(summary)
+        else:
+            self.print("  No changes needed")
+
+        self.print()
+
+        # Compact stats table
         stats = [
-            ["Stories Matched", str(result.stories_matched)],
-            ["Stories Updated", str(result.stories_updated)],
-            ["Subtasks Created", str(result.subtasks_created)],
-            ["Subtasks Updated", str(result.subtasks_updated)],
-            ["Comments Added", str(result.comments_added)],
-            ["Statuses Updated", str(result.statuses_updated)],
+            ["Stories", f"{result.stories_matched} matched, {result.stories_updated} updated"],
+            [
+                "Subtasks",
+                f"{result.subtasks_created} created, {result.subtasks_updated} updated",
+            ],
         ]
 
+        # Only show if there were comments or status changes
+        if result.comments_added > 0 or result.statuses_updated > 0:
+            stats.append(
+                [
+                    "Other",
+                    f"{result.comments_added} comments, {result.statuses_updated} transitions",
+                ]
+            )
+
         # Add incremental stats if applicable
-        if getattr(result, "incremental", False):
-            stats.insert(2, ["Stories Skipped (unchanged)", str(result.stories_skipped)])
+        if getattr(result, "incremental", False) and result.stories_skipped > 0:
+            stats.insert(
+                0, ["Incremental", f"{result.stories_skipped} stories skipped (unchanged)"]
+            )
 
         self.table(["Metric", "Count"], stats)
 

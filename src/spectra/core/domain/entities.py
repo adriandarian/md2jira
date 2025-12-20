@@ -37,6 +37,7 @@ class Subtask:
     description: str = ""
     story_points: int = 1
     status: Status = Status.PLANNED
+    priority: Priority | None = None
     assignee: str | None = None
 
     # External references (populated when synced)
@@ -135,6 +136,11 @@ class UserStory:
     # External references
     external_key: IssueKey | None = None
     external_url: str | None = None
+
+    # Sync metadata (populated from source file tracker info)
+    last_synced: datetime | None = None
+    sync_status: str | None = None  # synced, pending, modified, conflict
+    content_hash: str | None = None
 
     def normalize_title(self) -> str:
         """Normalize title for matching with external issues."""

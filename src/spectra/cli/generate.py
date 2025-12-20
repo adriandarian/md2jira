@@ -233,7 +233,7 @@ class TemplateGenerator:
         lines.append("")
         lines.append(f"> Generated from Jira epic {epic_key}")
         lines.append(
-            "> Edit this file and sync back with: spectra --markdown {file} --epic {epic_key} --execute"
+            "> Edit this file and sync back with: spectra --input {file} --epic {epic_key} --execute"
         )
 
         return "\n".join(lines)
@@ -562,7 +562,7 @@ def run_generate(args, console: Console) -> int:
         console.info("Next steps:")
         console.item(f"Edit {result.output_path} to refine the content")
         console.item(
-            f"Sync changes: spectra --markdown {result.output_path} --epic {epic_key} --execute"
+            f"Sync changes: spectra --input {result.output_path} --epic {epic_key} --execute"
         )
 
     return ExitCode.SUCCESS if result.success else ExitCode.ERROR

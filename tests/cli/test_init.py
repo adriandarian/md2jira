@@ -423,5 +423,5 @@ class TestCLIIntegration:
         args = cli_parser.parse_args(["--init"])
 
         assert args.init is True
-        assert args.markdown is None
+        assert args.input is None
         assert args.epic is None

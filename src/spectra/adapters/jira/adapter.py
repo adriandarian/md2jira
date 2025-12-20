@@ -136,6 +136,141 @@ class JiraAdapter(IssueTrackerPort):
         self.logger.info(f"Updated description for {issue_key}")
         return True
 
+    def update_issue_type(self, issue_key: str, issue_type: str) -> bool:
+        """
+        Change an issue's type using the move operation.
+
+        Some Jira configurations require a "move" operation to change issue types
+        rather than a simple field update.
+
+        Args:
+            issue_key: The issue key (e.g., 'PROJ-123').
+            issue_type: The new issue type name (e.g., 'User Story').
+
+        Returns:
+            True if successful.
+        """
+        if self._dry_run:
+            self.logger.info(f"[DRY-RUN] Would change {issue_key} type to '{issue_type}'")
+            return True
+
+        # Get issue type ID
+        issue_type_id = self._get_issue_type_id(issue_key, issue_type)
+        if not issue_type_id:
+            self.logger.warning(f"Issue type '{issue_type}' not found for {issue_key}")
+            return False
+
+        try:
+            # Try the move operation first (works for most Jira configurations)
+            self._client.post(
+                f"issue/{issue_key}/move",
+                json={"targetIssueType": issue_type_id},
+            )
+            self.logger.info(f"Moved {issue_key} to type '{issue_type}'")
+            return True
+        except Exception as move_error:
+            self.logger.debug(f"Move operation failed: {move_error}, trying direct update")
+            # Fallback to direct update
+            try:
+                self._client.put(
+                    f"issue/{issue_key}",
+                    json={JiraField.FIELDS: {JiraField.ISSUETYPE: {JiraField.NAME: issue_type}}},
+                )
+                self.logger.info(f"Changed {issue_key} type to '{issue_type}'")
+                return True
+            except Exception as update_error:
+                self.logger.error(f"Failed to change {issue_key} type: {update_error}")
+                return False
+
+    def _get_issue_type_id(self, issue_key: str, issue_type_name: str) -> str | None:
+        """Get issue type ID by name for the project of the given issue."""
+        project_key = issue_key.split("-")[0] if "-" in issue_key else None
+        if not project_key:
+            return None
+
+        try:
+            self.get_project_issue_types(project_key)
+            # issue_types is a list of names, we need IDs
+            # Fetch from project endpoint
+            data = self._client.get(f"project/{project_key}")
+            for it in data.get("issueTypes", []):
+                if it.get("name", "").lower() == issue_type_name.lower():
+                    return it.get("id")
+        except Exception as e:
+            self.logger.debug(f"Failed to get issue type ID: {e}")
+        return None
+
+    def create_story(
+        self,
+        summary: str,
+        description: Any,
+        project_key: str,
+        epic_key: str | None = None,
+        story_points: int | None = None,
+        priority: str | None = None,
+        assignee: str | None = None,
+        issue_type: str = "Story",
+    ) -> str | None:
+        """
+        Create a new story issue in Jira.
+
+        Args:
+            summary: Story title/summary.
+            description: Story description (can be string or ADF).
+            project_key: Project key (e.g., 'PROJ').
+            epic_key: Epic key to link to (e.g., 'PROJ-123').
+            story_points: Optional story points.
+            priority: Optional priority name.
+            assignee: Optional assignee account ID.
+            issue_type: Issue type name (default: 'Story').
+
+        Returns:
+            New issue key (e.g., 'PROJ-456') or None if dry-run.
+        """
+        if self._dry_run:
+            self.logger.debug(f"[DRY-RUN] Would create {issue_type} '{summary[:50]}...'")
+            return None
+
+        # Auto-assign to current user if no assignee specified
+        if assignee is None:
+            import contextlib
+
+            with contextlib.suppress(Exception):
+                assignee = self._client.get_current_user_id()
+
+        # Convert description to ADF if string
+        if isinstance(description, str):
+            description = self.formatter.format_text(description)
+
+        fields: dict[str, Any] = {
+            JiraField.PROJECT: {JiraField.KEY: project_key},
+            JiraField.SUMMARY: summary[:255],
+            JiraField.DESCRIPTION: description,
+            JiraField.ISSUETYPE: {JiraField.NAME: issue_type},
+        }
+
+        # Link to epic (using parent field for next-gen projects, or epic link for classic)
+        if epic_key:
+            # Try parent field first (next-gen/team-managed projects)
+            fields[JiraField.PARENT] = {JiraField.KEY: epic_key}
+
+        if story_points is not None:
+            fields[self.STORY_POINTS_FIELD] = float(story_points)
+
+        if priority:
+            fields[JiraField.PRIORITY] = {JiraField.NAME: priority}
+
+        if assignee:
+            fields[JiraField.ASSIGNEE] = {JiraField.ACCOUNT_ID: assignee}
+
+        result = self._client.post("issue", json={"fields": fields})
+        new_key = result.get("key")
+
+        if new_key:
+            self.logger.info(f"Created {issue_type} {new_key}: {summary[:50]}")
+
+        return new_key
+
     def create_subtask(
         self,
         parent_key: str,
@@ -144,6 +279,7 @@ class JiraAdapter(IssueTrackerPort):
         project_key: str,
         story_points: int | None = None,
         assignee: str | None = None,
+        priority: str | None = None,
     ) -> str | None:
         if self._dry_run:
             self.logger.info(
@@ -171,6 +307,9 @@ class JiraAdapter(IssueTrackerPort):
         if story_points is not None:
             fields[self.STORY_POINTS_FIELD] = float(story_points)
 
+        if priority is not None:
+            fields[JiraField.PRIORITY] = {JiraField.NAME: priority}
+
         result = self._client.post("issue", json={"fields": fields})
         new_key = result.get("key")
 
@@ -185,27 +324,64 @@ class JiraAdapter(IssueTrackerPort):
         description: Any | None = None,
         story_points: int | None = None,
         assignee: str | None = None,
+        priority_id: str | None = None,
     ) -> bool:
-        if self._dry_run:
-            self.logger.info(f"[DRY-RUN] Would update subtask {issue_key}")
-            return True
+        # Get current values to compare
+        current = self.get_subtask_details(issue_key)
+        current_points = current.get("story_points")
+        current_priority = current.get("priority")
 
+        # Normalize story points for comparison (Jira returns float, we use int)
+        current_points_int = int(current_points) if current_points is not None else None
+        new_points_int = int(story_points) if story_points is not None else None
+
+        # Get current priority ID for comparison
+        current_priority_id = current_priority.get("id") if current_priority else None
+
+        # Determine what actually needs updating
+        changes: list[str] = []
         fields: dict[str, Any] = {}
 
         if description is not None:
             if isinstance(description, str):
                 description = self.formatter.format_text(description)
+            # Always update description (hard to compare ADF)
             fields["description"] = description
+            changes.append("description")
 
         if story_points is not None:
-            fields[self.STORY_POINTS_FIELD] = float(story_points)
+            # Compare story points (using normalized int values)
+            if current_points_int != new_points_int:
+                fields[self.STORY_POINTS_FIELD] = float(story_points)
+                changes.append(f"points {current_points_int or 0}→{new_points_int}")
 
         if assignee is not None:
-            fields["assignee"] = {"accountId": assignee}
+            current_assignee = current.get("assignee")
+            current_assignee_id = current_assignee.get("accountId") if current_assignee else None
+            if current_assignee_id != assignee:
+                fields["assignee"] = {"accountId": assignee}
+                changes.append("assignee")
 
-        if fields:
-            self._client.put(f"issue/{issue_key}", json={"fields": fields})
-            self.logger.info(f"Updated subtask {issue_key}")
+        if priority_id is not None:
+            # Compare priority IDs
+            if current_priority_id != priority_id:
+                fields[JiraField.PRIORITY] = {"id": priority_id}
+                current_name = current_priority.get("name", "None") if current_priority else "None"
+                changes.append(f"priority {current_name}→{priority_id}")
+
+        if self._dry_run:
+            if changes:
+                self.logger.info(f"[DRY-RUN] Would update {issue_key}: {', '.join(changes)}")
+            else:
+                self.logger.debug(f"[DRY-RUN] {issue_key} already up-to-date")
+            return True
+
+        if not fields:
+            self.logger.debug(f"Skipped {issue_key} - no changes needed")
+            return True
+
+        self._client.put(f"issue/{issue_key}", json={"fields": fields})
+        self.logger.info(f"Updated {issue_key}: {', '.join(changes)}")
 
         return True
 
@@ -320,6 +496,113 @@ class JiraAdapter(IssueTrackerPort):
     # Extended Methods (Jira-specific)
     # -------------------------------------------------------------------------
 
+    def get_priorities(self, project_key: str | None = None) -> list[dict[str, str]]:
+        """
+        Get available priorities from Jira with IDs.
+
+        Args:
+            project_key: Optional project key to get project-specific priorities.
+
+        Returns:
+            List of dicts with 'id' and 'name' keys.
+        """
+        # Try project-specific priorities first (via createmeta)
+        if project_key:
+            try:
+                # Get createmeta for Story issue type to find valid priorities
+                data = self._client.get(
+                    "issue/createmeta",
+                    params={
+                        "projectKeys": project_key,
+                        "issuetypeNames": "Story",
+                        "expand": "projects.issuetypes.fields",
+                    },
+                )
+                projects = data.get("projects", [])
+                if projects:
+                    issue_types = projects[0].get("issuetypes", [])
+                    if issue_types:
+                        fields = issue_types[0].get("fields", {})
+                        priority_field = fields.get("priority", {})
+                        allowed = priority_field.get("allowedValues", [])
+                        if allowed:
+                            self.logger.debug(
+                                f"Using project-specific priorities: {[p.get('name') for p in allowed]}"
+                            )
+                            return [
+                                {"id": p.get("id", ""), "name": p.get("name", "")}
+                                for p in allowed
+                                if p.get("id")
+                            ]
+            except Exception as e:
+                self.logger.debug(f"Could not get project priorities: {e}")
+
+        # Fallback to global priorities
+        try:
+            data = self._client.get("priority")
+            return [{"id": p.get("id", ""), "name": p.get("name", "")} for p in data if p.get("id")]
+        except Exception as e:
+            self.logger.warning(f"Failed to fetch priorities: {e}")
+            return []
+
+    def get_project_issue_types(self, project_key: str) -> list[str]:
+        """
+        Get available issue types for a project.
+
+        Args:
+            project_key: Project key (e.g., 'UPP')
+
+        Returns:
+            List of issue type names
+        """
+        try:
+            data = self._client.get(f"project/{project_key}")
+            issue_types = data.get("issueTypes", [])
+            return [it.get("name", "") for it in issue_types if it.get("name")]
+        except Exception as e:
+            self.logger.warning(f"Failed to fetch issue types: {e}")
+            return []
+
+    def update_issue_fields(
+        self,
+        issue_key: str,
+        priority_id: str | None = None,
+        assignee: str | None = None,
+    ) -> bool:
+        """
+        Update issue fields (priority, assignee).
+
+        Args:
+            issue_key: The issue key.
+            priority_id: Priority ID to set (not name).
+            assignee: Assignee account ID.
+
+        Returns:
+            True if successful.
+        """
+        if self._dry_run:
+            updates = []
+            if priority_id:
+                updates.append(f"priority_id={priority_id}")
+            if assignee:
+                updates.append(f"assignee={assignee}")
+            if updates:
+                self.logger.info(f"[DRY-RUN] Would update {issue_key}: {', '.join(updates)}")
+            return True
+
+        fields: dict[str, Any] = {}
+        if priority_id:
+            fields[JiraField.PRIORITY] = {"id": priority_id}
+        if assignee:
+            fields[JiraField.ASSIGNEE] = {JiraField.ACCOUNT_ID: assignee}
+
+        if not fields:
+            return True
+
+        self._client.put(f"issue/{issue_key}", json={JiraField.FIELDS: fields})
+        self.logger.info(f"Updated {issue_key} fields")
+        return True
+
     def add_commits_comment(self, issue_key: str, commits: list[CommitRef]) -> bool:
         """Add a formatted commits table as a comment."""
         if self._dry_run:
@@ -333,7 +616,9 @@ class JiraAdapter(IssueTrackerPort):
         """Get full details of a subtask."""
         data = self._client.get(
             f"issue/{issue_key}",
-            params={"fields": f"summary,description,assignee,status,{self.STORY_POINTS_FIELD}"},
+            params={
+                "fields": f"summary,description,assignee,status,priority,{self.STORY_POINTS_FIELD}"
+            },
         )
 
         fields = data.get("fields", {})
@@ -344,6 +629,7 @@ class JiraAdapter(IssueTrackerPort):
             "assignee": fields.get("assignee"),
             "story_points": fields.get(self.STORY_POINTS_FIELD),
             "status": fields.get("status", {}).get("name", ""),
+            "priority": fields.get("priority"),
         }
 
     # -------------------------------------------------------------------------

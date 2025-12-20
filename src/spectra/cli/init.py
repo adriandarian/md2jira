@@ -571,17 +571,17 @@ no_confirm = false
             )
             self.console.item("Run a dry-run to preview changes:")
             self.console.detail(
-                f"  spectra --markdown {self.config.sample_path} --epic {self.config.project_key or 'PROJ'}-123"
+                f"  spectra --input {self.config.sample_path} --epic {self.config.project_key or 'PROJ'}-123"
             )
             self.console.item("Execute the sync when ready:")
             self.console.detail(
-                f"  spectra --markdown {self.config.sample_path} --epic {self.config.project_key or 'PROJ'}-123 --execute"
+                f"  spectra --input {self.config.sample_path} --epic {self.config.project_key or 'PROJ'}-123 --execute"
             )
         else:
             self.console.item("Create a markdown file with your epic content")
-            self.console.item("Run a dry-run: spectra --markdown EPIC.md --epic PROJ-123")
+            self.console.item("Run a dry-run: spectra --input EPIC.md --epic PROJ-123")
             self.console.item(
-                "Execute when ready: spectra --markdown EPIC.md --epic PROJ-123 --execute"
+                "Execute when ready: spectra --input EPIC.md --epic PROJ-123 --execute"
             )
 
         self.console.print()

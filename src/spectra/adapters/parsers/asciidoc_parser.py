@@ -7,6 +7,7 @@ AsciiDoc is a text document format similar to Markdown but with richer
 semantic capabilities, commonly used in technical documentation.
 """
 
+import contextlib
 import logging
 import re
 from pathlib import Path
@@ -20,7 +21,7 @@ from spectra.core.domain.value_objects import (
     IssueKey,
     StoryId,
 )
-from spectra.core.ports.document_parser import DocumentParserPort, ParserError
+from spectra.core.ports.document_parser import DocumentParserPort
 
 
 class AsciiDocParser(DocumentParserPort):
@@ -29,13 +30,13 @@ class AsciiDocParser(DocumentParserPort):
 
     Supports AsciiDoc format with structured sections for stories.
 
-    Example AsciiDoc format:
+    Example AsciiDoc format (story IDs can use any PREFIX-NUMBER format):
 
     ```asciidoc
     = Epic Title
     :epic-key: PROJ-123
 
-    == US-001: Story Title
+    == PROJ-001: Story Title
 
     [cols="1,1"]
     |===
@@ -84,7 +85,9 @@ class AsciiDocParser(DocumentParserPort):
     """
 
     # Patterns for AsciiDoc parsing
-    STORY_PATTERN = r"^==\s+(?:.*?)?(US-\d+):\s*([^\n]+)"
+    # Generic story ID pattern: PREFIX-NUMBER (e.g., US-001, EU-042, PROJ-123)
+    STORY_ID_PATTERN = r"[A-Z]+-\d+"
+    STORY_PATTERN = rf"^==\s+(?:.*?)?({STORY_ID_PATTERN}):\s*([^\n]+)"
     EPIC_TITLE_PATTERN = r"^=\s+([^\n]+)"
     EPIC_KEY_PATTERN = r":epic-key:\s*([A-Z]+-\d+)"
 
@@ -379,7 +382,9 @@ class AsciiDocParser(DocumentParserPort):
         # ____
         # Comment text
         # ____
-        quote_pattern = r"\[quote(?:,\s*@?([^,\]]+))?(?:,\s*(\d{4}-\d{2}-\d{2}))?\]\s*\n____\n([\s\S]*?)____"
+        quote_pattern = (
+            r"\[quote(?:,\s*@?([^,\]]+))?(?:,\s*(\d{4}-\d{2}-\d{2}))?\]\s*\n____\n([\s\S]*?)____"
+        )
         for match in re.finditer(quote_pattern, section):
             author = match.group(1).strip() if match.group(1) else None
             date_str = match.group(2)
@@ -387,10 +392,8 @@ class AsciiDocParser(DocumentParserPort):
 
             created_at = None
             if date_str:
-                try:
+                with contextlib.suppress(ValueError):
                     created_at = datetime.strptime(date_str, "%Y-%m-%d")
-                except ValueError:
-                    pass
 
             if body:
                 comments.append(
@@ -438,4 +441,3 @@ class AsciiDocParser(DocumentParserPort):
         end = start + next_heading.start() if next_heading else len(content)
 
         return content[start:end].strip()
-

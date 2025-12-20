@@ -151,7 +151,7 @@ class TestMarkdownValidator:
     @pytest.fixture
     def valid_markdown(self):
         """Create valid markdown content."""
-        return """# 🚀 PROJ-100: Test Epic
+        return """# 🚀 Test Epic
 
 ## Stories
 
@@ -500,17 +500,17 @@ class TestCLIIntegration:
 
     def test_validate_flag_in_parser(self, cli_parser):
         """Test --validate flag is recognized."""
-        args = cli_parser.parse_args(["--validate", "--markdown", "test.md"])
+        args = cli_parser.parse_args(["--validate", "--input", "test.md"])
 
         assert args.validate is True
-        assert args.markdown == "test.md"
+        assert args.input == "test.md"
 
     def test_strict_flag_in_parser(self, cli_parser):
         """Test --strict flag is recognized."""
         args = cli_parser.parse_args(
             [
                 "--validate",
-                "--markdown",
+                "--input",
                 "test.md",
                 "--strict",
             ]
@@ -522,7 +522,7 @@ class TestCLIIntegration:
     def test_validate_without_epic(self, cli_parser):
         """Test --validate doesn't require --epic."""
         # Should not raise
-        args = cli_parser.parse_args(["--validate", "--markdown", "test.md"])
+        args = cli_parser.parse_args(["--validate", "--input", "test.md"])
 
         assert args.validate is True
         assert args.epic is None
