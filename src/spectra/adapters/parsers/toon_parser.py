@@ -251,7 +251,7 @@ class ToonParser(DocumentParserPort):
 
     def _parse_yaml_style(self, content: str) -> dict[str, Any]:
         """Parse YAML-style TOON content."""
-        import yaml
+        import yaml  # type: ignore[import-untyped]
 
         try:
             data = yaml.safe_load(content)

@@ -10,6 +10,7 @@ Subpackages organized by function:
 
 # Trackers
 # Infrastructure - Cache
+from .asana import AsanaAdapter
 from .cache import (
     CacheBackend,
     CacheEntry,
@@ -48,6 +49,7 @@ except ImportError:
 __all__ = [
     "ASYNC_AVAILABLE",
     "ADFFormatter",
+    "AsanaAdapter",
     "BatchOperation",
     "BatchResult",
     "CacheBackend",

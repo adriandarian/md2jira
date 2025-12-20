@@ -9,7 +9,7 @@
 
 **The Universal Bridge between Product Specifications and Issue Trackers**
 
-*Synchronize Markdown, YAML, JSON, and Notion specs with Jira, GitHub, Linear, and Azure DevOps*
+*Synchronize Markdown, YAML, JSON, and Notion specs with Jira, GitHub, Linear, Azure DevOps, and Asana*
 
 [Core Features](#-core-features) •
 [Installation](#-installation) •
@@ -32,7 +32,7 @@ Whether you write stories in Markdown, manage roadmaps in YAML, or organize feat
 
 ## ✨ Core Features
 
-- 🔄 **Universal Sync** - Multi-platform support for Jira, GitHub, Linear, and Azure DevOps.
+- 🔄 **Universal Sync** - Multi-platform support for Jira, GitHub, Linear, Azure DevOps, and Asana.
 - 📝 **Rich Input Formats** - Support for Markdown, YAML, TOML, JSON, CSV, and even Notion.
 - 🤖 **AI-Assisted Fixing** - Intelligent validation and auto-fixing of specifications using Claude, Ollama, or Aider.
 - 🛡️ **Safe by Design** - Mandatory dry-runs, detailed diff previews, and automatic backups.
@@ -50,6 +50,7 @@ Whether you write stories in Markdown, manage roadmaps in YAML, or organize feat
 | ✅ **JSON** & **CSV/Excel** | ✅ **Linear** |
 | ✅ **Notion** | ✅ **Azure DevOps** |
 | ✅ **AsciiDoc** | ✅ **Confluence** |
+|  | ✅ **Asana** |
 
 ---
 

@@ -12,7 +12,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 from spectra.core.domain.entities import Comment, Epic, Subtask, UserStory
 from spectra.core.domain.enums import Priority, Status

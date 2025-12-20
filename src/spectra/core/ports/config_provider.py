@@ -19,6 +19,7 @@ class TrackerType(Enum):
     GITHUB = "github"
     LINEAR = "linear"
     AZURE_DEVOPS = "azure_devops"
+    ASANA = "asana"
 
 
 @dataclass

@@ -60,7 +60,7 @@ def create_tracker_factory(
     Create a factory function for the issue tracker.
 
     Args:
-        tracker_type: Type of tracker ('jira', 'github', 'azure', 'linear')
+        tracker_type: Type of tracker ('jira', 'github', 'azure', 'linear', 'asana')
 
     Returns:
         Factory function that creates the tracker
@@ -102,6 +102,13 @@ def create_tracker_factory(
             from spectra.adapters.linear import LinearAdapter
 
             return LinearAdapter(
+                config=config,
+                dry_run=is_dry_run,
+            )
+        if tracker_type == "asana":
+            from spectra.adapters.asana import AsanaAdapter
+
+            return AsanaAdapter(
                 config=config,
                 dry_run=is_dry_run,
             )
