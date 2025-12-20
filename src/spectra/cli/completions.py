@@ -16,16 +16,20 @@ _spectra_completions() {
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
     # All available options
-    opts="--markdown -m --epic -e --execute -x --no-confirm --phase --story --config -c --jira-url --project --verbose -v --quiet -q --output -o --no-color --export --validate --interactive -i --resume --resume-session --list-sessions --version --help -h --completions"
+    opts="--input -f --input-dir -d --epic -e --execute -x --dry-run -n --no-confirm --phase --story --config -c --jira-url --project --verbose -v --quiet -q --output -o --no-color --export --validate --interactive -i --resume --resume-session --list-sessions --update-source --list-files --version --help -h --completions"
 
     # Phase choices
     phases="all descriptions subtasks comments statuses"
 
     # Handle option-specific completions
     case "${prev}" in
-        --markdown|-m)
+        --input|-f)
             COMPREPLY=( $(compgen -f -X '!*.md' -- "${cur}") )
             COMPREPLY+=( $(compgen -d -- "${cur}") )
+            return 0
+            ;;
+        --input-dir|-d)
+            COMPREPLY=( $(compgen -d -- "${cur}") )
             return 0
             ;;
         --config|-c)
@@ -93,9 +97,11 @@ _spectra() {
     )
 
     _arguments -C \\
-        '(-m --markdown)'{-m,--markdown}'[Path to markdown epic file]:markdown file:_files -g "*.md"' \\
+        '(-f --input)'{-f,--input}'[Path to input file (markdown, yaml, json, etc.)]:input file:_files -g "*.md"' \\
+        '(-d --input-dir)'{-d,--input-dir}'[Path to directory containing story files]:directory:_files -/' \\
         '(-e --epic)'{-e,--epic}'[Jira epic key (e.g., PROJ-123)]:epic key:' \\
         '(-x --execute)'{-x,--execute}'[Execute changes (default is dry-run)]' \\
+        '(-n --dry-run)'{-n,--dry-run}'[Preview changes without executing]' \\
         '--no-confirm[Skip confirmation prompts]' \\
         '--phase[Which phase to run]:phase:->phases' \\
         '--story[Filter to specific story ID]:story id:' \\
@@ -112,6 +118,8 @@ _spectra() {
         '--resume[Resume an interrupted sync session]' \\
         '--resume-session[Resume a specific sync session by ID]:session id:' \\
         '--list-sessions[List all resumable sync sessions]' \\
+        '--update-source[Write tracker info back to source file after sync]' \\
+        '--list-files[List which files would be processed from --input-dir]' \\
         '--version[Show version and exit]' \\
         '--completions[Generate shell completion script]:shell:->shells' \\
         '(-h --help)'{-h,--help}'[Show help message]' \\
@@ -135,13 +143,17 @@ FISH_COMPLETION = """# Fish completion script for spectra
 
 complete -c spectra -f
 
-# Required arguments
-complete -c spectra -s m -l markdown -d 'Path to markdown epic file' -r -F -a '*.md'
+# Input arguments
+complete -c spectra -s f -l input -d 'Path to input file (markdown, yaml, json, etc.)' -r -F -a '*.md'
+complete -c spectra -s d -l input-dir -d 'Path to directory containing story files' -r -a '(__fish_complete_directories)'
 complete -c spectra -s e -l epic -d 'Jira epic key (e.g., PROJ-123)' -x
 
 # Execution mode
 complete -c spectra -s x -l execute -d 'Execute changes (default is dry-run)'
+complete -c spectra -s n -l dry-run -d 'Preview changes without executing'
 complete -c spectra -l no-confirm -d 'Skip confirmation prompts'
+complete -c spectra -l update-source -d 'Write tracker info back to source file after sync'
+complete -c spectra -l list-files -d 'List which files would be processed from --input-dir'
 
 # Phase control
 complete -c spectra -l phase -d 'Which phase to run' -x -a '

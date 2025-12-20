@@ -40,7 +40,7 @@ class TestGetCompletionScript:
         assert script is not None
         assert "complete -c spectra" in script
         # Fish uses -l for long options
-        assert "-l markdown" in script
+        assert "-l input" in script
         assert "-l epic" in script
 
     def test_case_insensitive(self):
@@ -140,11 +140,15 @@ class TestCompletionScriptContent:
         """Test Bash script includes all CLI options."""
         options = [
             "--input",
-            "-m",
+            "-f",
+            "--input-dir",
+            "-d",
             "--epic",
             "-e",
             "--execute",
             "-x",
+            "--dry-run",
+            "-n",
             "--phase",
             "--config",
             "-c",
@@ -152,6 +156,7 @@ class TestCompletionScriptContent:
             "-v",
             "--interactive",
             "-i",
+            "--update-source",
             "--completions",
         ]
         for opt in options:
@@ -167,12 +172,15 @@ class TestCompletionScriptContent:
         """Test Zsh script includes all CLI options."""
         options = [
             "--input",
+            "--input-dir",
             "--epic",
             "--execute",
+            "--dry-run",
             "--phase",
             "--config",
             "--verbose",
             "--interactive",
+            "--update-source",
             "--completions",
         ]
         for opt in options:
@@ -182,13 +190,16 @@ class TestCompletionScriptContent:
         """Test Fish script includes all CLI options."""
         # Fish uses -l for long options
         options = [
-            "-l markdown",
+            "-l input",
+            "-l input-dir",
             "-l epic",
             "-l execute",
+            "-l dry-run",
             "-l phase",
             "-l config",
             "-l verbose",
             "-l interactive",
+            "-l update-source",
             "-l completions",
         ]
         for opt in options:
@@ -197,7 +208,7 @@ class TestCompletionScriptContent:
     def test_fish_has_descriptions(self):
         """Test Fish script includes option descriptions."""
         descriptions = [
-            "Path to markdown epic file",
+            "Path to input file",
             "Jira epic key",
             "Execute changes",
             "Which phase to run",

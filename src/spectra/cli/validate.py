@@ -892,7 +892,7 @@ def run_validate(
                         Path(markdown_path).write_text(fix_result.fixed_content, encoding="utf-8")
                         console.success("File has been fixed!")
                         console.info(
-                            "Run validation again to verify: spectra --validate --markdown "
+                            "Run validation again to verify: spectra --validate --input "
                             + markdown_path
                         )
                     except Exception as e:

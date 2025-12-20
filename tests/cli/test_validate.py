@@ -151,7 +151,7 @@ class TestMarkdownValidator:
     @pytest.fixture
     def valid_markdown(self):
         """Create valid markdown content."""
-        return """# 🚀 PROJ-100: Test Epic
+        return """# 🚀 Test Epic
 
 ## Stories
 
@@ -503,7 +503,7 @@ class TestCLIIntegration:
         args = cli_parser.parse_args(["--validate", "--input", "test.md"])
 
         assert args.validate is True
-        assert args.markdown == "test.md"
+        assert args.input == "test.md"
 
     def test_strict_flag_in_parser(self, cli_parser):
         """Test --strict flag is recognized."""

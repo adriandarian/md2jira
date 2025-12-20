@@ -18,18 +18,23 @@ _spectra_completions() {
     prev="${COMP_WORDS[COMP_CWORD-1]}"
     
     # All available options
-    opts="--markdown -m --epic -e --execute -x --no-confirm --phase --story --config -c --jira-url --project --verbose -v --quiet -q --output -o --no-color --export --validate --interactive -i --resume --resume-session --list-sessions --version --help -h --completions"
+    opts="--input -f --input-dir -d --epic -e --execute -x --dry-run -n --no-confirm --phase --story --config -c --jira-url --project --verbose -v --quiet -q --output -o --no-color --export --validate --interactive -i --resume --resume-session --list-sessions --update-source --list-files --version --help -h --completions"
     
     # Phase choices
     phases="all descriptions subtasks comments statuses"
     
     # Handle option-specific completions
     case "${prev}" in
-        --markdown|-m)
+        --input|-f)
             # Complete markdown files
             COMPREPLY=( $(compgen -f -X '!*.md' -- "${cur}") )
             # Also complete directories for navigation
             COMPREPLY+=( $(compgen -d -- "${cur}") )
+            return 0
+            ;;
+        --input-dir|-d)
+            # Complete directories only
+            COMPREPLY=( $(compgen -d -- "${cur}") )
             return 0
             ;;
         --config|-c)

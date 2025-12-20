@@ -18,7 +18,7 @@ Data Collected (when enabled):
 
 Usage:
     # Enable analytics
-    spectra --analytics --markdown EPIC.md --epic PROJ-123
+    spectra --analytics --input EPIC.md --epic PROJ-123
 
     # Show what would be collected
     spectra --analytics-show

@@ -30,16 +30,23 @@ class TestStoryIdProperties:
     """Property tests for StoryId value object."""
 
     @given(st.integers(min_value=1, max_value=9999))
-    def test_story_id_from_number(self, num):
-        """StoryId can be created from a number string."""
-        story_id = StoryId.from_string(str(num))
+    def test_story_id_from_prefixed_number(self, num):
+        """StoryId created from prefixed ID preserves the number."""
+        story_id = StoryId.from_string(f"US-{num:03d}")
         assert story_id.number == num
 
     @given(st.integers(min_value=1, max_value=9999))
     def test_story_id_preserves_prefix(self, num):
-        """StoryId always has US- prefix in string representation."""
-        story_id = StoryId.from_string(str(num))
+        """StoryId preserves any PREFIX-NUMBER format."""
+        # Test with various prefixes - now accepts any format
+        story_id = StoryId.from_string(f"US-{num:03d}")
         assert str(story_id).startswith("US-")
+
+        story_id = StoryId.from_string(f"PROJ-{num}")
+        assert str(story_id).startswith("PROJ-")
+
+        story_id = StoryId.from_string(f"EU-{num:04d}")
+        assert str(story_id).startswith("EU-")
 
     @given(st.integers(min_value=1, max_value=9999))
     def test_story_id_roundtrip(self, num):
@@ -48,14 +55,11 @@ class TestStoryIdProperties:
         roundtrip = StoryId.from_string(str(original))
         assert original.value == roundtrip.value
 
-    @given(st.text(alphabet="0123456789", min_size=1, max_size=6))
-    def test_story_id_from_digits(self, digits):
-        """StoryId from_string handles various digit formats."""
-        assume(digits.lstrip("0"))  # At least one non-zero digit
-
-        story_id = StoryId.from_string(digits)
-        expected_num = int(digits)
-        assert story_id.number == expected_num
+    @given(st.sampled_from(["US", "PROJ", "EU", "FEAT", "BUG"]))
+    def test_story_id_extracts_prefix(self, prefix):
+        """StoryId.prefix extracts the prefix portion."""
+        story_id = StoryId.from_string(f"{prefix}-001")
+        assert story_id.prefix == prefix
 
 
 # =============================================================================

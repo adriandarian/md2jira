@@ -598,11 +598,11 @@ def format_fix_suggestion(
     if color:
         lines.append(f"{Colors.BOLD}Option 1: View format guide{Colors.RESET}")
         lines.append(
-            f"  {Colors.DIM}Run: spectra --validate --markdown {file_path} --show-guide{Colors.RESET}\n"
+            f"  {Colors.DIM}Run: spectra --validate --input {file_path} --show-guide{Colors.RESET}\n"
         )
     else:
         lines.append("Option 1: View format guide")
-        lines.append(f"  Run: spectra --validate --markdown {file_path} --show-guide\n")
+        lines.append(f"  Run: spectra --validate --input {file_path} --show-guide\n")
 
     # Option 2: Get AI prompt
     if color:
@@ -610,11 +610,11 @@ def format_fix_suggestion(
             f"{Colors.BOLD}Option 2: Get AI fix prompt (copy to your AI tool){Colors.RESET}"
         )
         lines.append(
-            f"  {Colors.DIM}Run: spectra --validate --markdown {file_path} --suggest-fix{Colors.RESET}\n"
+            f"  {Colors.DIM}Run: spectra --validate --input {file_path} --suggest-fix{Colors.RESET}\n"
         )
     else:
         lines.append("Option 2: Get AI fix prompt (copy to your AI tool)")
-        lines.append(f"  Run: spectra --validate --markdown {file_path} --suggest-fix\n")
+        lines.append(f"  Run: spectra --validate --input {file_path} --suggest-fix\n")
 
     # Option 3: Auto-fix with detected tools
     if tools:
@@ -630,18 +630,16 @@ def format_fix_suggestion(
         first_tool = tools[0]
         if color:
             lines.append(
-                f"  {Colors.DIM}Run: spectra --validate --markdown {file_path} --auto-fix --ai-tool {first_tool.tool.value}{Colors.RESET}"
+                f"  {Colors.DIM}Run: spectra --validate --input {file_path} --auto-fix --ai-tool {first_tool.tool.value}{Colors.RESET}"
             )
             lines.append(
-                f"  {Colors.DIM}Or interactively: spectra --validate --markdown {file_path} --auto-fix{Colors.RESET}"
+                f"  {Colors.DIM}Or interactively: spectra --validate --input {file_path} --auto-fix{Colors.RESET}"
             )
         else:
             lines.append(
-                f"  Run: spectra --validate --markdown {file_path} --auto-fix --ai-tool {first_tool.tool.value}"
+                f"  Run: spectra --validate --input {file_path} --auto-fix --ai-tool {first_tool.tool.value}"
             )
-            lines.append(
-                f"  Or interactively: spectra --validate --markdown {file_path} --auto-fix"
-            )
+            lines.append(f"  Or interactively: spectra --validate --input {file_path} --auto-fix")
     # No tools detected, suggest installing one
     elif color:
         lines.append(f"{Colors.BOLD}Option 3: Install an AI CLI tool for auto-fix{Colors.RESET}")

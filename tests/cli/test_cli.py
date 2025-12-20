@@ -733,7 +733,7 @@ class TestRunSync:
         with (
             patch("spectra.cli.app.EnvironmentConfigProvider") as MockProvider,
             patch("spectra.cli.app.JiraAdapter") as MockAdapter,
-            patch("spectra.cli.app.SyncOrchestrator"),  # Mock to prevent real instantiation
+            patch("spectra.cli.app.SyncOrchestrator") as MockOrchestrator,
             patch("spectra.application.sync.StateStore") as MockStateStore,
         ):
             mock_provider = MockProvider.return_value
@@ -744,6 +744,9 @@ class TestRunSync:
             mock_adapter = MockAdapter.return_value
             mock_adapter.test_connection.return_value = True
             mock_adapter.get_current_user.return_value = {"displayName": "Test User"}
+
+            mock_orchestrator = MockOrchestrator.return_value
+            mock_orchestrator.validate_sync_prerequisites.return_value = []
 
             MockStateStore.return_value.find_latest_resumable.return_value = None
 
@@ -777,6 +780,7 @@ class TestRunSync:
             mock_adapter.get_current_user.return_value = {"displayName": "Test User"}
 
             mock_orchestrator = MockOrchestrator.return_value
+            mock_orchestrator.validate_sync_prerequisites.return_value = []
             mock_orchestrator.sync_resumable.return_value = SyncResult(
                 success=True,
                 dry_run=True,
@@ -814,6 +818,7 @@ class TestRunSync:
             mock_adapter.get_current_user.return_value = {"displayName": "Test User"}
 
             mock_orchestrator = MockOrchestrator.return_value
+            mock_orchestrator.validate_sync_prerequisites.return_value = []
             mock_orchestrator.sync_resumable.return_value = SyncResult(
                 success=True,
                 dry_run=True,
