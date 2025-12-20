@@ -61,7 +61,7 @@ complete -c spectra -s h -l help -d 'Show help message'
 # Shell completions
 complete -c spectra -l completions -d 'Generate shell completion script' -x -a '
     bash\t"Generate Bash completion script"
-    zsh\t"Generate Zsh completion script"  
+    zsh\t"Generate Zsh completion script"
     fish\t"Generate Fish completion script"
 '
 
