@@ -219,10 +219,20 @@ class TomlParser(DocumentParserPort):
             raise ParserError(f"Invalid TOML: {e}")
 
     def _is_valid_key(self, key: str) -> bool:
-        """Check if a string is a valid issue key."""
+        """Check if a string is a valid issue key.
+
+        Supports:
+        - PREFIX-NUMBER: PROJ-123 (hyphen)
+        - PREFIX_NUMBER: PROJ_123 (underscore)
+        - PREFIX/NUMBER: PROJ/123 (forward slash)
+        - #NUMBER: #123 (GitHub-style)
+        - NUMBER: 123 (purely numeric)
+        """
         import re
 
-        return bool(re.match(r"^[A-Z]+-\d+$", str(key).upper()))
+        upper_key = str(key).upper()
+        # PREFIX[-_/]NUMBER or #?NUMBER
+        return bool(re.match(r"^(?:[A-Z]+[-_/]\d+|#?\d+)$", upper_key))
 
     def _parse_story(self, data: dict[str, Any]) -> UserStory | None:
         """Parse a single story from TOML data.

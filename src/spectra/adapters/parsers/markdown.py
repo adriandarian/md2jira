@@ -100,9 +100,16 @@ class MarkdownParser(DocumentParserPort):
     FORMAT_BLOCKQUOTE = "blockquote"  # Blockquote metadata (> **Field**: Value)
     FORMAT_STANDALONE = "standalone"  # Standalone file with h1 header
 
-    # Generic story ID pattern: PREFIX-NUMBER (e.g., US-001, EU-042, PROJ-123, FEAT-001)
-    # Allows any alphanumeric prefix followed by hyphen and digits
-    STORY_ID_PATTERN = r"[A-Z]+-\d+"
+    # Generic story ID pattern supporting multiple formats:
+    # - PREFIX-NUMBER: US-001, EU-042, PROJ-123, FEAT-001 (hyphen separator)
+    # - PREFIX_NUMBER: PROJ_001, US_123 (underscore separator)
+    # - PREFIX/NUMBER: PROJ/001, US/123 (forward slash separator)
+    # - #NUMBER: #123, #42 (GitHub-style numeric IDs)
+    # - NUMBER: 123, 42 (purely numeric IDs) - only in specific contexts
+    STORY_ID_PATTERN = r"(?:[A-Z]+[-_/]\d+|#\d+)"
+
+    # Extended pattern that also accepts purely numeric IDs (for h1/standalone files)
+    STORY_ID_PATTERN_EXTENDED = r"(?:[A-Z]+[-_/]\d+|#?\d+)"
 
     # Story patterns - flexible to match multiple header levels and formats
     # Matches: ### ✅ PROJ-001: Title  OR  ### US-001: Title (h3)
@@ -110,11 +117,15 @@ class MarkdownParser(DocumentParserPort):
     STORY_PATTERN_FLEXIBLE = rf"### (?:.*?)?({STORY_ID_PATTERN}):\s*([^\n]+)\n"
 
     # Standalone story pattern for h1 headers: # PROJ-001: Title [emoji] or # US-001: Title
-    STORY_PATTERN_H1 = rf"^#\s+(?:.*?)?({STORY_ID_PATTERN}):\s*([^\n]+?)(?:\s*[✅🔲🟡⏸️]+)?\s*$"
+    # Also supports #123 and purely numeric IDs in standalone files
+    STORY_PATTERN_H1 = (
+        rf"^#\s+(?:.*?)?({STORY_ID_PATTERN_EXTENDED}):\s*([^\n]+?)(?:\s*[✅🔲🟡⏸️]+)?\s*$"
+    )
 
     EPIC_TITLE_PATTERN = r"^#\s+[^\n]+\s+([^\n]+)$"
     # Multi-epic pattern: ## Epic: PROJ-100 - Epic Title or ## Epic: PROJ-100
-    MULTI_EPIC_PATTERN = r"^##\s+Epic:\s*([A-Z]+-\d+)(?:\s*[-–—]\s*(.+))?$"
+    # Supports custom separators: PROJ-100, PROJ_100, PROJ/100
+    MULTI_EPIC_PATTERN = r"^##\s+Epic:\s*([A-Z]+[-_/]\d+)(?:\s*[-–—]\s*(.+))?$"
 
     # Inline metadata patterns (Format B)
     INLINE_FIELD_PATTERN = r"\*\*{field}\*\*:\s*(.+?)(?:\s*$|\s{2,})"
@@ -243,17 +254,19 @@ class MarkdownParser(DocumentParserPort):
         if name_lower in skip_patterns:
             return False
 
-        # Filename pattern match (fast path) - any PREFIX-NUMBER format
-        # Matches: us-001.md, eu-042.md, proj-123.md, story-001.md, etc.
-        if re.match(r"^[a-z]+-\d+", name_lower):
+        # Filename pattern match (fast path) - any PREFIX-SEPARATOR-NUMBER format
+        # Matches: us-001.md, eu_042.md, proj-123.md, story_001.md, etc.
+        # Also matches purely numeric: 123.md
+        if re.match(r"^(?:[a-z]+[-_]\d+|\d+)", name_lower):
             return True
 
         # Content-based detection (slower but more reliable)
         try:
             content = file_path.read_text(encoding="utf-8")
             # Check for story header patterns
+            # Support custom separators: PREFIX-NUM, PREFIX_NUM, PREFIX/NUM, #NUM
             story_markers = [
-                r"^#{1,3}\s+.*(?:US-\d+|[A-Z]+-\d+):",  # Story ID header
+                r"^#{1,3}\s+.*(?:[A-Z]+[-_/]\d+|#\d+):",  # Story ID header
                 r"\*\*As a\*\*.*\*\*I want\*\*",  # User story format
                 r">\s*\*\*Story ID\*\*:",  # Blockquote metadata
                 r"\|\s*\*\*Story Points\*\*\s*\|",  # Table metadata
@@ -333,7 +346,8 @@ class MarkdownParser(DocumentParserPort):
             return epics[0] if epics else None
 
         # Extract epic title from first heading
-        title_match = re.search(r"^#\s+[^\n]*?([A-Z]+-\d+)?.*$", content, re.MULTILINE)
+        # Supports custom separators: PROJ-123, PROJ_123, PROJ/123, #123
+        title_match = re.search(r"^#\s+[^\n]*?([A-Z]+[-_/]\d+|#\d+)?.*$", content, re.MULTILINE)
         title = title_match.group(0) if title_match else "Untitled Epic"
 
         # Parse all stories
@@ -523,6 +537,7 @@ class MarkdownParser(DocumentParserPort):
 
             # Try to extract epic ID from metadata
             # Format: > **Epic ID**: NDP-OC-001 or **Epic ID**: NDP-OC-001
+            # Supports custom separators: PROJ-123, PROJ_123, PROJ/123
             id_match = re.search(r"(?:>\s*)?\*\*Epic\s*ID\*\*:\s*(\S+)", content, re.IGNORECASE)
             if id_match:
                 epic_key = IssueKey(id_match.group(1).strip())
@@ -568,8 +583,8 @@ class MarkdownParser(DocumentParserPort):
 
         if not story_matches:
             errors.append(
-                "No user stories found matching pattern '### [emoji] PREFIX-001: Title' "
-                "(e.g., US-001, EU-042, PROJ-123)"
+                "No user stories found matching pattern '### [emoji] ID: Title' "
+                "(e.g., US-001, PROJ_123, FEAT/001, #123)"
             )
 
         # Validate each story
@@ -985,10 +1000,14 @@ class MarkdownParser(DocumentParserPort):
             r"#### (?:Links|Related Issues|Dependencies)\n([\s\S]*?)(?=####|\n---|\Z)", content
         )
 
+        # Issue key pattern supporting all separator types and numeric IDs
+        issue_key_pattern = r"(?:[A-Z]+[-_/]\d+|#\d+)"
+
         if section:
             section_content = section.group(1)
             # Parse table rows: | link_type | target_key |
-            table_pattern = r"\|\s*([^|]+)\s*\|\s*([A-Z]+-\d+)\s*\|"
+            # Support custom separators: PROJ-123, PROJ_123, PROJ/123, #123
+            table_pattern = rf"\|\s*([^|]+)\s*\|\s*({issue_key_pattern})\s*\|"
             for match in re.finditer(table_pattern, section_content):
                 link_type = match.group(1).strip().lower()
                 target_key = match.group(2).strip()
@@ -996,29 +1015,46 @@ class MarkdownParser(DocumentParserPort):
                     links.append((link_type, target_key))
 
             # Parse bullet list: - blocks: PROJ-123
-            bullet_pattern = (
-                r"[-*]\s*(blocks|blocked by|relates to|depends on|duplicates)[:\s]+([A-Z]+-\d+)"
-            )
+            bullet_pattern = rf"[-*]\s*(blocks|blocked by|relates to|depends on|duplicates)[:\s]+({issue_key_pattern})"
             for match in re.finditer(bullet_pattern, section_content, re.IGNORECASE):
                 link_type = match.group(1).strip().lower()
                 target_key = match.group(2).strip()
                 links.append((link_type, target_key))
 
         # Pattern for inline links: **Blocks:** PROJ-123, PROJ-456
+        # Support custom separators and #123 format
         inline_patterns = [
-            (r"\*\*Blocks[:\s]*\*\*\s*([A-Z]+-\d+(?:\s*,\s*[A-Z]+-\d+)*)", "blocks"),
-            (r"\*\*Blocked by[:\s]*\*\*\s*([A-Z]+-\d+(?:\s*,\s*[A-Z]+-\d+)*)", "blocked by"),
-            (r"\*\*Depends on[:\s]*\*\*\s*([A-Z]+-\d+(?:\s*,\s*[A-Z]+-\d+)*)", "depends on"),
-            (r"\*\*Related to[:\s]*\*\*\s*([A-Z]+-\d+(?:\s*,\s*[A-Z]+-\d+)*)", "relates to"),
-            (r"\*\*Relates to[:\s]*\*\*\s*([A-Z]+-\d+(?:\s*,\s*[A-Z]+-\d+)*)", "relates to"),
-            (r"\*\*Duplicates[:\s]*\*\*\s*([A-Z]+-\d+(?:\s*,\s*[A-Z]+-\d+)*)", "duplicates"),
+            (
+                rf"\*\*Blocks[:\s]*\*\*\s*({issue_key_pattern}(?:\s*,\s*{issue_key_pattern})*)",
+                "blocks",
+            ),
+            (
+                rf"\*\*Blocked by[:\s]*\*\*\s*({issue_key_pattern}(?:\s*,\s*{issue_key_pattern})*)",
+                "blocked by",
+            ),
+            (
+                rf"\*\*Depends on[:\s]*\*\*\s*({issue_key_pattern}(?:\s*,\s*{issue_key_pattern})*)",
+                "depends on",
+            ),
+            (
+                rf"\*\*Related to[:\s]*\*\*\s*({issue_key_pattern}(?:\s*,\s*{issue_key_pattern})*)",
+                "relates to",
+            ),
+            (
+                rf"\*\*Relates to[:\s]*\*\*\s*({issue_key_pattern}(?:\s*,\s*{issue_key_pattern})*)",
+                "relates to",
+            ),
+            (
+                rf"\*\*Duplicates[:\s]*\*\*\s*({issue_key_pattern}(?:\s*,\s*{issue_key_pattern})*)",
+                "duplicates",
+            ),
         ]
 
         for pattern, link_type in inline_patterns:
             match = re.search(pattern, content, re.IGNORECASE)
             if match:
                 keys_str = match.group(1)
-                for key in re.findall(r"[A-Z]+-\d+", keys_str):
+                for key in re.findall(issue_key_pattern, keys_str):
                     links.append((link_type, key))
 
         return links
@@ -1164,10 +1200,10 @@ class MarkdownParser(DocumentParserPort):
                 issue_url = tracker_shorthand.group(2).strip()
 
         # Pattern 3: Just the issue key without link (for manual entries)
-        # > **Issue:** PROJ-123
+        # > **Issue:** PROJ-123 or PROJ_123 or PROJ/123 or #123 or 123
         if not issue_key:
             key_only_match = re.search(
-                r">\s*\*\*Issue:\*\*\s*([A-Z]+-\d+|#?\d+)",
+                r">\s*\*\*Issue:\*\*\s*([A-Z]+[-_/]\d+|#?\d+)",
                 content,
                 re.IGNORECASE,
             )

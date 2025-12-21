@@ -86,11 +86,16 @@ class AsciiDocParser(DocumentParserPort):
     """
 
     # Patterns for AsciiDoc parsing
-    # Generic story ID pattern: PREFIX-NUMBER (e.g., US-001, EU-042, PROJ-123)
-    STORY_ID_PATTERN = r"[A-Z]+-\d+"
+    # Generic story ID pattern supporting multiple formats:
+    # - PREFIX-NUMBER: US-001, EU-042, PROJ-123 (hyphen separator)
+    # - PREFIX_NUMBER: PROJ_001, US_123 (underscore separator)
+    # - PREFIX/NUMBER: PROJ/001, US/123 (forward slash separator)
+    # - #NUMBER: #123, #42 (GitHub-style numeric IDs)
+    STORY_ID_PATTERN = r"(?:[A-Z]+[-_/]\d+|#\d+)"
     STORY_PATTERN = rf"^==\s+(?:.*?)?({STORY_ID_PATTERN}):\s*([^\n]+)"
     EPIC_TITLE_PATTERN = r"^=\s+([^\n]+)"
-    EPIC_KEY_PATTERN = r":epic-key:\s*([A-Z]+-\d+)"
+    # Epic key supports custom separators
+    EPIC_KEY_PATTERN = r":epic-key:\s*([A-Z]+[-_/]\d+)"
 
     def __init__(self) -> None:
         """Initialize the AsciiDoc parser."""
@@ -161,8 +166,8 @@ class AsciiDocParser(DocumentParserPort):
         story_matches = list(re.finditer(self.STORY_PATTERN, content, re.MULTILINE))
         if not story_matches:
             errors.append(
-                "No user stories found matching pattern '== PREFIX-XXX: Title' "
-                "(e.g., US-001, EU-042, PROJ-123)"
+                "No user stories found matching pattern '== ID: Title' "
+                "(e.g., US-001, PROJ_123, FEAT/001, #123)"
             )
 
         return errors
@@ -363,7 +368,11 @@ class AsciiDocParser(DocumentParserPort):
             return links
 
         # Parse bullet list: * blocks: PROJ-123
-        pattern = r"\*\s*(blocks|blocked by|relates to|depends on|duplicates)[:\s]+([A-Z]+-\d+)"
+        # Supports custom separators: PROJ-123, PROJ_123, PROJ/123, #123
+        issue_key_pattern = r"(?:[A-Z]+[-_/]\d+|#\d+)"
+        pattern = (
+            rf"\*\s*(blocks|blocked by|relates to|depends on|duplicates)[:\s]+({issue_key_pattern})"
+        )
         for match in re.finditer(pattern, section, re.IGNORECASE):
             link_type = match.group(1).strip().lower()
             target = match.group(2).strip()

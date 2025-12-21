@@ -207,15 +207,19 @@ class MarkdownValidator:
     }
 
     # Story pattern - matches various header levels with story IDs
-    # Accepts any PREFIX-NUMBER format (e.g., US-001, EU-042, PROJ-123, FEAT-001)
+    # Accepts multiple ID formats:
+    # - PREFIX-NUMBER: US-001, EU-042, PROJ-123, FEAT-001 (hyphen separator)
+    # - PREFIX_NUMBER: PROJ_001, US_123 (underscore separator)
+    # - PREFIX/NUMBER: PROJ/001, US/123 (forward slash separator)
+    # - #NUMBER: #123, #42 (GitHub-style numeric IDs)
     # ### [emoji] PROJ-001: Title (h3) - most common format
     # ## [emoji] PROJ-001: Title (h2)
     # # PROJ-001: Title [emoji] (h1, standalone files)
     STORY_PATTERN = re.compile(
         r"^(?:"
-        r"#{2,3}\s+(?:[^\s:]+\s+)?(?P<id1>[A-Z]+-\d+)"  # h2/h3: any PREFIX-NUMBER
+        r"#{2,3}\s+(?:[^\s:]+\s+)?(?P<id1>[A-Z]+[-_/]\d+|#\d+)"  # h2/h3: PREFIX[-_/]NUM or #NUM
         r"|"
-        r"#\s+(?:[^\s:]+\s+)?(?P<id2>[A-Z]+-\d+)"  # h1: any PREFIX-NUMBER
+        r"#\s+(?:[^\s:]+\s+)?(?P<id2>[A-Z]+[-_/]\d+|#?\d+)"  # h1: PREFIX[-_/]NUM, #NUM, or NUM
         r"):\s*(?P<title>.+?)(?:\s*[✅🔲🟡⏸️]+)?$",
         re.MULTILINE,
     )

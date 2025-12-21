@@ -86,11 +86,12 @@ class NotionParser(DocumentParserPort):
     ```
     """
 
-    # Story ID patterns (flexible) - supports any PREFIX-NUMBER format
+    # Story ID patterns (flexible) - supports multiple formats
     STORY_ID_PATTERNS = [
-        r"[A-Z]+-\d+",  # Any PREFIX-NUMBER: US-001, EU-042, PROJ-123, FEAT-001
-        r"#\d+",  # #123
-        r"\[([A-Z]+-\d+)\]",  # [PROJ-123]
+        r"[A-Z]+[-_/]\d+",  # Any PREFIX[-_/]NUMBER: US-001, PROJ_042, FEAT/123
+        r"#\d+",  # #123 (GitHub-style)
+        r"\[([A-Z]+[-_/]\d+)\]",  # [PROJ-123], [PROJ_123], [PROJ/123]
+        r"\d+",  # Purely numeric: 123
     ]
 
     # Property patterns
@@ -320,7 +321,8 @@ class NotionParser(DocumentParserPort):
             return sections
 
         # Check for H2 with story IDs (for epic pages with sub-stories)
-        h2_pattern = r"^## .*(?:US-\d+|STORY-\d+|#\d+)"
+        # Supports: US-001, STORY_123, PROJ/001, #123
+        h2_pattern = r"^## .*(?:[A-Z]+[-_/]\d+|#\d+)"
         h2_matches = list(re.finditer(h2_pattern, content, flags=re.MULTILINE | re.IGNORECASE))
 
         if len(h2_matches) > 1:
@@ -406,8 +408,8 @@ class NotionParser(DocumentParserPort):
         story_id = self._extract_story_id(title + "\n" + content)
 
         # Clean title (remove ID if present)
-        title = re.sub(r"\s*\[?(?:US|STORY|S)-?\d+\]?\s*:?\s*", "", title)
-        title = re.sub(r"\s*#\d+\s*:?\s*", "", title)
+        # Handles: US-001, STORY_123, PROJ/001, #123, [PROJ-001]
+        title = re.sub(r"\s*\[?(?:[A-Z]+[-_/]\d+|#?\d+)\]?\s*:?\s*", "", title, flags=re.IGNORECASE)
 
         return title.strip(), story_id
 
@@ -680,8 +682,8 @@ class NotionParser(DocumentParserPort):
         for prop_name, link_type in link_property_map.items():
             value = properties.get(prop_name, "")
             if value:
-                # Parse comma-separated keys
-                for key in re.findall(r"[A-Z]+-\d+", value):
+                # Parse comma-separated keys - supports custom separators
+                for key in re.findall(r"(?:[A-Z]+[-_/]\d+|#\d+)", value, re.IGNORECASE):
                     links.append((link_type, key))
 
         # Find Links/Related/Dependencies section
@@ -693,9 +695,12 @@ class NotionParser(DocumentParserPort):
         if not section:
             section = self._extract_section(content, "Related Issues")
 
+        # Issue key pattern supporting all separator types and numeric IDs
+        issue_key_pattern = r"(?:[A-Z]+[-_/]\d+|#\d+)"
+
         if section:
             # Parse table rows: | link_type | target_key |
-            table_pattern = r"\|\s*([^|]+)\s*\|\s*([A-Z]+-\d+)\s*\|"
+            table_pattern = rf"\|\s*([^|]+)\s*\|\s*({issue_key_pattern})\s*\|"
             for match in re.finditer(table_pattern, section):
                 link_type = match.group(1).strip().lower()
                 target_key = match.group(2).strip()
@@ -703,9 +708,7 @@ class NotionParser(DocumentParserPort):
                     links.append((link_type, target_key))
 
             # Parse bullet list: - blocks: PROJ-123 or - blocks PROJ-123
-            bullet_pattern = (
-                r"[-*]\s*(blocks|blocked by|relates to|depends on|duplicates)[:\s]+([A-Z]+-\d+)"
-            )
+            bullet_pattern = rf"[-*]\s*(blocks|blocked by|relates to|depends on|duplicates)[:\s]+({issue_key_pattern})"
             for match in re.finditer(bullet_pattern, section, re.IGNORECASE):
                 link_type = match.group(1).strip().lower()
                 target_key = match.group(2).strip()

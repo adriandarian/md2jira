@@ -394,8 +394,18 @@ class ToonParser(DocumentParserPort):
         return value
 
     def _is_valid_key(self, key: str) -> bool:
-        """Check if a string is a valid issue key."""
-        return bool(re.match(r"^[A-Z]+-\d+$", str(key).upper()))
+        """Check if a string is a valid issue key.
+
+        Supports:
+        - PREFIX-NUMBER: PROJ-123 (hyphen)
+        - PREFIX_NUMBER: PROJ_123 (underscore)
+        - PREFIX/NUMBER: PROJ/123 (forward slash)
+        - #NUMBER: #123 (GitHub-style)
+        - NUMBER: 123 (purely numeric)
+        """
+        upper_key = str(key).upper()
+        # PREFIX[-_/]NUMBER or #?NUMBER
+        return bool(re.match(r"^(?:[A-Z]+[-_/]\d+|#?\d+)$", upper_key))
 
     # -------------------------------------------------------------------------
     # Private Methods - Story Parsing

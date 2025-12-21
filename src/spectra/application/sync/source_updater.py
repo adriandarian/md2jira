@@ -534,7 +534,10 @@ class SourceFileUpdater:
         story_start = story_match.start()
 
         # Find the next story or end of content
-        next_story = re.search(r"\n#{{1,3}}\s+[^\n]*[A-Z]+-\d+:", content[story_match.end() :])
+        # Supports custom separators: PROJ-123, PROJ_123, PROJ/123, #123
+        next_story = re.search(
+            r"\n#{{1,3}}\s+[^\n]*(?:[A-Z]+[-_/]\d+|#\d+):", content[story_match.end() :]
+        )
         story_end = story_match.end() + next_story.start() if next_story else len(content)
 
         story_section = content[story_start:story_end]
@@ -731,6 +734,7 @@ def detect_sync_conflicts(
 
 def _extract_story_section(content: str, story_id: str) -> str | None:
     """Extract the content section for a specific story."""
-    pattern = rf"(#{{1,3}}\s+[^\n]*?{re.escape(story_id)}:\s*[^\n]+\n[\s\S]*?)(?=#{{1,3}}\s+[^\n]*[A-Z]+-\d+:|\Z)"
+    # Supports custom separators: PROJ-123, PROJ_123, PROJ/123, #123
+    pattern = rf"(#{{1,3}}\s+[^\n]*?{re.escape(story_id)}:\s*[^\n]+\n[\s\S]*?)(?=#{{1,3}}\s+[^\n]*(?:[A-Z]+[-_/]\d+|#\d+):|\Z)"
     match = re.search(pattern, content)
     return match.group(1) if match else None

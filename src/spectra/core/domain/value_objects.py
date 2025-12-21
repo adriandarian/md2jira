@@ -17,20 +17,39 @@ class StoryId:
     """
     Unique identifier for a story within a markdown document.
 
-    Format: PREFIX-NUMBER (e.g., US-001, EU-042, PROJ-123, FEAT-001)
+    Supported formats:
+    - PREFIX-NUMBER: US-001, EU-042, PROJ-123, FEAT-001 (hyphen separator)
+    - PREFIX_NUMBER: PROJ_001, US_123 (underscore separator)
+    - PREFIX/NUMBER: PROJ/001, US/123 (forward slash separator)
+    - #NUMBER: #123, #42 (GitHub-style numeric IDs)
+    - NUMBER: 123, 42 (purely numeric IDs)
 
-    Accepts any alphanumeric prefix followed by a hyphen and number.
+    Accepts any alphanumeric prefix followed by a separator and number,
+    or just a number (with optional # prefix).
     This allows organizations to use their own naming conventions.
     """
 
     value: str
 
-    # Pattern for valid story IDs: one or more uppercase letters, hyphen, one or more digits
-    PATTERN = re.compile(r"^[A-Z]+-\d+$", re.IGNORECASE)
+    # Pattern for valid story IDs:
+    # - PREFIX[-_/]NUMBER: letters, separator, digits (e.g., US-001, PROJ_123, FEAT/001)
+    # - #NUMBER: GitHub-style (e.g., #123)
+    # - NUMBER: purely numeric (e.g., 123)
+    PATTERN = re.compile(r"^(?:[A-Z]+[-_/]\d+|#?\d+)$", re.IGNORECASE)
+
+    # Separator characters used in PREFIX-NUMBER format
+    SEPARATORS = "-_/"
 
     def __post_init__(self) -> None:
-        # Normalize to uppercase
-        normalized = self.value.strip().upper()
+        # Normalize: strip whitespace, uppercase prefix (not # or purely numeric)
+        normalized = self.value.strip()
+        if normalized.startswith("#") or re.match(r"^\d+$", normalized):
+            # Keep # prefix or purely numeric as-is
+            pass
+        else:
+            # Has prefix - uppercase it
+            normalized = normalized.upper()
+
         if normalized != self.value:
             object.__setattr__(self, "value", normalized)
 
@@ -38,15 +57,31 @@ class StoryId:
     def from_string(cls, value: str) -> StoryId:
         """Parse a story ID from string.
 
-        Accepts any PREFIX-NUMBER format (e.g., US-001, EU-042, PROJ-123).
+        Accepts formats:
+        - PREFIX-NUMBER: US-001, EU-042, PROJ-123
+        - PREFIX_NUMBER: PROJ_001, US_123
+        - PREFIX/NUMBER: PROJ/001, US/123
+        - #NUMBER: #123 (GitHub-style)
+        - NUMBER: 123 (purely numeric)
         """
-        return cls(value.strip().upper())
+        return cls(value.strip())
 
     @property
     def prefix(self) -> str:
         """Extract the prefix portion (e.g., 'US' from 'US-001')."""
-        if "-" in self.value:
-            return self.value.split("-")[0]
+        # Check for any separator
+        for sep in self.SEPARATORS:
+            if sep in self.value:
+                return self.value.split(sep)[0]
+        # No prefix for #123 or purely numeric
+        return ""
+
+    @property
+    def separator(self) -> str:
+        """Extract the separator character (-, _, or /)."""
+        for sep in self.SEPARATORS:
+            if sep in self.value:
+                return sep
         return ""
 
     @property
@@ -55,6 +90,12 @@ class StoryId:
         match = re.search(r"\d+", self.value)
         return int(match.group()) if match else 0
 
+    @property
+    def is_numeric(self) -> bool:
+        """Check if this is a purely numeric ID (no prefix)."""
+        stripped = self.value.lstrip("#")
+        return stripped.isdigit()
+
     def __str__(self) -> str:
         return self.value
 
@@ -62,28 +103,68 @@ class StoryId:
 @dataclass(frozen=True)
 class IssueKey:
     """
-    Jira issue key.
+    Issue tracker key.
 
-    Format: PROJECT-NUMBER (e.g., PROJ-123, UPP-80006)
+    Supported formats:
+    - PROJECT-NUMBER: PROJ-123, UPP-80006 (hyphen separator - Jira, Linear)
+    - PROJECT_NUMBER: PROJ_123 (underscore separator)
+    - PROJECT/NUMBER: PROJ/123 (forward slash separator)
+    - #NUMBER: #123 (GitHub Issues style)
+    - NUMBER: 123 (Azure DevOps, purely numeric)
     """
 
     value: str
 
+    # Separator characters used in PROJECT-NUMBER format
+    SEPARATORS = "-_/"
+
     def __post_init__(self) -> None:
-        if not re.match(r"^[A-Z]+-\d+$", self.value.upper()):
+        upper_val = self.value.upper()
+        # Accept: PREFIX[-_/]NUMBER, #NUMBER, or just NUMBER
+        has_prefix_separator = any(
+            re.match(rf"^[A-Z]+{re.escape(sep)}\d+$", upper_val) for sep in self.SEPARATORS
+        )
+        is_numeric = re.match(r"^#?\d+$", self.value)
+
+        if not has_prefix_separator and not is_numeric:
             raise ValueError(f"Invalid issue key format: {self.value}")
 
     @property
     def project(self) -> str:
         """Extract project key."""
-        return self.value.split("-")[0].upper()
+        for sep in self.SEPARATORS:
+            if sep in self.value:
+                return self.value.split(sep)[0].upper()
+        # No project for #123 or purely numeric
+        return ""
+
+    @property
+    def separator(self) -> str:
+        """Extract the separator character (-, _, or /)."""
+        for sep in self.SEPARATORS:
+            if sep in self.value:
+                return sep
+        return ""
 
     @property
     def number(self) -> int:
         """Extract issue number."""
-        return int(self.value.split("-")[1])
+        for sep in self.SEPARATORS:
+            if sep in self.value:
+                return int(self.value.split(sep)[1])
+        # Handle #123 or purely numeric
+        return int(self.value.lstrip("#"))
+
+    @property
+    def is_numeric(self) -> bool:
+        """Check if this is a purely numeric ID (no project prefix)."""
+        stripped = self.value.lstrip("#")
+        return stripped.isdigit()
 
     def __str__(self) -> str:
+        # Keep numeric IDs as-is, uppercase prefix-based IDs
+        if self.is_numeric:
+            return self.value
         return self.value.upper()
 
 
