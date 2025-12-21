@@ -120,6 +120,21 @@ class TestTrackerBlockFormatting:
         assert "> **Tracker:** Azure DevOps" in block
         assert "> **Issue:** [123](https://dev.azure.com/org/project/_workitems/edit/123)" in block
 
+    def test_format_asana_tracker_block(self) -> None:
+        """Test formatting Asana tracker info block."""
+        updater = SourceFileUpdater(
+            tracker_type=TrackerType.ASANA,
+            base_url="https://app.asana.com",
+        )
+        info = TrackerInfo(
+            tracker_type=TrackerType.ASANA,
+            issue_key="1234567890",
+            issue_url="https://app.asana.com/0/0/1234567890",
+        )
+        block = updater._format_tracker_block(info)
+        assert "> **Tracker:** Asana" in block
+        assert "> **Issue:** [1234567890](https://app.asana.com/0/0/1234567890)" in block
+
 
 class TestUrlBuilding:
     """Tests for URL building."""
@@ -168,6 +183,15 @@ class TestUrlBuilding:
         )
         url = updater._build_url("456")
         assert url == "https://dev.azure.com/org/project/_workitems/edit/456"
+
+    def test_build_asana_url(self) -> None:
+        """Test building Asana task URL."""
+        updater = SourceFileUpdater(
+            tracker_type=TrackerType.ASANA,
+            base_url="https://app.asana.com",
+        )
+        url = updater._build_url("1234567890")
+        assert url == "https://app.asana.com/0/0/1234567890"
 
 
 class TestStoryTrackerInfoUpdate:

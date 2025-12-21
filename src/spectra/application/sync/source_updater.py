@@ -651,6 +651,7 @@ class SourceFileUpdater:
             TrackerType.GITHUB: "GitHub",
             TrackerType.LINEAR: "Linear",
             TrackerType.AZURE_DEVOPS: "Azure DevOps",
+            TrackerType.ASANA: "Asana",
         }
         return names.get(tracker_type, tracker_type.value.title())
 
@@ -680,6 +681,11 @@ class SourceFileUpdater:
         if self.tracker_type == TrackerType.AZURE_DEVOPS:
             # Azure DevOps URLs: https://dev.azure.com/org/project/_workitems/edit/123
             return f"{self.base_url}/_workitems/edit/{issue_key}"
+
+        if self.tracker_type == TrackerType.ASANA:
+            # Asana URLs: https://app.asana.com/0/project_gid/task_gid
+            # The issue_key is typically the task GID
+            return f"{self.base_url}/0/0/{issue_key}"
 
         # Fallback for unknown trackers
         return f"{self.base_url}/{issue_key}"
