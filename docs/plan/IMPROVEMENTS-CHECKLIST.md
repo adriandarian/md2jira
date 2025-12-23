@@ -16,9 +16,9 @@
 ## 🟡 Medium Priority (Quality & Parity)
 
 ### Adapter Improvements
-- [ ] **Asana Adapter Feature Parity** - Verify batch operations, async support, caching, custom field mapping, attachments, comment sync
-- [ ] **Complete Async Adapter Parity** - Linear, Azure DevOps, Confluence need async adapters
-- [ ] **Unify Batch Operations** - Bring `JiraBatchClient` pattern to other adapters
+- [x] **Asana Adapter Feature Parity** - Verified batch operations, async support, caching, custom field mapping, comment sync (attachments noted as future enhancement)
+- [x] **Complete Async Adapter Parity** - Created async adapters for Linear and Azure DevOps (Confluence is DocumentOutputPort, doesn't need async)
+- [x] **Unify Batch Operations** - Created batch clients for Linear and Azure DevOps following `JiraBatchClient` pattern
 
 ### Testing & Coverage
 - [ ] **Integration Tests for All Trackers**

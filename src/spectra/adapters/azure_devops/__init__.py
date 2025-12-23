@@ -6,12 +6,18 @@ enabling syncing markdown documents to Azure DevOps work items.
 """
 
 from .adapter import AzureDevOpsAdapter
+from .async_adapter import AsyncAzureDevOpsAdapter
+from .batch import AzureDevOpsBatchClient, BatchOperation, BatchResult
 from .client import AzureDevOpsApiClient
 from .plugin import AzureDevOpsTrackerPlugin
 
 
 __all__ = [
+    "AsyncAzureDevOpsAdapter",
     "AzureDevOpsAdapter",
     "AzureDevOpsApiClient",
+    "AzureDevOpsBatchClient",
+    "BatchOperation",
+    "BatchResult",
     "AzureDevOpsTrackerPlugin",
 ]

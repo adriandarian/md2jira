@@ -91,6 +91,7 @@ class AzureDevOpsAdapter(IssueTrackerPort):
 
         # Cache for states
         self._states_cache: dict[str, list[dict]] = {}
+        self._batch_client: Any = None
 
     def _get_states(self, work_item_type: str) -> list[dict]:
         """Get available states for a work item type, with caching."""
@@ -556,3 +557,17 @@ class AzureDevOpsAdapter(IssueTrackerPort):
         """Execute a WIQL query and return results."""
         work_items = self._client.query_work_items(wiql, top)
         return [self._parse_work_item(wi) for wi in work_items]
+
+    # -------------------------------------------------------------------------
+    # Batch operations
+    # -------------------------------------------------------------------------
+    @property
+    def batch_client(self) -> Any:
+        """Get the batch client for bulk operations."""
+        if self._batch_client is None:
+            from .batch import AzureDevOpsBatchClient
+
+            self._batch_client = AzureDevOpsBatchClient(
+                client=self._client,
+            )
+        return self._batch_client

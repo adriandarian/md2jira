@@ -71,6 +71,7 @@ class LinearAdapter(IssueTrackerPort):
         # Cache for team and workflow states
         self._team: dict[str, Any] | None = None
         self._workflow_states: dict[str, dict] = {}  # name -> state
+        self._batch_client: Any = None
 
     def _get_team(self) -> dict[str, Any]:
         """Get the configured team, caching the result."""
@@ -546,3 +547,17 @@ class LinearAdapter(IssueTrackerPort):
             description=description,
         )
         return result.get("id", "")
+
+    # -------------------------------------------------------------------------
+    # Batch operations
+    # -------------------------------------------------------------------------
+    @property
+    def batch_client(self) -> Any:
+        """Get the batch client for bulk operations."""
+        if self._batch_client is None:
+            from .batch import LinearBatchClient
+
+            self._batch_client = LinearBatchClient(
+                client=self._client,
+            )
+        return self._batch_client
