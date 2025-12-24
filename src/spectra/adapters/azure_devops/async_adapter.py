@@ -150,15 +150,17 @@ class AsyncAzureDevOpsAdapter(AsyncIssueTrackerPort):
         if method == "PATCH":
             headers["Content-Type"] = "application/json-patch+json"
 
-        async with self._semaphore:
-            async with session.request(method, url, params=params, json=json, headers=headers) as response:
-                if response.status >= 400:
-                    text = await response.text()
-                    raise Exception(f"API error {response.status}: {text}")
+        async with (
+            self._semaphore,
+            session.request(method, url, params=params, json=json, headers=headers) as response,
+        ):
+            if response.status >= 400:
+                text = await response.text()
+                raise Exception(f"API error {response.status}: {text}")
 
-                if response.content_type == "application/json":
-                    return await response.json()
-                return {}
+            if response.content_type == "application/json":
+                return await response.json()
+            return {}
 
     def _parse_work_item_id(self, key: str) -> int:
         """Parse a work item key into an ID."""
@@ -198,7 +200,8 @@ class AsyncAzureDevOpsAdapter(AsyncIssueTrackerPort):
     async def get_epic_children_async(self, epic_key: str) -> list[IssueData]:
         """Fetch all children of an epic asynchronously."""
         # Azure DevOps uses relations for hierarchy
-        epic = await self.get_issue_async(epic_key)
+        # Fetch epic to validate it exists, but relations would need separate API call
+        _ = await self.get_issue_async(epic_key)
         # Would need to fetch relations separately - simplified for now
         return []
 
@@ -259,7 +262,11 @@ class AsyncAzureDevOpsAdapter(AsyncIssueTrackerPort):
                 html_desc = self._markdown_to_html(str(st.get("description", "")))
 
                 operations = [
-                    {"op": "add", "path": "/fields/System.Title", "value": st.get("summary", "")[:255]},
+                    {
+                        "op": "add",
+                        "path": "/fields/System.Title",
+                        "value": st.get("summary", "")[:255],
+                    },
                     {"op": "add", "path": "/fields/System.Description", "value": html_desc},
                     {
                         "op": "add",
@@ -389,8 +396,7 @@ class AsyncAzureDevOpsAdapter(AsyncIssueTrackerPort):
         html = re.sub(r"\*(.+?)\*", r"<em>\1</em>", html)
         html = re.sub(r"```(\w*)\n(.*?)```", r"<pre><code>\2</code></pre>", html, flags=re.DOTALL)
         html = re.sub(r"`([^`]+)`", r"<code>\1</code>", html)
-        html = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r'<a href="\2">\1</a>', html)
-        return html
+        return re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r'<a href="\2">\1</a>', html)
 
 
 def is_async_available() -> bool:
@@ -399,4 +405,3 @@ def is_async_available() -> bool:
 
 
 __all__ = ["ASYNC_AVAILABLE", "AsyncAzureDevOpsAdapter", "is_async_available"]
-

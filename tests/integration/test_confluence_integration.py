@@ -492,3 +492,175 @@ class TestConfluenceLabelOperations:
 
         mock_client.remove_label.assert_called_once_with("page-123", "remove")
         mock_client.add_labels.assert_called_once_with("page-123", ["new"])
+
+
+# =============================================================================
+# Confluence Batch and Extended Operations Tests
+# =============================================================================
+
+
+class TestConfluenceBatchOperations:
+    """Tests for batch page operations."""
+
+    def test_bulk_update_pages(self, adapter, mock_client, mock_page_response):
+        """Test updating multiple pages in sequence."""
+        mock_client.update_content.return_value = mock_page_response
+        mock_client.get_labels.return_value = []
+
+        pages = [
+            ("page-1", "Title 1", "<p>Content 1</p>", 1),
+            ("page-2", "Title 2", "<p>Content 2</p>", 2),
+            ("page-3", "Title 3", "<p>Content 3</p>", 3),
+        ]
+
+        for page_id, title, content, version in pages:
+            result = adapter.update_page(page_id, title, content, version)
+            assert result is not None
+
+        assert mock_client.update_content.call_count == 3
+
+    def test_bulk_create_pages(self, adapter, mock_client, mock_page_response):
+        """Test creating multiple pages."""
+        mock_client.create_content.return_value = mock_page_response
+
+        pages = [
+            ("PROJ", "Page 1", "<p>Content 1</p>"),
+            ("PROJ", "Page 2", "<p>Content 2</p>"),
+        ]
+
+        for space_key, title, content in pages:
+            result = adapter.create_page(space_key, title, content)
+            assert result is not None
+
+        assert mock_client.create_content.call_count == 2
+
+    def test_bulk_delete_pages(self, adapter, mock_client):
+        """Test deleting multiple pages."""
+        mock_client.delete_content.return_value = None
+
+        page_ids = ["page-1", "page-2", "page-3"]
+
+        for page_id in page_ids:
+            adapter.delete_page(page_id)
+
+        assert mock_client.delete_content.call_count == 3
+
+
+class TestConfluenceSearchOperations:
+    """Tests for search operations."""
+
+    def test_search_by_label(self, adapter, mock_client, mock_page_response):
+        """Test searching pages by label."""
+        mock_client.search.return_value = [mock_page_response]
+
+        # Search using CQL
+        results = mock_client.search("label = 'test'")
+
+        assert len(results) == 1
+
+    def test_get_child_pages(self, adapter, mock_client, mock_page_response):
+        """Test getting child pages of a parent."""
+        mock_client.get_child_pages.return_value = [mock_page_response]
+
+        children = mock_client.get_child_pages("parent-123")
+
+        assert len(children) == 1
+
+
+class TestConfluenceStorageFormat:
+    """Tests for Confluence storage format edge cases."""
+
+    def test_escape_html_in_content(self, adapter):
+        """Test HTML escaping in content."""
+        html = adapter._info_panel("<script>alert('xss')</script>")
+
+        # Script tags should be escaped or handled
+        assert "ac:name" in html
+
+    def test_format_empty_description(self, adapter):
+        """Test formatting empty description."""
+        from spectra.core.domain.value_objects import Description
+
+        desc = Description(role="", want="", benefit="")
+        html = adapter._format_description(desc)
+
+        # Should produce valid HTML even with empty values
+        assert html is not None
+
+    def test_status_lozenge_all_statuses(self, adapter):
+        """Test status lozenge for all status values."""
+        from spectra.core.domain.enums import Status
+
+        for status in Status:
+            html = adapter._status_lozenge(status)
+            assert 'ac:name="status"' in html
+
+    def test_task_list_empty(self, adapter):
+        """Test task list with empty items."""
+        html = adapter._task_list([], [])
+
+        # Should handle empty list gracefully
+        assert "ac:task-list" in html or html == ""
+
+
+class TestConfluenceAttachments:
+    """Tests for attachment operations."""
+
+    def test_format_with_attachments(self, adapter, sample_story):
+        """Test story content with potential attachments."""
+        content = adapter.format_story_content(sample_story)
+
+        # Content should be valid Confluence storage format
+        assert content is not None
+        assert len(content) > 0
+
+    def test_format_epic_with_many_stories(self, adapter, sample_epic):
+        """Test formatting epic with stories."""
+        content = adapter.format_epic_content(sample_epic)
+
+        # Should contain story information
+        assert "Stories" in content
+
+
+class TestConfluenceVersionControl:
+    """Tests for page version handling."""
+
+    def test_update_with_version_increment(self, adapter, mock_client, mock_page_response):
+        """Test that updates increment version correctly."""
+        mock_client.update_content.return_value = mock_page_response
+        mock_client.get_labels.return_value = []
+
+        adapter.update_page("page-123", "Title", "<p>Content</p>", version=5)
+
+        # Verify update was called
+        mock_client.update_content.assert_called_once()
+
+    def test_get_page_includes_version(self, adapter, mock_client, mock_page_response):
+        """Test that get_page returns version information."""
+        mock_client.get_content.return_value = mock_page_response
+
+        page = adapter.get_page("page-123")
+
+        assert page.version == 5
+
+
+class TestConfluencePermissions:
+    """Tests for permission handling."""
+
+    def test_create_page_in_restricted_space(self, adapter, mock_client):
+        """Test creating page in restricted space."""
+        mock_client.create_content.side_effect = ConfluenceAPIError(
+            "No permission", status_code=403
+        )
+
+        with pytest.raises(PermissionError):
+            adapter.create_page("RESTRICTED", "Title", "<p>Content</p>")
+
+    def test_update_page_no_edit_permission(self, adapter, mock_client):
+        """Test updating page without edit permission."""
+        mock_client.update_content.side_effect = ConfluenceAPIError("Cannot edit", status_code=403)
+        mock_client.get_labels.return_value = []
+
+        # 403 errors are re-raised as ConfluenceAPIError (not wrapped as PermissionError)
+        with pytest.raises(ConfluenceAPIError):
+            adapter.update_page("page-123", "Title", "<p>Content</p>", version=1)

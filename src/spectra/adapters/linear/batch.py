@@ -299,7 +299,9 @@ class LinearBatchClient:
         Returns:
             BatchResult
         """
-        update_dicts = [{"identifier": identifier, "description": desc} for identifier, desc in updates]
+        update_dicts = [
+            {"identifier": identifier, "description": desc} for identifier, desc in updates
+        ]
         return self.bulk_update_issues(update_dicts)
 
     # -------------------------------------------------------------------------
@@ -330,7 +332,9 @@ class LinearBatchClient:
                 result.add_success(i, identifier)
             return result
 
-        def transition_single(idx: int, identifier: str, status: str) -> tuple[int, str, str | None]:
+        def transition_single(
+            idx: int, identifier: str, status: str
+        ) -> tuple[int, str, str | None]:
             """Transition a single issue."""
             try:
                 # Get workflow states for the team
@@ -489,4 +493,3 @@ class LinearBatchClient:
         result.operations.sort(key=lambda op: op.index)
         self.logger.info(f"Bulk fetch issues: {result.summary()}")
         return result
-

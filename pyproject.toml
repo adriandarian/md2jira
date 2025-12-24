@@ -125,6 +125,9 @@ markers = [
     "slow: marks tests as slow",
     "integration: marks tests as integration tests",
     "benchmark: marks test as a performance benchmark",
+    "stress: marks tests as stress/load tests",
+    "chaos: marks tests as chaos engineering tests",
+    "e2e: marks tests as end-to-end workflow tests",
 ]
 # Benchmarks disabled by default; run with: pytest tests/benchmarks/ --benchmark-only
 

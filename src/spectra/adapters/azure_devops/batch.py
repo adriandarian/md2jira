@@ -167,8 +167,7 @@ class AzureDevOpsBatchClient:
         html = re.sub(r"\*(.+?)\*", r"<em>\1</em>", html)
         html = re.sub(r"```(\w*)\n(.*?)```", r"<pre><code>\2</code></pre>", html, flags=re.DOTALL)
         html = re.sub(r"`([^`]+)`", r"<code>\1</code>", html)
-        html = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r'<a href="\2">\1</a>', html)
-        return html
+        return re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r'<a href="\2">\1</a>', html)
 
     # -------------------------------------------------------------------------
     # Bulk Create Subtasks
@@ -213,7 +212,9 @@ class AzureDevOpsBatchClient:
                     title=subtask.get("summary", "")[:255],
                     description=html_desc,
                     parent_id=parent_id,
-                    story_points=float(subtask["story_points"]) if subtask.get("story_points") else None,
+                    story_points=float(subtask["story_points"])
+                    if subtask.get("story_points")
+                    else None,
                     assigned_to=subtask.get("assignee"),
                 )
 
@@ -316,7 +317,10 @@ class AzureDevOpsBatchClient:
             BatchResult
         """
         update_dicts = [
-            {"work_item_id": int(self._parse_work_item_id(work_item_id)), "description": self._markdown_to_html(desc)}
+            {
+                "work_item_id": int(self._parse_work_item_id(work_item_id)),
+                "description": self._markdown_to_html(desc),
+            }
             for work_item_id, desc in updates
         ]
         return self.bulk_update_work_items(update_dicts)
@@ -349,7 +353,9 @@ class AzureDevOpsBatchClient:
                 result.add_success(i, str(work_item_id))
             return result
 
-        def transition_single(idx: int, work_item_id: str, state: str) -> tuple[int, str, str | None]:
+        def transition_single(
+            idx: int, work_item_id: str, state: str
+        ) -> tuple[int, str, str | None]:
             """Transition a single work item."""
             try:
                 item_id = self._parse_work_item_id(work_item_id)
@@ -407,7 +413,9 @@ class AzureDevOpsBatchClient:
                 result.add_success(i, str(work_item_id))
             return result
 
-        def add_comment_single(idx: int, work_item_id: str, text: str) -> tuple[int, str, str | None]:
+        def add_comment_single(
+            idx: int, work_item_id: str, text: str
+        ) -> tuple[int, str, str | None]:
             """Add comment to a single work item."""
             try:
                 item_id = self._parse_work_item_id(work_item_id)
@@ -493,4 +501,3 @@ class AzureDevOpsBatchClient:
         result.operations.sort(key=lambda op: op.index)
         self.logger.info(f"Bulk fetch work items: {result.summary()}")
         return result
-

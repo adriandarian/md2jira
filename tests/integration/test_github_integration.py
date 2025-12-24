@@ -381,3 +381,306 @@ class TestGitHubExtendedOperations:
             assert "story" in call_kwargs.get("labels", [])
             assert "points:8" in call_kwargs.get("labels", [])
             assert call_kwargs.get("milestone") == 5
+
+
+# =============================================================================
+# GitHub Batch and Async Operation Tests
+# =============================================================================
+
+
+class TestGitHubBatchOperations:
+    """Tests for batch operations."""
+
+    def test_bulk_update_issues(self, github_config, mock_issue_response):
+        """Test bulk update of multiple issues."""
+        adapter = GitHubAdapter(**github_config, dry_run=False)
+
+        with (
+            patch.object(adapter._client, "get_issue") as mock_get,
+            patch.object(adapter._client, "update_issue"),
+        ):
+            mock_get.return_value = mock_issue_response
+
+            # Update multiple issues
+            updates = [
+                ("#123", "New desc 1"),
+                ("#456", "New desc 2"),
+            ]
+
+            for issue_key, description in updates:
+                result = adapter.update_issue_description(issue_key, description)
+                assert result is True
+
+    def test_bulk_add_comments(self, github_config):
+        """Test adding comments to multiple issues."""
+        adapter = GitHubAdapter(**github_config, dry_run=False)
+
+        with patch.object(adapter._client, "add_issue_comment") as mock_comment:
+            comments = [
+                ("#123", "Comment 1"),
+                ("#456", "Comment 2"),
+                ("#789", "Comment 3"),
+            ]
+
+            for issue_key, comment in comments:
+                result = adapter.add_comment(issue_key, comment)
+                assert result is True
+
+            assert mock_comment.call_count == 3
+
+    def test_bulk_create_subtasks(self, github_config):
+        """Test creating multiple subtasks."""
+        adapter = GitHubAdapter(**github_config, dry_run=False, subtasks_as_issues=True)
+
+        with patch.object(adapter._client, "create_issue") as mock_create:
+            mock_create.side_effect = [
+                {"number": 100},
+                {"number": 101},
+                {"number": 102},
+            ]
+
+            subtasks = [
+                ("Task 1", "Description 1"),
+                ("Task 2", "Description 2"),
+                ("Task 3", "Description 3"),
+            ]
+
+            results = []
+            for summary, description in subtasks:
+                result = adapter.create_subtask(
+                    parent_key="#123",
+                    summary=summary,
+                    description=description,
+                    project_key="test",
+                )
+                results.append(result)
+
+            assert results == ["#100", "#101", "#102"]
+
+
+class TestGitHubEdgeCases:
+    """Tests for edge cases and error handling."""
+
+    def test_get_issue_with_empty_body(self, github_config):
+        """Test get_issue handles empty body."""
+        adapter = GitHubAdapter(**github_config, dry_run=True)
+
+        issue_with_no_body = {
+            "number": 123,
+            "title": "Issue with no body",
+            "body": None,
+            "state": "open",
+            "labels": [],
+        }
+
+        with patch.object(adapter._client, "get_issue") as mock_get:
+            mock_get.return_value = issue_with_no_body
+
+            issue = adapter.get_issue("#123")
+
+            assert issue.key == "#123"
+            # Empty body may be None or empty string
+            assert issue.description in (None, "")
+
+    def test_get_issue_with_unicode_content(self, github_config):
+        """Test get_issue handles unicode content."""
+        adapter = GitHubAdapter(**github_config, dry_run=True)
+
+        issue_with_unicode = {
+            "number": 123,
+            "title": "Unicode: 日本語 🚀 émojis",
+            "body": "Content with émojis 🎉 and Unicode 中文",
+            "state": "open",
+            "labels": [],
+        }
+
+        with patch.object(adapter._client, "get_issue") as mock_get:
+            mock_get.return_value = issue_with_unicode
+
+            issue = adapter.get_issue("#123")
+
+            assert "日本語" in issue.summary
+            assert "🎉" in issue.description
+
+    def test_get_issue_with_very_long_body(self, github_config):
+        """Test get_issue handles very long body."""
+        adapter = GitHubAdapter(**github_config, dry_run=True)
+
+        long_body = "Lorem ipsum " * 5000  # Very long description
+        issue_with_long_body = {
+            "number": 123,
+            "title": "Issue with long body",
+            "body": long_body,
+            "state": "open",
+            "labels": [],
+        }
+
+        with patch.object(adapter._client, "get_issue") as mock_get:
+            mock_get.return_value = issue_with_long_body
+
+            issue = adapter.get_issue("#123")
+
+            assert len(issue.description) > 10000
+
+    def test_transition_to_open_from_closed(self, github_config):
+        """Test reopening a closed issue."""
+        adapter = GitHubAdapter(**github_config, dry_run=False)
+
+        closed_issue = {
+            "number": 123,
+            "title": "Closed Issue",
+            "body": "Description",
+            "state": "closed",
+            "labels": [{"name": "status:done"}],
+        }
+
+        with (
+            patch.object(adapter._client, "get_issue") as mock_get,
+            patch.object(adapter._client, "update_issue") as mock_update,
+        ):
+            mock_get.return_value = closed_issue
+
+            result = adapter.transition_issue("#123", "open")
+
+            assert result is True
+            call_kwargs = mock_update.call_args.kwargs
+            assert call_kwargs.get("state") == "open"
+            assert "status:open" in call_kwargs.get("labels", [])
+
+    def test_update_subtask_with_story_points(self, github_config):
+        """Test updating subtask story points."""
+        adapter = GitHubAdapter(**github_config, dry_run=False)
+
+        subtask_issue = {
+            "number": 99,
+            "labels": [{"name": "subtask"}, {"name": "points:2"}],
+        }
+
+        with (
+            patch.object(adapter._client, "get_issue") as mock_get,
+            patch.object(adapter._client, "update_issue") as mock_update,
+        ):
+            mock_get.return_value = subtask_issue
+
+            result = adapter.update_subtask(
+                issue_key="#99",
+                story_points=5,
+            )
+
+            assert result is True
+            call_kwargs = mock_update.call_args.kwargs
+            assert "points:5" in call_kwargs.get("labels", [])
+            assert "points:2" not in call_kwargs.get("labels", [])
+
+
+class TestGitHubIssueTypeDetection:
+    """Tests for issue type detection from labels."""
+
+    def test_detect_epic_from_label(self, github_config):
+        """Test detecting epic type from label."""
+        adapter = GitHubAdapter(**github_config, dry_run=True)
+
+        epic_issue = {
+            "number": 1,
+            "title": "Epic Issue",
+            "body": "Description",
+            "state": "open",
+            "labels": [{"name": "epic"}],
+        }
+
+        with patch.object(adapter._client, "get_issue") as mock_get:
+            mock_get.return_value = epic_issue
+
+            issue = adapter.get_issue("#1")
+
+            assert issue.issue_type == "Epic"
+
+    def test_detect_subtask_from_label(self, github_config):
+        """Test detecting subtask type from label."""
+        adapter = GitHubAdapter(**github_config, dry_run=True)
+
+        subtask_issue = {
+            "number": 100,
+            "title": "Subtask Issue",
+            "body": "Description",
+            "state": "open",
+            "labels": [{"name": "subtask"}],
+        }
+
+        with patch.object(adapter._client, "get_issue") as mock_get:
+            mock_get.return_value = subtask_issue
+
+            issue = adapter.get_issue("#100")
+
+            # Issue type may be "Subtask" or "Sub-task" depending on adapter
+            assert issue.issue_type in ("Subtask", "Sub-task")
+
+    def test_detect_story_from_label(self, github_config):
+        """Test detecting story type from label."""
+        adapter = GitHubAdapter(**github_config, dry_run=True)
+
+        story_issue = {
+            "number": 50,
+            "title": "Story Issue",
+            "body": "Description",
+            "state": "open",
+            "labels": [{"name": "story"}],
+        }
+
+        with patch.object(adapter._client, "get_issue") as mock_get:
+            mock_get.return_value = story_issue
+
+            issue = adapter.get_issue("#50")
+
+            assert issue.issue_type == "Story"
+
+    def test_default_issue_type(self, github_config):
+        """Test default issue type when no label."""
+        adapter = GitHubAdapter(**github_config, dry_run=True)
+
+        unlabeled_issue = {
+            "number": 999,
+            "title": "Unlabeled Issue",
+            "body": "Description",
+            "state": "open",
+            "labels": [],
+        }
+
+        with patch.object(adapter._client, "get_issue") as mock_get:
+            mock_get.return_value = unlabeled_issue
+
+            issue = adapter.get_issue("#999")
+
+            # Default should be Issue or Task
+            assert issue.issue_type in ["Issue", "Task", "Story"]
+
+
+class TestGitHubMilestoneOperations:
+    """Tests for milestone-based epic operations."""
+
+    def test_create_epic_with_description(self, github_config):
+        """Test creating epic with description."""
+        adapter = GitHubAdapter(**github_config, dry_run=False)
+
+        with patch.object(adapter._client, "create_milestone") as mock_create:
+            mock_create.return_value = {"number": 10}
+
+            result = adapter.create_epic(
+                title="Q1 Goals",
+                description="Goals for Q1 2024",
+                use_milestone=True,
+            )
+
+            assert result == "milestone:10"
+            mock_create.assert_called_once()
+
+    def test_get_epic_children_empty_milestone(self, github_config):
+        """Test get_epic_children with empty milestone."""
+        adapter = GitHubAdapter(**github_config, dry_run=True)
+
+        with patch.object(adapter._client, "list_issues") as mock_list:
+            mock_list.return_value = []
+
+            children = adapter.get_epic_children("1")
+
+            assert len(children) == 0

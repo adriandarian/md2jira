@@ -141,19 +141,18 @@ class AsyncLinearAdapter(AsyncIssueTrackerPort):
         if variables:
             payload["variables"] = variables
 
-        async with self._semaphore:
-            async with session.post(self.api_url, json=payload) as response:
-                if response.status >= 400:
-                    text = await response.text()
-                    raise Exception(f"API error {response.status}: {text}")
+        async with self._semaphore, session.post(self.api_url, json=payload) as response:
+            if response.status >= 400:
+                text = await response.text()
+                raise Exception(f"API error {response.status}: {text}")
 
-                data = await response.json()
-                if "errors" in data:
-                    errors = data["errors"]
-                    error_messages = [e.get("message", str(e)) for e in errors]
-                    raise Exception(f"GraphQL errors: {'; '.join(error_messages)}")
+            data = await response.json()
+            if "errors" in data:
+                errors = data["errors"]
+                error_messages = [e.get("message", str(e)) for e in errors]
+                raise Exception(f"GraphQL errors: {'; '.join(error_messages)}")
 
-                return data.get("data", {})
+            return data.get("data", {})
 
     # -------------------------------------------------------------------------
     # Async Read Operations
@@ -259,8 +258,7 @@ class AsyncLinearAdapter(AsyncIssueTrackerPort):
 
         # Try as parent issue
         parent_issue = await self.get_issue_async(epic_key)
-        children = parent_issue.subtasks if hasattr(parent_issue, "subtasks") else []
-        return children
+        return parent_issue.subtasks if hasattr(parent_issue, "subtasks") else []
 
     async def search_issues_async(self, query: str, max_results: int = 50) -> list[IssueData]:
         """Search for issues asynchronously."""
@@ -556,4 +554,3 @@ def is_async_available() -> bool:
 
 
 __all__ = ["ASYNC_AVAILABLE", "AsyncLinearAdapter", "is_async_available"]
-

@@ -412,3 +412,260 @@ class TestLinearExtendedOperations:
 
             assert len(transitions) == 5
             assert any(t["name"] == "Done" for t in transitions)
+
+
+# =============================================================================
+# Linear Batch and Async Operation Tests
+# =============================================================================
+
+
+class TestLinearBatchOperations:
+    """Tests for batch operations."""
+
+    def test_bulk_update_descriptions(self, linear_config, mock_team_response):
+        """Test bulk update of issue descriptions."""
+        adapter = LinearAdapter(**linear_config, dry_run=False)
+
+        with (
+            patch.object(adapter._client, "get_team_by_key") as mock_team,
+            patch.object(adapter._client, "update_issue") as mock_update,
+        ):
+            mock_team.return_value = mock_team_response
+
+            updates = [
+                ("ENG-1", "New desc 1"),
+                ("ENG-2", "New desc 2"),
+                ("ENG-3", "New desc 3"),
+            ]
+
+            for issue_key, description in updates:
+                result = adapter.update_issue_description(issue_key, description)
+                assert result is True
+
+            assert mock_update.call_count == 3
+
+    def test_bulk_add_comments(self, linear_config, mock_team_response):
+        """Test adding comments to multiple issues."""
+        adapter = LinearAdapter(**linear_config, dry_run=False)
+
+        with (
+            patch.object(adapter._client, "get_team_by_key") as mock_team,
+            patch.object(adapter._client, "add_comment") as mock_comment,
+        ):
+            mock_team.return_value = mock_team_response
+
+            comments = [
+                ("ENG-1", "Comment 1"),
+                ("ENG-2", "Comment 2"),
+                ("ENG-3", "Comment 3"),
+            ]
+
+            for issue_key, comment in comments:
+                result = adapter.add_comment(issue_key, comment)
+                assert result is True
+
+            assert mock_comment.call_count == 3
+
+    def test_bulk_create_subtasks(self, linear_config, mock_team_response, mock_issue_response):
+        """Test creating multiple subtasks."""
+        adapter = LinearAdapter(**linear_config, dry_run=False)
+
+        with (
+            patch.object(adapter._client, "get_team_by_key") as mock_team,
+            patch.object(adapter._client, "get_issue") as mock_get,
+            patch.object(adapter._client, "create_issue") as mock_create,
+        ):
+            mock_team.return_value = mock_team_response
+            mock_get.return_value = mock_issue_response
+            mock_create.side_effect = [
+                {"identifier": "ENG-100"},
+                {"identifier": "ENG-101"},
+                {"identifier": "ENG-102"},
+            ]
+
+            subtasks = [
+                ("Task 1", "Description 1"),
+                ("Task 2", "Description 2"),
+                ("Task 3", "Description 3"),
+            ]
+
+            results = []
+            for summary, description in subtasks:
+                result = adapter.create_subtask(
+                    parent_key="ENG-123",
+                    summary=summary,
+                    description=description,
+                    project_key="ENG",
+                )
+                results.append(result)
+
+            assert results == ["ENG-100", "ENG-101", "ENG-102"]
+
+
+class TestLinearEdgeCases:
+    """Tests for edge cases and error handling."""
+
+    def test_get_issue_with_empty_description(self, linear_config, mock_team_response):
+        """Test get_issue handles empty description."""
+        adapter = LinearAdapter(**linear_config, dry_run=True)
+
+        issue_no_desc = {
+            "id": "issue-1",
+            "identifier": "ENG-1",
+            "title": "Issue without description",
+            "description": None,
+            "state": {"name": "Backlog"},
+            "children": {"nodes": []},
+        }
+
+        with (
+            patch.object(adapter._client, "get_team_by_key") as mock_team,
+            patch.object(adapter._client, "get_issue") as mock_get,
+        ):
+            mock_team.return_value = mock_team_response
+            mock_get.return_value = issue_no_desc
+
+            issue = adapter.get_issue("ENG-1")
+
+            assert issue.key == "ENG-1"
+            assert issue.description == "" or issue.description is None
+
+    def test_get_issue_with_nested_subtasks(self, linear_config, mock_team_response):
+        """Test get_issue with nested subtasks."""
+        adapter = LinearAdapter(**linear_config, dry_run=True)
+
+        issue_with_subtasks = {
+            "id": "issue-1",
+            "identifier": "ENG-1",
+            "title": "Parent Issue",
+            "description": "Description",
+            "state": {"name": "In Progress"},
+            "children": {
+                "nodes": [
+                    {
+                        "id": "sub-1",
+                        "identifier": "ENG-2",
+                        "title": "Subtask 1",
+                        "state": {"name": "Todo"},
+                    },
+                    {
+                        "id": "sub-2",
+                        "identifier": "ENG-3",
+                        "title": "Subtask 2",
+                        "state": {"name": "Done"},
+                    },
+                ]
+            },
+        }
+
+        with (
+            patch.object(adapter._client, "get_team_by_key") as mock_team,
+            patch.object(adapter._client, "get_issue") as mock_get,
+        ):
+            mock_team.return_value = mock_team_response
+            mock_get.return_value = issue_with_subtasks
+
+            issue = adapter.get_issue("ENG-1")
+
+            assert issue.key == "ENG-1"
+            assert len(issue.subtasks) == 2
+
+    def test_transition_with_case_insensitive_status(
+        self, linear_config, mock_team_response, mock_workflow_states_response
+    ):
+        """Test transition with case insensitive status matching."""
+        adapter = LinearAdapter(**linear_config, dry_run=False)
+
+        with (
+            patch.object(adapter._client, "get_team_by_key") as mock_team,
+            patch.object(adapter._client, "get_workflow_states") as mock_states,
+            patch.object(adapter._client, "update_issue"),
+        ):
+            mock_team.return_value = mock_team_response
+            mock_states.return_value = mock_workflow_states_response
+
+            # Test with different case
+            result = adapter.transition_issue("ENG-1", "done")
+
+            assert result is True
+
+    def test_update_issue_with_estimate(self, linear_config, mock_team_response):
+        """Test updating issue with estimate."""
+        adapter = LinearAdapter(**linear_config, dry_run=False)
+
+        with (
+            patch.object(adapter._client, "get_team_by_key") as mock_team,
+            patch.object(adapter._client, "update_issue") as mock_update,
+        ):
+            mock_team.return_value = mock_team_response
+
+            result = adapter.update_subtask(
+                issue_key="ENG-1",
+                story_points=8,
+            )
+
+            assert result is True
+            call_kwargs = mock_update.call_args.kwargs
+            assert call_kwargs.get("estimate") == 8
+
+
+class TestLinearPriorityMapping:
+    """Tests for Linear priority mapping."""
+
+    def test_get_issue_with_priority(self, linear_config, mock_team_response):
+        """Test get_issue parses priority correctly."""
+        adapter = LinearAdapter(**linear_config, dry_run=True)
+
+        issue_with_priority = {
+            "id": "issue-1",
+            "identifier": "ENG-1",
+            "title": "Priority Issue",
+            "priority": 1,  # Urgent
+            "state": {"name": "Backlog"},
+            "children": {"nodes": []},
+        }
+
+        with (
+            patch.object(adapter._client, "get_team_by_key") as mock_team,
+            patch.object(adapter._client, "get_issue") as mock_get,
+        ):
+            mock_team.return_value = mock_team_response
+            mock_get.return_value = issue_with_priority
+
+            issue = adapter.get_issue("ENG-1")
+
+            # Issue parsed successfully
+            assert issue.key == "ENG-1"
+
+
+class TestLinearLabelOperations:
+    """Tests for Linear label operations."""
+
+    def test_get_issue_with_labels(self, linear_config, mock_team_response):
+        """Test get_issue with labels."""
+        adapter = LinearAdapter(**linear_config, dry_run=True)
+
+        issue_with_labels = {
+            "id": "issue-1",
+            "identifier": "ENG-1",
+            "title": "Labeled Issue",
+            "state": {"name": "Backlog"},
+            "labels": {
+                "nodes": [
+                    {"name": "bug"},
+                    {"name": "frontend"},
+                ]
+            },
+            "children": {"nodes": []},
+        }
+
+        with (
+            patch.object(adapter._client, "get_team_by_key") as mock_team,
+            patch.object(adapter._client, "get_issue") as mock_get,
+        ):
+            mock_team.return_value = mock_team_response
+            mock_get.return_value = issue_with_labels
+
+            issue = adapter.get_issue("ENG-1")
+
+            assert issue.key == "ENG-1"

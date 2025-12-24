@@ -17,7 +17,7 @@ __all__ = [
     "AzureDevOpsAdapter",
     "AzureDevOpsApiClient",
     "AzureDevOpsBatchClient",
+    "AzureDevOpsTrackerPlugin",
     "BatchOperation",
     "BatchResult",
-    "AzureDevOpsTrackerPlugin",
 ]
