@@ -49,6 +49,9 @@ dependencies = [
 async = [
     "aiohttp>=3.8.0",  # Async HTTP client for parallel API calls
 ]
+gitlab = [
+    "python-gitlab>=4.0.0",  # Official GitLab Python SDK (optional alternative to custom client)
+]
 telemetry = [
     "opentelemetry-api>=1.20.0",
     "opentelemetry-sdk>=1.20.0",
@@ -74,6 +77,7 @@ dev = [
 ]
 all = [
     "aiohttp>=3.8.0",  # Async HTTP client for parallel API calls
+    "python-gitlab>=4.0.0",  # Official GitLab Python SDK
     "opentelemetry-api>=1.20.0",
     "opentelemetry-sdk>=1.20.0",
     "opentelemetry-exporter-otlp>=1.20.0",
@@ -173,7 +177,7 @@ explicit_package_bases = true
 ignore_missing_imports = true  # Optional dependencies
 
 [[tool.mypy.overrides]]
-module = ["requests.*", "aiohttp.*", "opentelemetry.*", "prometheus_client.*"]
+module = ["requests.*", "aiohttp.*", "opentelemetry.*", "prometheus_client.*", "gitlab.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

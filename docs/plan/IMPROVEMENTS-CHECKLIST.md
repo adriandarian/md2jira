@@ -109,7 +109,7 @@ Each tracker adapter requires:
 
 - [x] **Dependencies**
   - [x] `requests` (already in dependencies)
-  - [ ] Optional: `python-gitlab` SDK (consider for advanced features - not needed)
+  - [x] Optional: `python-gitlab` SDK ✅ **COMPLETED** - Added as optional dependency `spectra[gitlab]`, adapter supports `use_sdk=True` to use official SDK instead of custom client
 
 - [ ] **Documentation**
   - [ ] Configuration guide

@@ -26,6 +26,14 @@ from spectra.core.ports.issue_tracker import (
 from .client import GitLabApiClient
 
 
+# Optional SDK client support
+try:
+    from .sdk_client import GITLAB_SDK_AVAILABLE, GitLabSdkClient
+except ImportError:
+    GITLAB_SDK_AVAILABLE = False
+    GitLabSdkClient = None  # type: ignore[assignment, misc]
+
+
 # Default labels for issue types
 DEFAULT_EPIC_LABEL = "epic"
 DEFAULT_STORY_LABEL = "story"
@@ -67,6 +75,7 @@ class GitLabAdapter(IssueTrackerPort):
         subtask_label: str = DEFAULT_SUBTASK_LABEL,
         status_labels: dict[str, str] | None = None,
         use_epics: bool = False,
+        use_sdk: bool = False,
     ):
         """
         Initialize the GitLab adapter.
@@ -82,6 +91,8 @@ class GitLabAdapter(IssueTrackerPort):
             subtask_label: Label used to identify subtasks
             status_labels: Mapping of status names to label names
             use_epics: If True, use Epic issue type instead of milestones
+            use_sdk: If True, use python-gitlab SDK instead of custom client
+                    (requires: pip install spectra[gitlab])
         """
         self._dry_run = dry_run
         self.project_id = project_id
@@ -95,13 +106,30 @@ class GitLabAdapter(IssueTrackerPort):
         self.subtask_label = subtask_label
         self.status_labels = status_labels or DEFAULT_STATUS_LABELS
 
-        # API client
-        self._client = GitLabApiClient(
-            token=token,
-            project_id=project_id,
-            base_url=base_url,
-            dry_run=dry_run,
-        )
+        # API client - choose between SDK and custom client
+        if use_sdk:
+            if not GITLAB_SDK_AVAILABLE:
+                raise ImportError(
+                    "python-gitlab SDK is not installed. "
+                    "Install it with: pip install spectra[gitlab] or pip install python-gitlab"
+                )
+            if GitLabSdkClient is None:
+                raise ImportError("GitLabSdkClient is not available")
+            self._client = GitLabSdkClient(
+                token=token,
+                project_id=project_id,
+                base_url=base_url,
+                dry_run=dry_run,
+            )
+            self.logger.info("Using python-gitlab SDK client")
+        else:
+            self._client = GitLabApiClient(
+                token=token,
+                project_id=project_id,
+                base_url=base_url,
+                dry_run=dry_run,
+            )
+            self.logger.info("Using custom GitLab API client")
 
         # Ensure required labels exist
         self._ensure_labels_exist()
