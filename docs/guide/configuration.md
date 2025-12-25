@@ -115,6 +115,11 @@ verbose = true
 | `MONDAY_STATUS_COLUMN_ID` | Status column ID (optional, auto-detected) |
 | `MONDAY_PRIORITY_COLUMN_ID` | Priority column ID (optional, auto-detected) |
 | `MONDAY_STORY_POINTS_COLUMN_ID` | Story points column ID (optional, auto-detected) |
+| `TRELLO_API_KEY` | Trello API key ([get here](https://trello.com/app-key)) |
+| `TRELLO_API_TOKEN` | Trello API token ([generate here](https://trello.com/app-key)) |
+| `TRELLO_BOARD_ID` | Trello board ID (alphanumeric, from board URL) |
+| `TRELLO_API_URL` | Trello API endpoint (default: `https://api.trello.com/1`) |
+| `TRELLO_SUBTASK_MODE` | Subtask mode: `checklist` (default) or `linked_card` |
 | `MD2JIRA_VERBOSE` | Enable verbose output (`true`/`false`) |
 
 ## .env File

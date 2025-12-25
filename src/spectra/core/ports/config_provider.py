@@ -22,6 +22,7 @@ class TrackerType(Enum):
     ASANA = "asana"
     GITLAB = "gitlab"
     MONDAY = "monday"
+    TRELLO = "trello"
 
 
 @dataclass
@@ -153,6 +154,37 @@ class MondayConfig:
     def is_valid(self) -> bool:
         """Check if configuration is valid."""
         return bool(self.api_token and self.board_id)
+
+
+@dataclass
+class TrelloConfig:
+    """Configuration for Trello tracker."""
+
+    api_key: str
+    api_token: str
+    board_id: str
+    api_url: str = "https://api.trello.com/1"
+
+    # List mapping configuration (status mapping)
+    # Maps status names to list names/IDs
+    status_lists: dict[str, str] = field(default_factory=dict)
+
+    # Label mapping for priorities
+    priority_labels: dict[str, str] = field(
+        default_factory=lambda: {
+            "Critical": "red",
+            "High": "orange",
+            "Medium": "yellow",
+            "Low": "green",
+        }
+    )
+
+    # Subtask handling: "checklist" or "linked_card"
+    subtask_mode: str = "checklist"
+
+    def is_valid(self) -> bool:
+        """Check if configuration is valid."""
+        return bool(self.api_key and self.api_token and self.board_id)
 
 
 # =============================================================================

@@ -146,6 +146,16 @@ def create_tracker_factory(
                 priority_column_id=config.priority_column_id,
                 story_points_column_id=config.story_points_column_id,
             )
+        if tracker_type == "trello":
+            from spectra.adapters.trello import TrelloAdapter
+            from spectra.core.ports.config_provider import TrelloConfig
+
+            if not isinstance(config, TrelloConfig):
+                raise ValueError("Trello adapter requires TrelloConfig")
+            return TrelloAdapter(
+                config=config,
+                dry_run=is_dry_run,
+            )
         raise ValueError(f"Unknown tracker type: {tracker_type}")
 
     return factory
