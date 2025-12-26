@@ -28,6 +28,7 @@ class TrackerType(Enum):
     BITBUCKET = "bitbucket"
     YOUTRACK = "youtrack"
     BASECAMP = "basecamp"
+    PLANE = "plane"
 
 
 @dataclass
@@ -310,6 +311,51 @@ class BasecampConfig:
     def is_valid(self) -> bool:
         """Check if configuration is valid."""
         return bool(self.access_token and self.account_id and self.project_id)
+
+    @property
+    def effective_api_url(self) -> str:
+        """Get the effective API URL."""
+        return self.api_url.rstrip("/")
+
+
+@dataclass
+class PlaneConfig:
+    """Configuration for Plane.so tracker."""
+
+    api_token: str  # API token for authentication
+    workspace_slug: str  # Workspace slug (e.g., 'my-workspace')
+    project_id: str  # Project ID (UUID)
+    api_url: str = "https://api.plane.so"  # Plane API URL (can be overridden for self-hosted)
+
+    # Epic mapping: Cycle or Module
+    epic_as_cycle: bool = True  # If True, map Epic → Cycle; if False, map Epic → Module
+
+    # Status mapping (Plane uses states)
+    status_mapping: dict[str, str] = field(
+        default_factory=lambda: {
+            "planned": "backlog",
+            "open": "backlog",
+            "in progress": "started",
+            "done": "completed",
+            "closed": "completed",
+            "cancelled": "cancelled",
+        }
+    )
+
+    # Priority mapping
+    priority_mapping: dict[str, str] = field(
+        default_factory=lambda: {
+            "critical": "urgent",
+            "high": "high",
+            "medium": "medium",
+            "low": "low",
+            "none": "none",
+        }
+    )
+
+    def is_valid(self) -> bool:
+        """Check if configuration is valid."""
+        return bool(self.api_token and self.workspace_slug and self.project_id)
 
     @property
     def effective_api_url(self) -> str:

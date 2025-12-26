@@ -20,6 +20,10 @@ These are required for spectra to connect to Jira:
 | `MONDAY_API_TOKEN` | Monday.com API token (v2) | None |
 | `MONDAY_BOARD_ID` | Monday.com board ID | None |
 | `MONDAY_WORKSPACE_ID` | Monday.com workspace ID | None |
+| `PLANE_API_TOKEN` | Plane.so API token | None |
+| `PLANE_WORKSPACE_SLUG` | Plane.so workspace slug | None |
+| `PLANE_PROJECT_ID` | Plane.so project ID | None |
+| `PLANE_API_URL` | Plane.so API endpoint (for self-hosted) | `https://app.plane.so/api/v1` |
 | `MD2JIRA_VERBOSE` | Enable verbose output | `false` |
 | `MD2JIRA_LOG_LEVEL` | Logging level | `INFO` |
 | `MD2JIRA_NO_COLOR` | Disable colored output | `false` |

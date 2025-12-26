@@ -123,6 +123,10 @@ verbose = true
 | `SHORTCUT_API_TOKEN` | Shortcut API token ([generate here](https://app.shortcut.com/settings/api-tokens)) |
 | `SHORTCUT_WORKSPACE_ID` | Shortcut workspace ID (UUID or slug) |
 | `SHORTCUT_API_URL` | Shortcut API endpoint (default: `https://api.app.shortcut.com/api/v3`) |
+| `PLANE_API_TOKEN` | Plane.so API token ([generate here](https://app.plane.so/settings/api-tokens)) |
+| `PLANE_WORKSPACE_SLUG` | Plane.so workspace slug (from URL) |
+| `PLANE_PROJECT_ID` | Plane.so project ID (UUID) |
+| `PLANE_API_URL` | Plane.so API endpoint (default: `https://app.plane.so/api/v1`) |
 | `CLICKUP_API_TOKEN` | ClickUp API token ([generate here](https://app.clickup.com/settings/apps)) |
 | `CLICKUP_SPACE_ID` | ClickUp space ID (optional, for scoping operations) |
 | `CLICKUP_FOLDER_ID` | ClickUp folder ID (optional, for scoping operations) |
