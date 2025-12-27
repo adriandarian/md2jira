@@ -61,8 +61,14 @@ Examples:
   # List detected AI CLI tools for auto-fix
   spectra --list-ai-tools
 
-  # Show status dashboard
+  # Show status dashboard (static)
   spectra --dashboard -f EPIC.md --epic PROJ-123
+
+  # Launch interactive TUI dashboard
+  spectra --tui -f EPIC.md --epic PROJ-123
+
+  # TUI with demo data (for testing)
+  spectra --tui-demo
 
   # Enable OpenTelemetry tracing
   spectra --otel-enable --otel-endpoint http://localhost:4317 -f EPIC.md -e PROJ-123
@@ -346,6 +352,16 @@ Environment Variables:
     )
     parser.add_argument(
         "--dashboard", action="store_true", help="Show TUI dashboard with sync status overview"
+    )
+    parser.add_argument(
+        "--tui",
+        action="store_true",
+        help="Launch interactive TUI dashboard (requires: pip install spectra[tui])",
+    )
+    parser.add_argument(
+        "--tui-demo",
+        action="store_true",
+        help="Launch TUI dashboard with demo data (for testing)",
     )
 
     # OpenTelemetry arguments
@@ -3109,6 +3125,23 @@ def main() -> int:
             console,
             markdown_path=args.input,
             epic_key=args.epic,
+        )
+
+    # Handle interactive TUI mode
+    if getattr(args, "tui", False) or getattr(args, "tui_demo", False):
+        try:
+            from .tui import run_tui
+        except ImportError:
+            console = Console(color=not args.no_color)
+            console.error("Interactive TUI requires the 'tui' optional dependency.")
+            console.info("Install with: pip install spectra[tui]")
+            return ExitCode.ERROR
+
+        return run_tui(
+            markdown_path=args.input,
+            epic_key=args.epic,
+            dry_run=not getattr(args, "execute", False),
+            demo=getattr(args, "tui_demo", False),
         )
 
     # Handle analytics commands (no markdown/epic needed)

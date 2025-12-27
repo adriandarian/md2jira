@@ -690,7 +690,7 @@ For each new tracker adapter, follow this checklist:
 - [x] **`spectra hook install`** - Pre-commit hook integration
 
 ### CLI Enhancements
-- [ ] **Interactive TUI Dashboard** - Real-time sync progress, epic/story browser, conflict resolution UI
+- [x] **Interactive TUI Dashboard** - Real-time sync progress, epic/story browser, conflict resolution UI
 - [ ] **Progress Bars** - Real-time sync progress indicators
 - [ ] **Colored Diff Output** - Better visualization of changes
 - [ ] **Better Error Messages** - More actionable error messages

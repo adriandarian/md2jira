@@ -92,6 +92,9 @@ docs = [
     "mkdocs>=1.5",
     "mkdocs-material>=9.0",
 ]
+tui = [
+    "textual>=0.85.0",  # Modern TUI framework for interactive dashboard
+]
 
 [project.scripts]
 spectra = "spectra.cli:run"
