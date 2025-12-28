@@ -333,7 +333,7 @@ User-level configuration file.
 .nf
 .B spectra --pull -e PROJ-123 --pull-output EPIC.md --execute
 .fi
-.SS "Bidirectional Sync"
+.SS "Bidirectional Sync with 3-Way Merge"
 .nf
 .B spectra --bidirectional -f EPIC.md -e PROJ-123 --execute
 .fi
@@ -341,6 +341,18 @@ User-level configuration file.
 Two-way sync that pushes local changes AND pulls remote changes with conflict detection:
 .nf
 .B spectra --bidirectional -f EPIC.md -e PROJ-123 --conflict-strategy force-local --execute
+.fi
+.PP
+Use 3-way merge to automatically resolve conflicts when possible:
+.nf
+.B spectra --bidirectional -f EPIC.md -e PROJ-123 --conflict-strategy merge --execute
+.B spectra --bidirectional -f EPIC.md -e PROJ-123 --conflict-strategy smart-merge --execute
+.fi
+.PP
+Configure merge behavior for different field types:
+.nf
+.B spectra --bidirectional -f EPIC.md -e PROJ-123 --conflict-strategy merge --merge-text-strategy word-level --execute
+.B spectra --bidirectional -f EPIC.md -e PROJ-123 --conflict-strategy merge --merge-numeric-strategy take-higher --execute
 .fi
 .SS "Watch Mode"
 .nf

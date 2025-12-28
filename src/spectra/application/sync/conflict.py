@@ -45,6 +45,8 @@ class ResolutionStrategy(Enum):
     FORCE_REMOTE = "force_remote"  # Always take remote (Jira) changes
     SKIP = "skip"  # Skip conflicting items
     ABORT = "abort"  # Abort sync on any conflict
+    MERGE = "merge"  # 3-way merge (auto-merge when possible)
+    SMART_MERGE = "smart_merge"  # Try merge first, fallback to ask
 
 
 @dataclass
@@ -630,6 +632,25 @@ class ConflictResolver:
         if self.strategy == ResolutionStrategy.SKIP:
             return ConflictResolution(conflict=conflict, resolution="skip")
 
+        if self.strategy == ResolutionStrategy.MERGE:
+            # Use 3-way merge
+            return self._resolve_with_merge(conflict)
+
+        if self.strategy == ResolutionStrategy.SMART_MERGE:
+            # Try merge first, fallback to ask
+            resolution = self._resolve_with_merge(conflict)
+            if (
+                resolution
+                and resolution.resolution == "merge"
+                and resolution.merged_value is not None
+            ):
+                return resolution
+            # Merge failed, fallback to ask
+            if self.prompt_func:
+                choice = self.prompt_func(conflict)
+                return ConflictResolution(conflict=conflict, resolution=choice)
+            return ConflictResolution(conflict=conflict, resolution="skip")
+
         if self.strategy == ResolutionStrategy.ASK:
             if self.prompt_func:
                 choice = self.prompt_func(conflict)
@@ -639,6 +660,21 @@ class ConflictResolver:
             return ConflictResolution(conflict=conflict, resolution="skip")
 
         return None
+
+    def _resolve_with_merge(self, conflict: Conflict) -> ConflictResolution | None:
+        """Attempt to resolve a conflict using 3-way merge."""
+        try:
+            from spectra.application.sync.merge import resolve_conflict_with_merge
+
+            resolution = resolve_conflict_with_merge(conflict)
+            if resolution.merged_value is not None:
+                self.logger.info(f"Auto-merged conflict: {conflict.field}")
+                return resolution
+            self.logger.warning(f"Merge failed for {conflict.field}")
+            return None
+        except Exception as e:
+            self.logger.error(f"Merge error: {e}")
+            return None
 
 
 class SnapshotStore:

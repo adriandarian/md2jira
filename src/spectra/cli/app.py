@@ -579,10 +579,25 @@ Environment Variables:
     parser.add_argument(
         "--conflict-strategy",
         type=str,
-        choices=["ask", "force-local", "force-remote", "skip", "abort"],
+        choices=["ask", "force-local", "force-remote", "skip", "abort", "merge", "smart-merge"],
         default="ask",
         help="How to resolve conflicts: ask (interactive), force-local (take markdown), "
-        "force-remote (take Jira), skip (skip conflicts), abort (fail on conflicts)",
+        "force-remote (take Jira), skip (skip conflicts), abort (fail on conflicts), "
+        "merge (3-way auto-merge), smart-merge (try merge, fallback to ask)",
+    )
+    parser.add_argument(
+        "--merge-text-strategy",
+        type=str,
+        choices=["line-level", "word-level", "character-level"],
+        default="line-level",
+        help="Text merge granularity for 3-way merge (default: line-level)",
+    )
+    parser.add_argument(
+        "--merge-numeric-strategy",
+        type=str,
+        choices=["take-higher", "take-lower", "take-local", "take-remote", "sum-changes"],
+        default="take-higher",
+        help="Numeric merge strategy for story points (default: take-higher)",
     )
     parser.add_argument(
         "--save-snapshot",

@@ -60,6 +60,15 @@ from .links import (
     LinkSyncOrchestrator,
     LinkSyncResult,
 )
+from .merge import (
+    MergeAttempt,
+    MergeConfig,
+    MergeResult,
+    MergeStrategy,
+    SmartMergeResolver,
+    ThreeWayMerger,
+    resolve_conflict_with_merge,
+)
 from .multi_epic import (
     EpicSyncResult,
     MultiEpicSyncOrchestrator,
@@ -152,6 +161,10 @@ __all__ = [
     "LinkChange",
     "LinkSyncOrchestrator",
     "LinkSyncResult",
+    "MergeAttempt",
+    "MergeConfig",
+    "MergeResult",
+    "MergeStrategy",
     "MultiEpicSyncOrchestrator",
     "MultiEpicSyncResult",
     "MultiTrackerSyncOrchestrator",
@@ -167,6 +180,7 @@ __all__ = [
     "RestoreOperation",
     "RestoreResult",
     "ReverseSyncOrchestrator",
+    "SmartMergeResolver",
     "SnapshotStore",
     "SourceFileUpdater",
     "SourceUpdateResult",
@@ -183,6 +197,7 @@ __all__ = [
     "SyncStatus",
     "SyncStrategy",
     "SyncableField",
+    "ThreeWayMerger",
     "TrackerInfo",
     "TrackerSyncStatus",
     "TrackerTarget",
@@ -198,6 +213,7 @@ __all__ = [
     "create_progress_reporter",
     "create_snapshot_from_sync",
     "detect_sync_conflicts",
+    "resolve_conflict_with_merge",
     "restore_from_backup",
     "stories_differ",
 ]
