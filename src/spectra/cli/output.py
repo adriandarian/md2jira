@@ -51,12 +51,126 @@ class Colors:
     BG_BLUE = "\033[44m"
 
 
-class Symbols:
+# Global emoji toggle (module-level for persistence)
+_emoji_enabled: bool = True
+
+# Emoji versions of symbols
+_EMOJI_SYMBOLS = {
+    "CHECK": "✓",
+    "CROSS": "✗",
+    "ARROW": "→",
+    "DOT": "•",
+    "WARN": "⚠",
+    "INFO": "ℹ",
+    "ROCKET": "🚀",
+    "GEAR": "⚙",
+    "FILE": "📄",
+    "FOLDER": "📁",
+    "LINK": "🔗",
+    "SUCCESS": "✅",
+    "FAILURE": "❌",
+    "WARNING": "⚠️",
+    "PROGRESS": "🔄",
+    "COMPLETE": "✅",
+    "PENDING": "📋",
+    "BLOCKED": "⏸️",
+    "CHART": "📊",
+    "DOWNLOAD": "📥",
+    "SYNC": "🔄",
+    "DIFF": "📝",
+}
+
+# ASCII fallbacks (no emojis)
+_ASCII_SYMBOLS = {
+    "CHECK": "[OK]",
+    "CROSS": "[X]",
+    "ARROW": "->",
+    "DOT": "*",
+    "WARN": "[!]",
+    "INFO": "[i]",
+    "ROCKET": "[>]",
+    "GEAR": "[*]",
+    "FILE": "[F]",
+    "FOLDER": "[D]",
+    "LINK": "[L]",
+    "SUCCESS": "[OK]",
+    "FAILURE": "[FAIL]",
+    "WARNING": "[WARN]",
+    "PROGRESS": "[...]",
+    "COMPLETE": "[DONE]",
+    "PENDING": "[TODO]",
+    "BLOCKED": "[HOLD]",
+    "CHART": "[#]",
+    "DOWNLOAD": "[v]",
+    "SYNC": "[~]",
+    "DIFF": "[D]",
+}
+
+
+def set_emoji_mode(use_emoji: bool) -> None:
+    """
+    Set whether to use emojis or ASCII fallbacks globally.
+
+    Args:
+        use_emoji: True to use emojis, False for ASCII-only.
+    """
+    global _emoji_enabled
+    _emoji_enabled = use_emoji
+
+
+def get_emoji_mode() -> bool:
+    """Get current emoji mode."""
+    return _emoji_enabled
+
+
+def get_symbol(name: str) -> str:
+    """
+    Get a symbol by name, respecting the global emoji mode.
+
+    Args:
+        name: Symbol name (CHECK, CROSS, ARROW, etc.)
+
+    Returns:
+        The symbol string (emoji or ASCII based on mode).
+    """
+    if _emoji_enabled:
+        return _EMOJI_SYMBOLS.get(name, name)
+    return _ASCII_SYMBOLS.get(name, name)
+
+
+class _SymbolsMeta(type):
+    """Metaclass to enable dynamic class attribute access for Symbols."""
+
+    def __getattr__(cls, name: str) -> str:
+        # Handle box drawing characters (not affected by emoji toggle)
+        if name.startswith("BOX_"):
+            box_chars = {
+                "BOX_TL": "╭",
+                "BOX_TR": "╮",
+                "BOX_BL": "╰",
+                "BOX_BR": "╯",
+                "BOX_H": "─",
+                "BOX_V": "│",
+            }
+            if name in box_chars:
+                return box_chars[name]
+        # Handle symbol lookup with emoji toggle
+        if name in _EMOJI_SYMBOLS:
+            return get_symbol(name)
+        raise AttributeError(f"'{cls.__name__}' has no attribute '{name}'")
+
+
+class Symbols(metaclass=_SymbolsMeta):
     """
     Unicode symbols for terminal output.
 
     Provides constants for commonly used symbols in CLI output,
     including status indicators, navigation arrows, and box drawing characters.
+
+    Supports both emoji and ASCII-only modes for accessibility and
+    compatibility with terminals that don't support emojis.
+
+    Use `set_emoji_mode(False)` to disable emojis globally.
 
     Attributes:
         CHECK: Checkmark symbol for success.
@@ -78,25 +192,48 @@ class Symbols:
         BOX_V: Box drawing vertical line.
     """
 
-    CHECK = "✓"
-    CROSS = "✗"
-    ARROW = "→"
-    DOT = "•"
-    WARN = "⚠"
-    INFO = "ℹ"
-    ROCKET = "🚀"
-    GEAR = "⚙"
-    FILE = "📄"
-    FOLDER = "📁"
-    LINK = "🔗"
+    # These are provided for IDE auto-complete, but actual values
+    # come from the metaclass __getattr__
+    CHECK: str
+    CROSS: str
+    ARROW: str
+    DOT: str
+    WARN: str
+    INFO: str
+    ROCKET: str
+    GEAR: str
+    FILE: str
+    FOLDER: str
+    LINK: str
+    SUCCESS: str
+    FAILURE: str
+    WARNING: str
+    PROGRESS: str
+    COMPLETE: str
+    PENDING: str
+    BLOCKED: str
+    CHART: str
+    DOWNLOAD: str
+    SYNC: str
+    DIFF: str
 
-    # Box drawing
-    BOX_TL = "╭"
-    BOX_TR = "╮"
-    BOX_BL = "╰"
-    BOX_BR = "╯"
-    BOX_H = "─"
-    BOX_V = "│"
+    # Box drawing (static, not affected by emoji toggle)
+    BOX_TL: str
+    BOX_TR: str
+    BOX_BL: str
+    BOX_BR: str
+    BOX_H: str
+    BOX_V: str
+
+    @staticmethod
+    def set_emoji_mode(use_emoji: bool) -> None:
+        """Set whether to use emojis or ASCII fallbacks."""
+        set_emoji_mode(use_emoji)
+
+    @staticmethod
+    def get_emoji_mode() -> bool:
+        """Get current emoji mode."""
+        return get_emoji_mode()
 
 
 class Console:

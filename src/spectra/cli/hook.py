@@ -278,11 +278,7 @@ def run_hook_uninstall(console: Console, hook_type: str = "all") -> int:
         console.error("Not a git repository")
         return ExitCode.CONFIG_ERROR
 
-    hooks = []
-    if hook_type == "all":
-        hooks = ["pre-commit", "pre-push"]
-    else:
-        hooks = [hook_type]
+    hooks = ["pre-commit", "pre-push"] if hook_type == "all" else [hook_type]
 
     removed = 0
     for name in hooks:

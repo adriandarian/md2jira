@@ -255,6 +255,11 @@ Environment Variables:
     )
     parser.add_argument("--no-color", action="store_true", help="Disable colored output")
     parser.add_argument(
+        "--no-emoji",
+        action="store_true",
+        help="Disable emojis in output (use ASCII alternatives)",
+    )
+    parser.add_argument(
         "--log-format",
         type=str,
         choices=["text", "json"],
@@ -2598,6 +2603,12 @@ def main() -> int:
     """
     parser = create_parser()
     args = parser.parse_args()
+
+    # Set global emoji mode based on --no-emoji flag
+    if getattr(args, "no_emoji", False):
+        from .output import set_emoji_mode
+
+        set_emoji_mode(False)
 
     # Handle completions first (doesn't require other args)
     if args.completions:

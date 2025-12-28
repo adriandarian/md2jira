@@ -160,10 +160,7 @@ def generate_velocity_chart(sprints: list[SprintData], width: int = 50, color: b
         label = sprint.name[:10].ljust(10)
         points = str(sprint.completed_points).rjust(4)
 
-        if color:
-            bar = f"{Colors.GREEN}{'█' * bar_length}{Colors.RESET}"
-        else:
-            bar = "█" * bar_length
+        bar = f"{Colors.GREEN}{'█' * bar_length}{Colors.RESET}" if color else "█" * bar_length
 
         lines.append(f"  {label} │{bar} {points} pts")
 

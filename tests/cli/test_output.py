@@ -7,7 +7,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from spectra.cli.output import Colors, Console, Symbols
+from spectra.cli.output import (
+    Colors,
+    Console,
+    Symbols,
+    get_emoji_mode,
+    get_symbol,
+    set_emoji_mode,
+)
 
 
 class TestColors:
@@ -37,6 +44,13 @@ class TestColors:
 class TestSymbols:
     """Tests for Symbols class."""
 
+    @pytest.fixture(autouse=True)
+    def reset_emoji_mode(self):
+        """Reset emoji mode to default before and after each test."""
+        set_emoji_mode(True)
+        yield
+        set_emoji_mode(True)
+
     def test_status_symbols_defined(self):
         """Test that status symbols are defined."""
         assert Symbols.CHECK == "✓"
@@ -62,6 +76,103 @@ class TestSymbols:
         assert Symbols.BOX_BR == "╯"
         assert Symbols.BOX_H == "─"
         assert Symbols.BOX_V == "│"
+
+    def test_additional_emoji_symbols_defined(self):
+        """Test that additional emoji symbols are defined."""
+        assert Symbols.CHART == "📊"
+        assert Symbols.DOWNLOAD == "📥"
+        assert Symbols.SYNC == "🔄"
+        assert Symbols.DIFF == "📝"
+
+
+class TestEmojiToggle:
+    """Tests for emoji toggle functionality."""
+
+    @pytest.fixture(autouse=True)
+    def reset_emoji_mode(self):
+        """Reset emoji mode to default before and after each test."""
+        set_emoji_mode(True)
+        yield
+        set_emoji_mode(True)
+
+    def test_emoji_mode_enabled_by_default(self):
+        """Test that emoji mode is enabled by default."""
+        assert get_emoji_mode() is True
+
+    def test_set_emoji_mode_off(self):
+        """Test disabling emoji mode."""
+        set_emoji_mode(False)
+        assert get_emoji_mode() is False
+
+    def test_set_emoji_mode_on(self):
+        """Test enabling emoji mode."""
+        set_emoji_mode(False)
+        set_emoji_mode(True)
+        assert get_emoji_mode() is True
+
+    def test_symbols_with_emoji_mode(self):
+        """Test Symbols class returns emojis when enabled."""
+        set_emoji_mode(True)
+        assert Symbols.CHECK == "✓"
+        assert Symbols.ROCKET == "🚀"
+        assert Symbols.GEAR == "⚙"
+
+    def test_symbols_without_emoji_mode(self):
+        """Test Symbols class returns ASCII when disabled."""
+        set_emoji_mode(False)
+        assert Symbols.CHECK == "[OK]"
+        assert Symbols.CROSS == "[X]"
+        assert Symbols.ARROW == "->"
+        assert Symbols.DOT == "*"
+        assert Symbols.WARN == "[!]"
+        assert Symbols.INFO == "[i]"
+        assert Symbols.ROCKET == "[>]"
+        assert Symbols.GEAR == "[*]"
+        assert Symbols.FILE == "[F]"
+        assert Symbols.FOLDER == "[D]"
+        assert Symbols.LINK == "[L]"
+
+    def test_get_symbol_with_emoji_mode(self):
+        """Test get_symbol function returns emojis when enabled."""
+        set_emoji_mode(True)
+        assert get_symbol("CHECK") == "✓"
+        assert get_symbol("ROCKET") == "🚀"
+
+    def test_get_symbol_without_emoji_mode(self):
+        """Test get_symbol function returns ASCII when disabled."""
+        set_emoji_mode(False)
+        assert get_symbol("CHECK") == "[OK]"
+        assert get_symbol("ROCKET") == "[>]"
+
+    def test_box_drawing_unaffected_by_emoji_mode(self):
+        """Test box drawing characters are not affected by emoji toggle."""
+        set_emoji_mode(True)
+        assert Symbols.BOX_TL == "╭"
+        assert Symbols.BOX_H == "─"
+
+        set_emoji_mode(False)
+        assert Symbols.BOX_TL == "╭"
+        assert Symbols.BOX_H == "─"
+
+    def test_symbols_class_set_emoji_mode(self):
+        """Test Symbols class method for setting emoji mode."""
+        Symbols.set_emoji_mode(False)
+        assert Symbols.get_emoji_mode() is False
+
+        Symbols.set_emoji_mode(True)
+        assert Symbols.get_emoji_mode() is True
+
+    def test_unknown_symbol_returns_name(self):
+        """Test that unknown symbol names return the name itself."""
+        assert get_symbol("UNKNOWN_SYMBOL") == "UNKNOWN_SYMBOL"
+
+    def test_additional_ascii_symbols(self):
+        """Test additional ASCII symbols when emoji mode is off."""
+        set_emoji_mode(False)
+        assert Symbols.CHART == "[#]"
+        assert Symbols.DOWNLOAD == "[v]"
+        assert Symbols.SYNC == "[~]"
+        assert Symbols.DIFF == "[D]"
 
 
 class TestConsoleInit:

@@ -695,7 +695,7 @@ For each new tracker adapter, follow this checklist:
 - [x] **Colored Diff Output** - Better visualization of changes
 - [x] **Better Error Messages** - More actionable error messages
 - [x] **JSON/YAML/Markdown Output** - Preview output formats for CI pipelines
-- [ ] **Emoji Toggle** - Option to disable emojis in output
+- [x] **Emoji Toggle** - Option to disable emojis in output
 - [ ] **Color Themes** - Support different color schemes
 - [ ] **PowerShell Completions** - Windows shell completion
 - [ ] **Man Pages** - Install man pages for Unix systems

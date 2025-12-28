@@ -362,10 +362,7 @@ def run_import(
             markdown_content = generate_markdown_content(epic_info, stories, options)
 
             # Determine output path
-            if output_path:
-                out_file = Path(output_path)
-            else:
-                out_file = Path(f"{epic_key}.md")
+            out_file = Path(output_path) if output_path else Path(f"{epic_key}.md")
 
             if dry_run:
                 console.print()
