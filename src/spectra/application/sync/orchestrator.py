@@ -19,9 +19,9 @@ if TYPE_CHECKING:
     from .backup import Backup, BackupManager
     from .incremental import ChangeTracker
     from .state import StateStore, SyncState
+
 from spectra.application.commands import (
     AddCommentCommand,
-    CommandBatch,
     CreateSubtaskCommand,
     TransitionStatusCommand,
     UpdateDescriptionCommand,
@@ -32,6 +32,8 @@ from spectra.core.domain.events import EventBus, SyncCompleted, SyncStarted
 from spectra.core.ports.config_provider import SyncConfig, ValidationConfig
 from spectra.core.ports.document_formatter import DocumentFormatterPort
 from spectra.core.ports.document_parser import DocumentParserPort
+
+from .progress import ProgressReporter, SyncPhase, create_progress_reporter
 
 
 @dataclass
@@ -305,6 +307,9 @@ class SyncOrchestrator:
         # Incremental sync support
         self._change_tracker: ChangeTracker | None = None
         self._changed_story_ids: set[str] = set()
+
+        # Progress reporting
+        self._progress: ProgressReporter | None = None
         if self.config.incremental:
             from .incremental import ChangeTracker
 
@@ -434,12 +439,18 @@ class SyncOrchestrator:
         Args:
             markdown_path: Path to markdown file
             epic_key: Jira epic key
-            progress_callback: Optional callback for progress updates
+            progress_callback: Optional callback for progress updates (phase, current, total)
 
         Returns:
             SyncResult with sync details
         """
         result = SyncResult(dry_run=self.config.dry_run)
+
+        # Calculate total phases based on config
+        total_phases = self._calculate_total_phases()
+
+        # Create progress reporter
+        self._progress = create_progress_reporter(progress_callback, total_phases=total_phases)
 
         # Publish start event
         self.event_bus.publish(
@@ -452,7 +463,9 @@ class SyncOrchestrator:
 
         # Phase 0: Create backup (only for non-dry-run)
         if not self.config.dry_run and self.config.backup_enabled:
-            self._report_progress(progress_callback, "Creating backup", 0, 6)
+            if self._progress:
+                self._progress.start_phase(SyncPhase.BACKUP)
+            self._report_progress(progress_callback, "Creating backup", 0, total_phases)
             try:
                 self._create_backup(markdown_path, epic_key)
             except Exception as e:
@@ -460,7 +473,8 @@ class SyncOrchestrator:
                 result.add_warning(f"Backup failed: {e}")
 
         # Phase 1: Analyze
-        total_phases = 6 if self.config.backup_enabled else 5
+        if self._progress:
+            self._progress.start_phase(SyncPhase.ANALYZING)
         self._report_progress(progress_callback, "Analyzing", 1, total_phases)
         self.analyze(markdown_path, epic_key)
         result.stories_matched = len(self._matches)
@@ -488,21 +502,34 @@ class SyncOrchestrator:
 
         # Phase 2: Update descriptions
         if self.config.sync_descriptions:
+            if self._progress:
+                # Count stories with descriptions to sync
+                stories_with_desc = self._count_syncable_descriptions()
+                self._progress.start_phase(SyncPhase.DESCRIPTIONS, stories_with_desc)
             self._report_progress(progress_callback, "Updating descriptions", 2, total_phases)
             self._sync_descriptions(result)
 
         # Phase 3: Sync subtasks
         if self.config.sync_subtasks:
+            if self._progress:
+                # Count total subtasks to sync
+                total_subtasks = self._count_syncable_subtasks()
+                self._progress.start_phase(SyncPhase.SUBTASKS, total_subtasks)
             self._report_progress(progress_callback, "Syncing subtasks", 3, total_phases)
             self._sync_subtasks(result)
 
         # Phase 4: Add commit comments
         if self.config.sync_comments:
+            if self._progress:
+                stories_with_commits = self._count_syncable_comments()
+                self._progress.start_phase(SyncPhase.COMMENTS, stories_with_commits)
             self._report_progress(progress_callback, "Adding comments", 4, total_phases)
             self._sync_comments(result)
 
         # Phase 5: Sync statuses
         if self.config.sync_statuses:
+            if self._progress:
+                self._progress.start_phase(SyncPhase.STATUSES)
             self._report_progress(progress_callback, "Syncing statuses", 5, total_phases)
             self._sync_statuses(result)
 
@@ -517,12 +544,16 @@ class SyncOrchestrator:
 
         # Phase N: Update source file with tracker info
         if self.config.update_source_file:
+            if self._progress:
+                self._progress.start_phase(SyncPhase.SOURCE_UPDATE)
             self._report_progress(
                 progress_callback, "Updating source file", total_phases - 1, total_phases
             )
             self._update_source_file_with_tracker_info(markdown_path, result, epic_key=epic_key)
 
         # Final phase: Complete (100%)
+        if self._progress:
+            self._progress.complete()
         self._report_progress(progress_callback, "Complete", total_phases, total_phases)
 
         # Publish complete event
@@ -538,6 +569,61 @@ class SyncOrchestrator:
         )
 
         return result
+
+    def _calculate_total_phases(self) -> int:
+        """Calculate total number of sync phases based on config."""
+        phases = 2  # Always: analyze + complete
+        if not self.config.dry_run and self.config.backup_enabled:
+            phases += 1  # Backup
+        if self.config.sync_descriptions:
+            phases += 1
+        if self.config.sync_subtasks:
+            phases += 1
+        if self.config.sync_comments:
+            phases += 1
+        if self.config.sync_statuses:
+            phases += 1
+        if self.config.update_source_file:
+            phases += 1
+        return phases
+
+    def _count_syncable_descriptions(self) -> int:
+        """Count stories with descriptions that will be synced."""
+        count = 0
+        for story in self._md_stories:
+            story_id = str(story.id)
+            if story_id not in self._matches:
+                continue
+            if self.config.incremental and story_id not in self._changed_story_ids:
+                continue
+            if story.description:
+                count += 1
+        return count
+
+    def _count_syncable_subtasks(self) -> int:
+        """Count total subtasks that will be synced."""
+        count = 0
+        for story in self._md_stories:
+            story_id = str(story.id)
+            if story_id not in self._matches:
+                continue
+            if self.config.incremental and story_id not in self._changed_story_ids:
+                continue
+            count += len(story.subtasks)
+        return count
+
+    def _count_syncable_comments(self) -> int:
+        """Count stories with commits that will get comments."""
+        count = 0
+        for story in self._md_stories:
+            story_id = str(story.id)
+            if story_id not in self._matches:
+                continue
+            if self.config.incremental and story_id not in self._changed_story_ids:
+                continue
+            if story.commits:
+                count += 1
+        return count
 
     def sync_descriptions_only(
         self,
@@ -647,14 +733,11 @@ class SyncOrchestrator:
         Sync story descriptions from markdown to issue tracker.
 
         Creates UpdateDescriptionCommand for each matched story with a description,
-        and executes them as a batch with graceful degradation (stop_on_error=False).
+        and executes them individually with progress reporting.
 
         Args:
             result: SyncResult to update with operation counts and errors.
         """
-        batch = CommandBatch(stop_on_error=False)
-        command_to_story: dict[int, tuple[str, str]] = {}  # cmd index -> (story_id, issue_key)
-
         for md_story in self._md_stories:
             story_id = str(md_story.id)
             if story_id not in self._matches:
@@ -668,6 +751,10 @@ class SyncOrchestrator:
 
             # Only update if story has description
             if md_story.description:
+                # Report progress
+                if self._progress:
+                    self._progress.update_item(f"{issue_key}: {md_story.title[:30]}")
+
                 adf = self.formatter.format_story_description(md_story)
 
                 cmd = UpdateDescriptionCommand(
@@ -677,23 +764,17 @@ class SyncOrchestrator:
                     event_bus=self.event_bus,
                     dry_run=self.config.dry_run,
                 )
-                command_to_story[len(batch.commands)] = (story_id, issue_key)
-                batch.add(cmd)
 
-        # Execute batch
-        batch.execute_all()
-        result.stories_updated = batch.executed_count
-
-        # Record failures with detailed context
-        for idx, cmd_result in enumerate(batch.results):
-            if not cmd_result.success and cmd_result.error:
-                story_id, issue_key = command_to_story.get(idx, ("", "unknown"))
-                result.add_failed_operation(
-                    operation="update_description",
-                    issue_key=issue_key,
-                    error=cmd_result.error,
-                    story_id=story_id,
-                )
+                cmd_result = cmd.execute()
+                if cmd_result.success:
+                    result.stories_updated += 1
+                elif cmd_result.error:
+                    result.add_failed_operation(
+                        operation="update_description",
+                        issue_key=issue_key,
+                        error=cmd_result.error,
+                        story_id=story_id,
+                    )
 
     def _sync_subtasks(self, result: SyncResult) -> None:
         """
@@ -722,6 +803,10 @@ class SyncOrchestrator:
             # Sync each subtask
             project_key = issue_key.split("-")[0]
             for md_subtask in md_story.subtasks:
+                # Report progress
+                if self._progress:
+                    self._progress.update_item(f"{issue_key}: {md_subtask.name[:25]}")
+
                 self._sync_single_subtask(
                     md_subtask, existing_subtasks, issue_key, project_key, story_id, result
                 )
@@ -866,6 +951,10 @@ class SyncOrchestrator:
                 continue
 
             issue_key = self._matches[story_id]
+
+            # Report progress
+            if self._progress:
+                self._progress.update_item(f"{issue_key}: {len(md_story.commits)} commits")
 
             try:
                 # Check if commits comment already exists

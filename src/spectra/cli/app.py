@@ -2485,9 +2485,20 @@ def run_sync(
             console.warning("Cancelled by user")
             return ExitCode.CANCELLED
 
-    # Run sync with progress callback
-    def progress_callback(phase: str, current: int, total: int) -> None:
-        console.progress(current, total, phase)
+    # Run sync with progress callback (supports both legacy and detailed progress)
+    def progress_callback(
+        phase: str,
+        item: str = "",
+        overall_progress: float = 0.0,
+        current_item: int = 0,
+        total_items: int = 0,
+    ) -> None:
+        # Use detailed progress display when item info is available
+        if item or total_items > 0:
+            console.progress_detailed(phase, item, overall_progress, current_item, total_items)
+        else:
+            # Fallback to simple progress for backward compatibility
+            console.progress(current_item, total_items or 1, phase)
 
     console.section("Running Sync")
 

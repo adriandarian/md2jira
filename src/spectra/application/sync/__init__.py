@@ -53,6 +53,15 @@ from .multi_epic import (
     MultiEpicSyncResult,
 )
 from .orchestrator import FailedOperation, SyncOrchestrator, SyncResult
+from .progress import (
+    ProgressCallback,
+    ProgressReporter,
+    ProgressState,
+    create_progress_reporter,
+)
+from .progress import (
+    SyncPhase as ProgressSyncPhase,
+)
 from .reverse_sync import (
     ChangeDetail,
     PullChanges,
@@ -118,6 +127,10 @@ __all__ = [
     "MultiEpicSyncOrchestrator",
     "MultiEpicSyncResult",
     "OperationRecord",
+    "ProgressCallback",
+    "ProgressReporter",
+    "ProgressState",
+    "ProgressSyncPhase",
     "PullChanges",
     "PullResult",
     "ResolutionStrategy",
@@ -144,6 +157,7 @@ __all__ = [
     "compute_story_hash",
     "create_audit_trail",
     "create_pre_sync_backup",
+    "create_progress_reporter",
     "create_snapshot_from_sync",
     "detect_sync_conflicts",
     "restore_from_backup",

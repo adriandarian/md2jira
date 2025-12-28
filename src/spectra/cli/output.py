@@ -139,6 +139,11 @@ class Console:
         self._json_messages: list[dict] = []
         self._json_errors: list[str] = []
 
+        # Progress tracking state
+        self._last_progress_message: str = ""
+        self._last_progress_phase: str = ""
+        self._last_had_item: bool = False
+
         # Quiet mode overrides verbose
         if self.quiet:
             self.verbose = False
@@ -402,9 +407,9 @@ class Console:
             return
 
         width = 30
-        filled = int(width * current / total)
+        filled = int(width * current / total) if total > 0 else 0
         bar = "█" * filled + "░" * (width - filled)
-        pct = int(100 * current / total)
+        pct = int(100 * current / total) if total > 0 else 0
 
         # Check if running in interactive terminal
         if sys.stdout.isatty():
@@ -413,7 +418,7 @@ class Console:
             line = f"\r  [{bar}] {pct:>3}% {padded_message}"
             sys.stdout.write(line)
             sys.stdout.flush()
-            if current >= total:
+            if current >= total > 0:
                 self.print()
         else:
             # Non-interactive: print each phase once (track with instance variable)
@@ -422,6 +427,73 @@ class Console:
             if message != self._last_progress_message:
                 self._last_progress_message = message
                 self.print(f"  [{bar}] {pct:>3}% {message}")
+
+    def progress_detailed(
+        self,
+        phase: str,
+        item: str,
+        overall_progress: float,
+        current_item: int,
+        total_items: int,
+    ) -> None:
+        """
+        Print a detailed progress bar with phase and item information.
+
+        Shows overall progress and current item being processed.
+
+        Args:
+            phase: Current sync phase name.
+            item: Current item being processed.
+            overall_progress: Overall progress (0-100).
+            current_item: Current item number in phase.
+            total_items: Total items in current phase.
+        """
+        if self.quiet:
+            return
+
+        width = 25
+        filled = int(width * overall_progress / 100)
+        bar = "█" * filled + "░" * (width - filled)
+        pct = int(overall_progress)
+
+        # Build message with phase and item info
+        item_info = f"({current_item}/{total_items})" if total_items > 0 else ""
+
+        # Truncate item name for display
+        item_display = (item[:20] + "...") if len(item) > 23 else item
+
+        # Check if running in interactive terminal
+        if sys.stdout.isatty():
+            # Interactive: show two-line progress (phase + item)
+            # Use ANSI escape sequences to position cursor
+            phase_line = f"\r  [{bar}] {pct:>3}% {phase} {item_info}"
+            item_line = f"\n  {Colors.DIM}→ {item_display}{Colors.RESET}" if item else ""
+
+            # Move up if we have a previous line, then clear
+            if hasattr(self, "_last_had_item") and self._last_had_item:
+                sys.stdout.write("\033[A\033[K")  # Move up and clear line
+
+            sys.stdout.write(phase_line)
+            if item:
+                sys.stdout.write(item_line)
+                self._last_had_item = True
+            else:
+                self._last_had_item = False
+
+            sys.stdout.flush()
+
+            if overall_progress >= 100:
+                if hasattr(self, "_last_had_item") and self._last_had_item:
+                    sys.stdout.write("\n")
+                self.print()
+                self._last_had_item = False
+        else:
+            # Non-interactive: print phase changes only
+            if not hasattr(self, "_last_progress_phase"):
+                self._last_progress_phase = ""
+            if phase != self._last_progress_phase:
+                self._last_progress_phase = phase
+                self.print(f"  [{bar}] {pct:>3}% {phase}")
 
     def dry_run_banner(self) -> None:
         """
