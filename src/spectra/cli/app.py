@@ -364,6 +364,24 @@ Environment Variables:
         help="Undo last sync by restoring from most recent backup (requires --epic)",
     )
 
+    # Transactional sync
+    parser.add_argument(
+        "--transactional",
+        action="store_true",
+        help="Enable transactional mode: all-or-nothing with automatic rollback on failure",
+    )
+    parser.add_argument(
+        "--fail-fast",
+        action="store_true",
+        default=True,
+        help="In transactional mode, rollback immediately on first error (default: True)",
+    )
+    parser.add_argument(
+        "--no-fail-fast",
+        action="store_true",
+        help="In transactional mode, continue on errors and attempt partial rollback",
+    )
+
     # Special modes
     parser.add_argument(
         "--init", action="store_true", help="Run first-time setup wizard to configure spectra"

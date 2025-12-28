@@ -711,7 +711,7 @@ For each new tracker adapter, follow this checklist:
 - [x] **Partial Sync by Field** - Sync only specific fields (e.g., just status)
 - [x] **Multi-Tracker Sync** - Sync same markdown to multiple trackers simultaneously
 - [x] **Smart Merge Conflicts** - 3-way merge for conflicts
-- [ ] **Transactional Behavior** - All-or-nothing mode with rollback
+- [x] **Transactional Behavior** - All-or-nothing mode with rollback
 - [ ] **Idempotency Guarantees** - Ensure re-running produces no unintended edits
 
 ### Data Sync

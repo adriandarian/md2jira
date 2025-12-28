@@ -111,6 +111,15 @@ from .source_updater import (
     detect_sync_conflicts,
 )
 from .state import OperationRecord, StateStore, SyncPhase, SyncState
+from .transaction import OperationType as TransactionOperationType
+from .transaction import (
+    RollbackResult,
+    TransactionalSync,
+    TransactionManager,
+    TransactionResult,
+    TransactionState,
+    create_transactional_sync,
+)
 
 
 # Parallel operations (optional, requires aiohttp)
@@ -180,6 +189,7 @@ __all__ = [
     "RestoreOperation",
     "RestoreResult",
     "ReverseSyncOrchestrator",
+    "RollbackResult",
     "SmartMergeResolver",
     "SnapshotStore",
     "SourceFileUpdater",
@@ -202,6 +212,11 @@ __all__ = [
     "TrackerSyncStatus",
     "TrackerTarget",
     "TrackerType",
+    "TransactionManager",
+    "TransactionOperationType",
+    "TransactionResult",
+    "TransactionState",
+    "TransactionalSync",
     "compare_backup_to_current",
     "compute_content_hash",
     "compute_story_content_hash",
@@ -212,6 +227,7 @@ __all__ = [
     "create_pre_sync_backup",
     "create_progress_reporter",
     "create_snapshot_from_sync",
+    "create_transactional_sync",
     "detect_sync_conflicts",
     "resolve_conflict_with_merge",
     "restore_from_backup",
