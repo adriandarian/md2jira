@@ -75,6 +75,16 @@ Force full sync even when \\-\\-incremental is set.
 .TP
 .B \\-\\-update\\-source
 Write tracker info back to source file after sync.
+.SS "Multi-Tracker Sync"
+.TP
+.B \\-\\-multi\\-tracker
+Sync to multiple trackers simultaneously (requires config file or \\-\\-trackers).
+.TP
+.B \\-\\-trackers " " \\fITRACKER\\fR ...
+Tracker targets (format: type:epic_key). Examples: jira:PROJ-123 github:1 gitlab:42
+.TP
+.B \\-\\-primary\\-tracker " " \\fINAME\\fR
+Name of primary tracker for ID generation in multi-tracker mode.
 .SS "Phase Control"
 .TP
 .B \\-\\-phase " " \\fIPHASE\\fR

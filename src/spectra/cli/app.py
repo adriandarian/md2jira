@@ -697,6 +697,26 @@ Environment Variables:
         "--analyze-links", action="store_true", help="Analyze links in markdown without syncing"
     )
 
+    # Multi-tracker sync
+    parser.add_argument(
+        "--multi-tracker",
+        action="store_true",
+        help="Sync to multiple trackers simultaneously (requires config file)",
+    )
+    parser.add_argument(
+        "--trackers",
+        type=str,
+        nargs="+",
+        metavar="TRACKER",
+        help="Tracker targets for multi-tracker sync (format: type:epic_key, e.g., jira:PROJ-123 github:1)",
+    )
+    parser.add_argument(
+        "--primary-tracker",
+        type=str,
+        metavar="NAME",
+        help="Name of primary tracker for ID generation in multi-tracker mode",
+    )
+
     # New CLI commands
     new_commands = parser.add_argument_group("Commands")
     new_commands.add_argument("--doctor", action="store_true", help="Diagnose common setup issues")
@@ -1737,6 +1757,218 @@ def run_multi_epic(args) -> int:
             console.item(error, "fail")
 
     return ExitCode.SUCCESS if result.success else ExitCode.SYNC_ERROR
+
+
+def run_multi_tracker_sync(args) -> int:
+    """
+    Run multi-tracker sync mode.
+
+    Syncs the same markdown to multiple issue trackers simultaneously.
+
+    Args:
+        args: Parsed command-line arguments.
+
+    Returns:
+        Exit code.
+    """
+    from spectra.adapters import ADFFormatter, EnvironmentConfigProvider
+    from spectra.adapters.parsers import MarkdownParser
+    from spectra.application.sync.multi_tracker import (
+        MultiTrackerSyncOrchestrator,
+        TrackerTarget,
+    )
+
+    from .logging import setup_logging
+
+    # Setup logging
+    log_level = logging.DEBUG if getattr(args, "verbose", False) else logging.INFO
+    log_format = getattr(args, "log_format", "text")
+    setup_logging(level=log_level, log_format=log_format)
+
+    # Create console
+    console = Console(
+        color=not getattr(args, "no_color", False),
+        verbose=getattr(args, "verbose", False),
+        quiet=getattr(args, "quiet", False),
+    )
+
+    markdown_path = args.input
+    dry_run = not getattr(args, "execute", False)
+    trackers_arg = getattr(args, "trackers", None) or []
+    primary_tracker = getattr(args, "primary_tracker", None)
+
+    # Check markdown file exists
+    if not Path(markdown_path).exists():
+        console.error(f"Markdown file not found: {markdown_path}")
+        return ExitCode.FILE_NOT_FOUND
+
+    console.header("spectra Multi-Tracker Sync")
+    console.info(f"Source: {markdown_path}")
+
+    if dry_run:
+        console.dry_run_banner()
+
+    # Load configuration
+    config_file = Path(args.config) if getattr(args, "config", None) else None
+    config_provider = EnvironmentConfigProvider(
+        config_file=config_file,
+        cli_overrides=vars(args),
+    )
+
+    config = config_provider.load()
+    config.sync.dry_run = dry_run
+
+    # Parse tracker targets from --trackers arg or config
+    # Format: type:epic_key (e.g., jira:PROJ-123 github:1)
+    targets_to_create: list[dict] = []
+
+    for tracker_spec in trackers_arg:
+        if ":" in tracker_spec:
+            parts = tracker_spec.split(":", 1)
+            tracker_type = parts[0].lower()
+            epic_key = parts[1]
+            targets_to_create.append(
+                {
+                    "type": tracker_type,
+                    "epic_key": epic_key,
+                    "name": f"{tracker_type.title()} ({epic_key})",
+                    "is_primary": (tracker_type == primary_tracker) if primary_tracker else False,
+                }
+            )
+        else:
+            console.warning(f"Invalid tracker spec: {tracker_spec} (use format type:epic_key)")
+
+    if not targets_to_create:
+        console.error("No tracker targets specified. Use --trackers type:epic_key")
+        return ExitCode.CONFIG_ERROR
+
+    # Create orchestrator
+    parser = MarkdownParser()
+    formatter = ADFFormatter()
+
+    orchestrator = MultiTrackerSyncOrchestrator(
+        parser=parser,
+        config=config.sync,
+        formatter=formatter,
+    )
+
+    # Add targets
+    console.section("Configuring Trackers")
+    for target_config in targets_to_create:
+        tracker_type = target_config["type"]
+        epic_key = target_config["epic_key"]
+        name = target_config["name"]
+
+        try:
+            tracker = _create_tracker_for_multi_sync(tracker_type, config, config_provider, dry_run)
+            if tracker:
+                orchestrator.add_target(
+                    TrackerTarget(
+                        tracker=tracker,
+                        epic_key=epic_key,
+                        name=name,
+                        is_primary=target_config.get("is_primary", False),
+                        formatter=formatter,
+                    )
+                )
+                console.success(f"Added: {name}")
+            else:
+                console.warning(f"Skipped: {name} (no adapter)")
+        except Exception as e:
+            console.warning(f"Failed to add {name}: {e}")
+
+    if not orchestrator.targets:
+        console.error("No valid tracker targets configured")
+        return ExitCode.CONFIG_ERROR
+
+    # Progress callback
+    def on_progress(tracker_name: str, phase: str, current: int, total: int) -> None:
+        console.progress(current, total, f"{tracker_name}: {phase}")
+
+    # Run sync
+    console.section("Syncing")
+    result = orchestrator.sync(
+        markdown_path=markdown_path,
+        progress_callback=on_progress,
+    )
+
+    # Show results
+    console.print()
+    console.section("Results")
+
+    for status in result.tracker_statuses:
+        icon = "success" if status.success else "fail"
+        console.item(
+            f"{status.tracker_name}: {status.stories_synced} synced, "
+            f"{status.stories_created} created, {status.stories_updated} updated",
+            icon,
+        )
+        if status.errors:
+            for error in status.errors[:3]:
+                console.detail(f"  Error: {error}")
+
+    console.print()
+    console.info(f"Total: {result.successful_trackers}/{result.total_trackers} trackers synced")
+
+    if result.success:
+        console.success("Multi-tracker sync completed successfully!")
+    elif result.partial_success:
+        console.warning("Multi-tracker sync completed with some failures")
+    else:
+        console.error("Multi-tracker sync failed")
+
+    return ExitCode.SUCCESS if result.success else ExitCode.SYNC_ERROR
+
+
+def _create_tracker_for_multi_sync(
+    tracker_type: str,
+    config: object,
+    config_provider: object,
+    dry_run: bool,
+) -> object | None:
+    """Create a tracker adapter for multi-tracker sync."""
+    import os
+
+    if tracker_type == "jira":
+        from spectra.adapters import ADFFormatter, JiraAdapter
+
+        formatter = ADFFormatter()
+        return JiraAdapter(
+            config=getattr(config, "tracker", None),
+            dry_run=dry_run,
+            formatter=formatter,
+        )
+
+    if tracker_type == "github":
+        from spectra.adapters.github import GitHubAdapter
+
+        return GitHubAdapter(
+            token=os.getenv("GITHUB_TOKEN", ""),
+            owner=os.getenv("GITHUB_OWNER", ""),
+            repo=os.getenv("GITHUB_REPO", ""),
+            dry_run=dry_run,
+        )
+
+    if tracker_type == "gitlab":
+        from spectra.adapters.gitlab import GitLabAdapter
+
+        return GitLabAdapter(
+            token=os.getenv("GITLAB_TOKEN", ""),
+            project_id=os.getenv("GITLAB_PROJECT_ID", ""),
+            dry_run=dry_run,
+            base_url=os.getenv("GITLAB_URL", "https://gitlab.com/api/v4"),
+        )
+
+    if tracker_type == "linear":
+        from spectra.adapters.linear import LinearAdapter
+
+        return LinearAdapter(
+            api_key=os.getenv("LINEAR_API_KEY", ""),
+            team_key=os.getenv("LINEAR_TEAM_KEY", ""),
+            dry_run=dry_run,
+        )
+
+    return None
 
 
 def run_webhook(args) -> int:
@@ -3276,6 +3508,12 @@ def main() -> int:
         if not args.input:
             parser.error("--multi-epic and --list-epics require --input/-i to be specified")
         return run_multi_epic(args)
+
+    # Handle multi-tracker sync
+    if getattr(args, "multi_tracker", False) or getattr(args, "trackers", None):
+        if not args.input:
+            parser.error("--multi-tracker requires --input/-i to be specified")
+        return run_multi_tracker_sync(args)
 
     # Handle link sync
     if args.sync_links or args.analyze_links:

@@ -708,8 +708,8 @@ For each new tracker adapter, follow this checklist:
 - [x] **Bidirectional Sync** - Pull tracker changes back into markdown with conflict detection
 - [x] **Incremental Sync Optimization** - Only sync changed items (content hash + persisted state)
 - [x] **Delta Sync** - Only fetch/sync changed fields
-- [ ] **Partial Sync by Field** - Sync only specific fields (e.g., just status)
-- [ ] **Multi-Tracker Sync** - Sync same markdown to multiple trackers simultaneously
+- [x] **Partial Sync by Field** - Sync only specific fields (e.g., just status)
+- [x] **Multi-Tracker Sync** - Sync same markdown to multiple trackers simultaneously
 - [ ] **Smart Merge Conflicts** - 3-way merge for conflicts
 - [ ] **Transactional Behavior** - All-or-nothing mode with rollback
 - [ ] **Idempotency Guarantees** - Ensure re-running produces no unintended edits
