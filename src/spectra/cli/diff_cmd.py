@@ -162,7 +162,7 @@ def compare_stories(local_story, remote_issue: dict) -> list[FieldDiff]:
 
 def format_diff(diff_result: DiffResult, color: bool = True) -> str:
     """
-    Format diff result for display.
+    Format diff result for display with enhanced colors.
 
     Args:
         diff_result: DiffResult to format.
@@ -173,28 +173,38 @@ def format_diff(diff_result: DiffResult, color: bool = True) -> str:
     """
     lines = []
 
-    # Header
+    # Header with enhanced styling
     if color:
-        lines.append(f"{Colors.BOLD}Diff: Local vs Tracker{Colors.RESET}")
+        lines.append(f"{Colors.BOLD}{Colors.CYAN}Diff: Local vs Tracker{Colors.RESET}")
+        lines.append(f"{Colors.DIM}{'=' * 60}{Colors.RESET}")
     else:
         lines.append("Diff: Local vs Tracker")
-    lines.append("=" * 60)
-    lines.append(f"  Local:  {diff_result.local_path}")
-    lines.append(f"  Remote: {diff_result.remote_source}")
+        lines.append("=" * 60)
+
+    lines.append(f"  {Colors.DIM}Local:{Colors.RESET}  {diff_result.local_path}")
+    lines.append(f"  {Colors.DIM}Remote:{Colors.RESET} {diff_result.remote_source}")
     lines.append("")
 
     if not diff_result.has_changes:
         if color:
-            lines.append(f"{Colors.GREEN}{Symbols.CHECK} No differences found{Colors.RESET}")
+            lines.append(
+                f"{Colors.GREEN}{Colors.BOLD}{Symbols.CHECK} No differences found{Colors.RESET}"
+            )
         else:
             lines.append("✓ No differences found")
         return "\n".join(lines)
 
-    # Summary
-    lines.append(f"  Changes: {diff_result.total_changes} story/stories")
+    # Summary with color
+    if color:
+        lines.append(
+            f"  {Colors.BOLD}Changes:{Colors.RESET} "
+            f"{Colors.YELLOW}{diff_result.total_changes}{Colors.RESET} story/stories"
+        )
+    else:
+        lines.append(f"  Changes: {diff_result.total_changes} story/stories")
     lines.append("")
 
-    # New local stories
+    # New local stories - enhanced formatting
     if diff_result.local_only:
         if color:
             lines.append(f"{Colors.GREEN}{Colors.BOLD}Local Only (to be created):{Colors.RESET}")
@@ -203,12 +213,15 @@ def format_diff(diff_result: DiffResult, color: bool = True) -> str:
 
         for story_id in diff_result.local_only:
             if color:
-                lines.append(f"  {Colors.GREEN}+ {story_id}{Colors.RESET}")
+                lines.append(
+                    f"  {Colors.GREEN}{Colors.BOLD}+{Colors.RESET} "
+                    f"{Colors.GREEN}{story_id}{Colors.RESET}"
+                )
             else:
                 lines.append(f"  + {story_id}")
         lines.append("")
 
-    # Remote only stories
+    # Remote only stories - enhanced formatting
     if diff_result.remote_only:
         if color:
             lines.append(f"{Colors.RED}{Colors.BOLD}Remote Only (not in local):{Colors.RESET}")
@@ -217,12 +230,15 @@ def format_diff(diff_result: DiffResult, color: bool = True) -> str:
 
         for story_id in diff_result.remote_only:
             if color:
-                lines.append(f"  {Colors.RED}- {story_id}{Colors.RESET}")
+                lines.append(
+                    f"  {Colors.RED}{Colors.BOLD}-{Colors.RESET} "
+                    f"{Colors.RED}{story_id}{Colors.RESET}"
+                )
             else:
                 lines.append(f"  - {story_id}")
         lines.append("")
 
-    # Changed stories
+    # Changed stories - enhanced formatting with better field visualization
     changed = [s for s in diff_result.story_diffs if s.has_changes]
     if changed:
         if color:
@@ -232,21 +248,57 @@ def format_diff(diff_result: DiffResult, color: bool = True) -> str:
 
         for story in changed:
             title_display = story.title[:40] + "..." if len(story.title) > 40 else story.title
-            if color:
-                lines.append(f"  {Colors.YELLOW}~ {story.story_id}{Colors.RESET}: {title_display}")
-            else:
-                lines.append(f"  ~ {story.story_id}: {title_display}")
 
+            # Story header with key if available
+            if story.external_key:
+                story_header = f"{story.story_id} ({story.external_key})"
+            else:
+                story_header = story.story_id
+
+            if color:
+                lines.append(
+                    f"  {Colors.YELLOW}{Colors.BOLD}~{Colors.RESET} "
+                    f"{Colors.BOLD}{story_header}{Colors.RESET}: {title_display}"
+                )
+            else:
+                lines.append(f"  ~ {story_header}: {title_display}")
+
+            # Field diffs with enhanced formatting
             for field_diff in story.field_diffs:
-                local_val = field_diff.local_value or "(none)"
-                remote_val = field_diff.remote_value or "(none)"
+                local_val = (
+                    field_diff.local_value or f"{Colors.DIM}(none){Colors.RESET}"
+                    if color
+                    else "(none)"
+                )
+                remote_val = (
+                    field_diff.remote_value or f"{Colors.DIM}(none){Colors.RESET}"
+                    if color
+                    else "(none)"
+                )
+
+                # Truncate long values for better display
+                max_val_length = 50
+                if isinstance(local_val, str) and len(local_val) > max_val_length:
+                    local_val = local_val[: max_val_length - 3] + "..."
+                if isinstance(remote_val, str) and len(remote_val) > max_val_length:
+                    remote_val = remote_val[: max_val_length - 3] + "..."
 
                 if color:
-                    lines.append(
-                        f"      {field_diff.field_name}: "
-                        f"{Colors.RED}{remote_val}{Colors.RESET} → "
-                        f"{Colors.GREEN}{local_val}{Colors.RESET}"
-                    )
+                    # Special formatting for status/priority
+                    if field_diff.field_name.lower() in ("status", "priority"):
+                        lines.append(
+                            f"      {Colors.BOLD}{field_diff.field_name}:{Colors.RESET} "
+                            f"{Colors.RED}{Colors.BOLD}{remote_val}{Colors.RESET} "
+                            f"{Colors.DIM}→{Colors.RESET} "
+                            f"{Colors.GREEN}{Colors.BOLD}{local_val}{Colors.RESET}"
+                        )
+                    else:
+                        lines.append(
+                            f"      {Colors.BOLD}{field_diff.field_name}:{Colors.RESET} "
+                            f"{Colors.RED}{remote_val}{Colors.RESET} "
+                            f"{Colors.DIM}→{Colors.RESET} "
+                            f"{Colors.GREEN}{local_val}{Colors.RESET}"
+                        )
                 else:
                     lines.append(f"      {field_diff.field_name}: {remote_val} → {local_val}")
 

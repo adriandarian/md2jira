@@ -428,6 +428,87 @@ class TestDiffFormatter:
         text = formatter._extract_adf_text(adf)
         assert text == "Hello  World"
 
+    def test_format_text_diff(self, formatter):
+        """Should format unified diff for text changes."""
+        old_text = "Line 1\nLine 2\nLine 3"
+        new_text = "Line 1\nLine 2 Modified\nLine 3\nLine 4"
+
+        diff_lines = formatter.format_text_diff(old_text, new_text)
+
+        assert len(diff_lines) > 0
+        # Should contain diff markers
+        assert any("+++" in line or "---" in line or "@@" in line for line in diff_lines)
+
+    def test_format_field_diff_with_description(self, formatter):
+        """Should format description field with unified diff for multi-line."""
+        diff = FieldDiff(
+            field_name="description",
+            old_value="Old line 1\nOld line 2",
+            new_value="New line 1\nNew line 2",
+            changed=True,
+        )
+
+        lines = formatter.format_field_diff(diff)
+        assert len(lines) > 0
+        assert "description" in lines[0]
+
+    def test_format_field_diff_status_priority(self, formatter):
+        """Should format status/priority fields with enhanced styling."""
+        diff = FieldDiff(
+            field_name="status",
+            old_value="Open",
+            new_value="Done",
+            changed=True,
+        )
+
+        lines = formatter.format_field_diff(diff)
+        assert len(lines) > 0
+        assert "status" in lines[0]
+        assert "Open" in lines[0] or "Done" in lines[0]
+
+    def test_format_field_diff_added(self, formatter):
+        """Should format added fields."""
+        diff = FieldDiff(
+            field_name="priority",
+            old_value=None,
+            new_value="High",
+            changed=True,
+        )
+
+        lines = formatter.format_field_diff(diff)
+        assert len(lines) > 0
+        assert "priority" in lines[0]
+        assert "High" in lines[0]
+
+    def test_format_field_diff_removed(self, formatter):
+        """Should format removed fields."""
+        diff = FieldDiff(
+            field_name="assignee",
+            old_value="John Doe",
+            new_value=None,
+            changed=True,
+        )
+
+        lines = formatter.format_field_diff(diff)
+        assert len(lines) > 0
+        assert "assignee" in lines[0]
+        assert "John Doe" in lines[0]
+
+    def test_extract_text_from_value(self, formatter):
+        """Should extract text from various value types."""
+        # String value
+        assert formatter._extract_text_from_value("Hello") == "Hello"
+
+        # ADF value
+        adf = {"type": "doc", "content": [{"type": "text", "text": "Test"}]}
+        assert formatter._extract_text_from_value(adf) == "Test"
+
+        # None value
+        assert formatter._extract_text_from_value(None) == ""
+
+        # Other types
+        assert formatter._extract_text_from_value(123) == "123"
+
 
 class TestCompareBackupToCurrentFunction:
     """Tests for compare_backup_to_current convenience function."""

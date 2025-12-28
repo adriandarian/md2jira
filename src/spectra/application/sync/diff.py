@@ -347,20 +347,28 @@ class DiffFormatter:
     YELLOW = "\033[33m"
     BLUE = "\033[34m"
     CYAN = "\033[36m"
+    MAGENTA = "\033[35m"
     DIM = "\033[2m"
     BOLD = "\033[1m"
     RESET = "\033[0m"
 
-    def __init__(self, color: bool = True, max_line_length: int = 80):
+    # Background colors for better contrast
+    BG_RED = "\033[41m"
+    BG_GREEN = "\033[42m"
+    BG_YELLOW = "\033[43m"
+
+    def __init__(self, color: bool = True, max_line_length: int = 80, context_lines: int = 3):
         """
         Initialize the diff formatter.
 
         Args:
             color: Whether to use ANSI colors.
             max_line_length: Maximum line length for truncation.
+            context_lines: Number of context lines to show in unified diffs.
         """
         self.color = color
         self.max_line_length = max_line_length
+        self.context_lines = context_lines
 
     def _c(self, text: str, *codes: str) -> str:
         """Apply color codes to text."""
@@ -416,18 +424,23 @@ class DiffFormatter:
         lines = []
         prefix = "  " * indent
 
-        # Issue header
+        # Issue header with enhanced formatting
         if diff.is_new:
             lines.append(
-                f"{prefix}{self._c('+ NEW:', self.GREEN)} {diff.issue_key} - {diff.summary}"
+                f"{prefix}{self._c('+', self.GREEN, self.BOLD)} "
+                f"{self._c('NEW:', self.GREEN, self.BOLD)} "
+                f"{self._c(diff.issue_key, self.BOLD)} - {diff.summary}"
             )
         elif diff.is_deleted:
             lines.append(
-                f"{prefix}{self._c('- DELETED:', self.RED)} {diff.issue_key} - {diff.summary}"
+                f"{prefix}{self._c('-', self.RED, self.BOLD)} "
+                f"{self._c('DELETED:', self.RED, self.BOLD)} "
+                f"{self._c(diff.issue_key, self.BOLD)} - {diff.summary}"
             )
         else:
             lines.append(
-                f"{prefix}{self._c('~', self.YELLOW)} {self._c(diff.issue_key, self.BOLD)} - {diff.summary}"
+                f"{prefix}{self._c('~', self.YELLOW, self.BOLD)} "
+                f"{self._c(diff.issue_key, self.BOLD, self.CYAN)} - {diff.summary}"
             )
 
         # Field diffs
@@ -435,9 +448,9 @@ class DiffFormatter:
             if field_diff.changed:
                 lines.extend(self.format_field_diff(field_diff, indent + 1))
 
-        # Subtask diffs
+        # Subtask diffs with visual separator
         if diff.subtask_diffs:
-            lines.append(f"{prefix}  Subtasks:")
+            lines.append(f"{prefix}  {self._c('Subtasks:', self.BOLD, self.CYAN)}")
             for st_diff in diff.subtask_diffs:
                 lines.extend(self.format_issue_diff(st_diff, indent + 2))
 
@@ -445,7 +458,7 @@ class DiffFormatter:
 
     def format_field_diff(self, diff: FieldDiff, indent: int = 0) -> list[str]:
         """
-        Format a single field diff.
+        Format a single field diff with enhanced colors.
 
         Args:
             diff: The FieldDiff to format.
@@ -458,32 +471,85 @@ class DiffFormatter:
         prefix = "  " * indent
 
         if diff.added:
+            # Added field - green with background highlight
+            value_str = self._format_value(diff.new_value)
             lines.append(
-                f"{prefix}{self._c('+', self.GREEN)} {diff.field_name}: {self._format_value(diff.new_value)}"
+                f"{prefix}{self._c('+', self.GREEN, self.BOLD)} "
+                f"{self._c(diff.field_name, self.BOLD)}: "
+                f"{self._c(value_str, self.GREEN)}"
             )
         elif diff.removed:
+            # Removed field - red with background highlight
+            value_str = self._format_value(diff.old_value)
             lines.append(
-                f"{prefix}{self._c('-', self.RED)} {diff.field_name}: {self._format_value(diff.old_value)}"
+                f"{prefix}{self._c('-', self.RED, self.BOLD)} "
+                f"{self._c(diff.field_name, self.BOLD)}: "
+                f"{self._c(value_str, self.RED)}"
             )
         elif diff.modified:
-            # Show before/after
+            # Modified field - show before/after with enhanced formatting
             if diff.field_name == "description":
-                # For descriptions, show a summary
-                lines.append(f"{prefix}{self._c('~', self.YELLOW)} {diff.field_name}:")
-                lines.append(
-                    f"{prefix}  {self._c('- (backup):', self.RED)} {self._format_description_summary(diff.old_value)}"
-                )
-                lines.append(
-                    f"{prefix}  {self._c('+ (current):', self.GREEN)} {self._format_description_summary(diff.new_value)}"
-                )
+                # For descriptions, show unified diff if text is multi-line
+                old_text = self._extract_text_from_value(diff.old_value)
+                new_text = self._extract_text_from_value(diff.new_value)
+
+                # Use unified diff for multi-line or substantial changes
+                if (
+                    "\n" in old_text
+                    or "\n" in new_text
+                    or len(old_text) > 100
+                    or len(new_text) > 100
+                ):
+                    lines.append(
+                        f"{prefix}{self._c('~', self.YELLOW, self.BOLD)} {self._c(diff.field_name, self.BOLD)}:"
+                    )
+                    lines.append("")
+                    diff_lines = self.format_text_diff(old_text, new_text)
+                    for diff_line in diff_lines:
+                        lines.append(f"{prefix}  {diff_line}")
+                else:
+                    # Simple before/after for short text
+                    lines.append(
+                        f"{prefix}{self._c('~', self.YELLOW, self.BOLD)} {self._c(diff.field_name, self.BOLD)}:"
+                    )
+                    old_summary = self._format_description_summary(diff.old_value)
+                    new_summary = self._format_description_summary(diff.new_value)
+                    lines.append(f"{prefix}  {self._c('-', self.RED)} {old_summary}")
+                    lines.append(f"{prefix}  {self._c('+', self.GREEN)} {new_summary}")
             else:
+                # Other fields - show before/after with arrow
                 old_str = self._format_value(diff.old_value)
                 new_str = self._format_value(diff.new_value)
-                lines.append(
-                    f"{prefix}{self._c('~', self.YELLOW)} {diff.field_name}: {self._c(old_str, self.RED)} → {self._c(new_str, self.GREEN)}"
-                )
+
+                # Special formatting for status/priority fields
+                if diff.field_name.lower() in ("status", "priority"):
+                    lines.append(
+                        f"{prefix}{self._c('~', self.YELLOW, self.BOLD)} "
+                        f"{self._c(diff.field_name, self.BOLD)}: "
+                        f"{self._c(old_str, self.RED, self.BOLD)} "
+                        f"{self._c('→', self.DIM)} "
+                        f"{self._c(new_str, self.GREEN, self.BOLD)}"
+                    )
+                else:
+                    lines.append(
+                        f"{prefix}{self._c('~', self.YELLOW, self.BOLD)} "
+                        f"{self._c(diff.field_name, self.BOLD)}: "
+                        f"{self._c(old_str, self.RED)} "
+                        f"{self._c('→', self.DIM)} "
+                        f"{self._c(new_str, self.GREEN)}"
+                    )
 
         return lines
+
+    def _extract_text_from_value(self, value: Any) -> str:
+        """Extract plain text from a value (handles ADF, strings, etc.)."""
+        if value is None:
+            return ""
+        if isinstance(value, str):
+            return value
+        if isinstance(value, dict):
+            return self._extract_adf_text(value)
+        return str(value)
 
     def _format_value(self, value: Any) -> str:
         """Format a value for display."""
@@ -535,14 +601,14 @@ class DiffFormatter:
 
     def format_text_diff(self, old_text: str, new_text: str) -> list[str]:
         """
-        Format a unified diff between two text strings.
+        Format a unified diff between two text strings with enhanced colors.
 
         Args:
             old_text: Original text.
             new_text: New text.
 
         Returns:
-            List of diff lines with colors.
+            List of diff lines with colors and line numbers.
         """
         lines = []
 
@@ -550,20 +616,43 @@ class DiffFormatter:
         new_lines = (new_text or "").splitlines(keepends=True)
 
         diff = difflib.unified_diff(
-            old_lines, new_lines, fromfile="backup", tofile="current", lineterm=""
+            old_lines,
+            new_lines,
+            fromfile="backup",
+            tofile="current",
+            lineterm="",
+            n=self.context_lines,
         )
 
         for line in diff:
-            if line.startswith(("+++", "---")):
-                lines.append(self._c(line.rstrip(), self.BOLD))
+            if line.startswith("+++"):
+                lines.append(self._c(line.rstrip(), self.BOLD, self.GREEN))
+            elif line.startswith("---"):
+                lines.append(self._c(line.rstrip(), self.BOLD, self.RED))
             elif line.startswith("@@"):
-                lines.append(self._c(line.rstrip(), self.CYAN))
+                # Highlight line number ranges
+                lines.append(self._c(line.rstrip(), self.CYAN, self.BOLD))
             elif line.startswith("+"):
-                lines.append(self._c(line.rstrip(), self.GREEN))
+                # Green for additions with subtle background
+                content = line.rstrip()
+                if len(content) > 1:
+                    lines.append(
+                        f"{self._c('+', self.GREEN, self.BOLD)} {self._c(content[1:], self.GREEN)}"
+                    )
+                else:
+                    lines.append(self._c(content, self.GREEN))
             elif line.startswith("-"):
-                lines.append(self._c(line.rstrip(), self.RED))
+                # Red for deletions with subtle background
+                content = line.rstrip()
+                if len(content) > 1:
+                    lines.append(
+                        f"{self._c('-', self.RED, self.BOLD)} {self._c(content[1:], self.RED)}"
+                    )
+                else:
+                    lines.append(self._c(content, self.RED))
             else:
-                lines.append(line.rstrip())
+                # Context lines - dimmed
+                lines.append(self._c(line.rstrip(), self.DIM))
 
         return lines
 
