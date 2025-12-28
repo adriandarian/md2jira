@@ -382,6 +382,23 @@ Environment Variables:
         help="In transactional mode, continue on errors and attempt partial rollback",
     )
 
+    # Idempotency
+    parser.add_argument(
+        "--idempotent",
+        action="store_true",
+        help="Enable idempotency checks: skip operations that would not change anything",
+    )
+    parser.add_argument(
+        "--check-idempotency",
+        action="store_true",
+        help="Analyze and report what operations are needed vs what can be skipped",
+    )
+    parser.add_argument(
+        "--strict-compare",
+        action="store_true",
+        help="Use strict content comparison (no normalization) for idempotency checks",
+    )
+
     # Special modes
     parser.add_argument(
         "--init", action="store_true", help="Run first-time setup wizard to configure spectra"

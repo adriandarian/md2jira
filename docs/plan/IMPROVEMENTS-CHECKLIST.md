@@ -712,7 +712,7 @@ For each new tracker adapter, follow this checklist:
 - [x] **Multi-Tracker Sync** - Sync same markdown to multiple trackers simultaneously
 - [x] **Smart Merge Conflicts** - 3-way merge for conflicts
 - [x] **Transactional Behavior** - All-or-nothing mode with rollback
-- [ ] **Idempotency Guarantees** - Ensure re-running produces no unintended edits
+- [x] **Idempotency Guarantees** - Ensure re-running produces no unintended edits
 
 ### Data Sync
 - [ ] **Attachment Sync** - Upload/download attachments between markdown and trackers
