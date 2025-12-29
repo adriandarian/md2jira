@@ -715,7 +715,7 @@ For each new tracker adapter, follow this checklist:
 - [x] **Idempotency Guarantees** - Ensure re-running produces no unintended edits
 
 ### Data Sync
-- [ ] **Attachment Sync** - Upload/download attachments between markdown and trackers
+- [x] **Attachment Sync** - Upload/download attachments between markdown and trackers
 - [ ] **Custom Field Mapping** - Map custom fields per tracker (via config)
 - [ ] **Time Tracking Sync** - Parse/sync time estimates and logged time
 - [ ] **Sprint/Iteration Sync** - Parse and sync sprint assignments

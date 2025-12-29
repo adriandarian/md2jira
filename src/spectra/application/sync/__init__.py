@@ -2,6 +2,18 @@
 Sync Module - Orchestration of synchronization between markdown and issue tracker.
 """
 
+from .attachments import (
+    Attachment,
+    AttachmentExtractor,
+    AttachmentStatus,
+    AttachmentStore,
+    AttachmentSyncConfig,
+    AttachmentSyncDirection,
+    AttachmentSyncer,
+    AttachmentSyncResult,
+    extract_attachments_from_markdown,
+    sync_attachments,
+)
 from .audit import AuditEntry, AuditTrail, AuditTrailRecorder, create_audit_trail
 from .backup import (
     Backup,
@@ -146,6 +158,14 @@ except ImportError:
 
 __all__ = [
     "PARALLEL_AVAILABLE",
+    "Attachment",
+    "AttachmentExtractor",
+    "AttachmentStatus",
+    "AttachmentStore",
+    "AttachmentSyncConfig",
+    "AttachmentSyncDirection",
+    "AttachmentSyncResult",
+    "AttachmentSyncer",
     "AuditEntry",
     "AuditTrail",
     "AuditTrailRecorder",
@@ -246,8 +266,10 @@ __all__ = [
     "create_snapshot_from_sync",
     "create_transactional_sync",
     "detect_sync_conflicts",
+    "extract_attachments_from_markdown",
     "is_content_unchanged",
     "resolve_conflict_with_merge",
     "restore_from_backup",
     "stories_differ",
+    "sync_attachments",
 ]

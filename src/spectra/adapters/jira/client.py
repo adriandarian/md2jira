@@ -543,3 +543,157 @@ class JiraApiClient:
     ) -> None:
         """Context manager exit - closes the client."""
         self.close()
+
+    # -------------------------------------------------------------------------
+    # Attachment Operations
+    # -------------------------------------------------------------------------
+
+    def get_issue_attachments(self, issue_key: str) -> list[dict[str, Any]]:
+        """
+        Get all attachments for an issue.
+
+        Args:
+            issue_key: Issue key (e.g., "PROJ-123")
+
+        Returns:
+            List of attachment dictionaries
+        """
+        issue = self.get(f"issue/{issue_key}", params={"fields": "attachment"})
+        fields = issue.get("fields", {})
+        attachments = fields.get("attachment", [])
+        return list(attachments) if isinstance(attachments, list) else []
+
+    def upload_attachment(
+        self,
+        issue_key: str,
+        file_path: str,
+        name: str | None = None,
+    ) -> dict[str, Any]:
+        """
+        Upload a file attachment to an issue.
+
+        Args:
+            issue_key: Issue key (e.g., "PROJ-123")
+            file_path: Path to file to upload
+            name: Optional attachment name (defaults to filename)
+
+        Returns:
+            Attachment information dictionary
+
+        Raises:
+            NotFoundError: If file doesn't exist
+            IssueTrackerError: On upload failure
+        """
+        from pathlib import Path
+
+        file_path_obj = Path(file_path)
+        if not file_path_obj.exists():
+            raise NotFoundError(f"File not found: {file_path}")
+
+        if self.dry_run:
+            self.logger.info(f"[DRY-RUN] Would upload attachment {file_path} to issue {issue_key}")
+            return {"id": "attachment:dry-run", "filename": name or file_path_obj.name}
+
+        attachment_name = name or file_path_obj.name
+        url = f"{self.api_url}/issue/{issue_key}/attachments"
+
+        # Apply rate limiting
+        if self._rate_limiter is not None:
+            self._rate_limiter.acquire()
+
+        try:
+            # Open file and upload using multipart/form-data
+            # Jira requires X-Atlassian-Token: no-check header for file uploads
+            with open(file_path_obj, "rb") as f:
+                files = {"file": (attachment_name, f)}
+                headers = dict(self._session.headers)
+                headers.pop("Content-Type", None)  # Remove for multipart
+                headers["X-Atlassian-Token"] = "no-check"
+
+                response = self._session.post(
+                    url,
+                    files=files,
+                    headers=headers,
+                    timeout=self.timeout,
+                )
+
+            if not response.ok:
+                self._handle_error(response, f"issue/{issue_key}/attachments")
+
+            result = response.json()
+            # Jira returns a list of attachments
+            if isinstance(result, list) and len(result) > 0:
+                return dict(result[0])
+            return {"id": "unknown", "filename": attachment_name}
+
+        except requests.RequestException as e:
+            raise IssueTrackerError(f"Failed to upload attachment: {e}")
+
+    def download_attachment(
+        self,
+        attachment_id: str,
+        download_url: str,
+        download_path: str,
+    ) -> bool:
+        """
+        Download an attachment to a local file.
+
+        Args:
+            attachment_id: Attachment ID
+            download_url: URL to download the attachment
+            download_path: Path to save the file
+
+        Returns:
+            True if successful
+        """
+        from pathlib import Path
+
+        if self.dry_run:
+            self.logger.info(
+                f"[DRY-RUN] Would download attachment {attachment_id} to {download_path}"
+            )
+            return True
+
+        # Apply rate limiting
+        if self._rate_limiter is not None:
+            self._rate_limiter.acquire()
+
+        try:
+            response = self._session.get(download_url, stream=True, timeout=self.timeout)
+            response.raise_for_status()
+
+            file_path = Path(download_path)
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+
+            with open(file_path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+
+            self.logger.info(f"Downloaded attachment {attachment_id} to {download_path}")
+            return True
+
+        except requests.RequestException as e:
+            self.logger.error(f"Failed to download attachment: {e}")
+            return False
+
+    def delete_attachment(self, attachment_id: str) -> bool:
+        """
+        Delete an attachment by ID.
+
+        Args:
+            attachment_id: Attachment ID
+
+        Returns:
+            True if successful
+        """
+        if self.dry_run:
+            self.logger.info(f"[DRY-RUN] Would delete attachment {attachment_id}")
+            return True
+
+        try:
+            self.delete(f"attachment/{attachment_id}")
+            self.logger.info(f"Deleted attachment {attachment_id}")
+            return True
+        except IssueTrackerError as e:
+            self.logger.error(f"Failed to delete attachment: {e}")
+            return False

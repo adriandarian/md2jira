@@ -970,3 +970,115 @@ class JiraAdapter(IssueTrackerPort):
             dry_run=self._dry_run,
             formatter=self.formatter,
         )
+
+    # -------------------------------------------------------------------------
+    # Attachment Operations
+    # -------------------------------------------------------------------------
+
+    def get_issue_attachments(self, issue_key: str) -> list[dict[str, Any]]:
+        """
+        Get all file attachments for an issue.
+
+        Args:
+            issue_key: Issue key (e.g., "PROJ-123")
+
+        Returns:
+            List of attachment dictionaries with id, filename, url, size, etc.
+        """
+        raw_attachments = self._client.get_issue_attachments(issue_key)
+        return [
+            {
+                "id": str(a.get("id", "")),
+                "name": a.get("filename", ""),
+                "filename": a.get("filename", ""),
+                "url": a.get("content", ""),
+                "self": a.get("self", ""),
+                "size": a.get("size", 0),
+                "mime_type": a.get("mimeType", ""),
+                "created": a.get("created"),
+                "author": a.get("author", {}).get("displayName", ""),
+            }
+            for a in raw_attachments
+        ]
+
+    def upload_attachment(
+        self,
+        issue_key: str,
+        file_path: str,
+        name: str | None = None,
+    ) -> dict[str, Any]:
+        """
+        Upload a file attachment to an issue.
+
+        Args:
+            issue_key: Issue key (e.g., "PROJ-123")
+            file_path: Path to local file to upload
+            name: Optional display name (defaults to filename)
+
+        Returns:
+            Attachment information dictionary
+        """
+        if self._dry_run:
+            self.logger.info(f"[DRY-RUN] Would upload attachment {file_path} to {issue_key}")
+            return {"id": "attachment:dry-run", "filename": name or file_path}
+
+        result = self._client.upload_attachment(issue_key, file_path, name)
+        self.logger.info(f"Uploaded attachment to {issue_key}: {result.get('filename')}")
+        return result
+
+    def download_attachment(
+        self,
+        issue_key: str,
+        attachment_id: str,
+        download_path: str,
+    ) -> bool:
+        """
+        Download an attachment to a local file.
+
+        Args:
+            issue_key: Issue key (for context, not strictly needed for Jira)
+            attachment_id: Attachment ID
+            download_path: Path to save the file
+
+        Returns:
+            True if successful
+        """
+        if self._dry_run:
+            self.logger.info(
+                f"[DRY-RUN] Would download attachment {attachment_id} to {download_path}"
+            )
+            return True
+
+        # Get attachment info to find download URL
+        attachments = self.get_issue_attachments(issue_key)
+        attachment = next((a for a in attachments if a["id"] == attachment_id), None)
+        if not attachment:
+            self.logger.error(f"Attachment {attachment_id} not found on {issue_key}")
+            return False
+
+        download_url = attachment.get("url", "")
+        if not download_url:
+            self.logger.error(f"No download URL for attachment {attachment_id}")
+            return False
+
+        return self._client.download_attachment(attachment_id, download_url, download_path)
+
+    def delete_attachment(self, issue_key: str, attachment_id: str) -> bool:
+        """
+        Delete a file attachment from an issue.
+
+        Args:
+            issue_key: Issue key (for logging, not strictly needed for Jira)
+            attachment_id: Attachment ID to delete
+
+        Returns:
+            True if successful
+        """
+        if self._dry_run:
+            self.logger.info(f"[DRY-RUN] Would delete attachment {attachment_id} from {issue_key}")
+            return True
+
+        success = self._client.delete_attachment(attachment_id)
+        if success:
+            self.logger.info(f"Deleted attachment {attachment_id} from {issue_key}")
+        return success

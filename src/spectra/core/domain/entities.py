@@ -130,6 +130,9 @@ class UserStory:
     commits: list[CommitRef] = field(default_factory=list)
     comments: list[Comment] = field(default_factory=list)
 
+    # Attachments (file references)
+    attachments: list[str] = field(default_factory=list)  # List of file paths
+
     # Links to other issues (cross-project linking)
     links: list[tuple[str, str]] = field(default_factory=list)  # [(link_type, target_key), ...]
 
@@ -208,6 +211,7 @@ class UserStory:
             "subtasks": [st.to_dict() for st in self.subtasks],
             "commits": [{"hash": c.hash, "message": c.message} for c in self.commits],
             "comments": [c.to_dict() for c in self.comments],
+            "attachments": self.attachments,
             "links": [{"type": link_type, "target": target} for link_type, target in self.links],
             "external_key": str(self.external_key) if self.external_key else None,
         }

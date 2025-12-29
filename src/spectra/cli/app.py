@@ -767,6 +767,40 @@ Environment Variables:
         help="Name of primary tracker for ID generation in multi-tracker mode",
     )
 
+    # Attachment sync options
+    parser.add_argument(
+        "--sync-attachments",
+        action="store_true",
+        help="Sync file attachments between markdown and tracker",
+    )
+    parser.add_argument(
+        "--attachments-dir",
+        type=str,
+        metavar="DIR",
+        default="attachments",
+        help="Directory for downloaded attachments (default: attachments)",
+    )
+    parser.add_argument(
+        "--attachment-direction",
+        type=str,
+        choices=["upload", "download", "bidirectional"],
+        default="upload",
+        help="Attachment sync direction (default: upload)",
+    )
+    parser.add_argument(
+        "--skip-existing-attachments",
+        action="store_true",
+        default=True,
+        help="Skip attachments that already exist at target (default: True)",
+    )
+    parser.add_argument(
+        "--attachment-max-size",
+        type=int,
+        metavar="BYTES",
+        default=50 * 1024 * 1024,
+        help="Maximum attachment size in bytes (default: 50MB)",
+    )
+
     # New CLI commands
     new_commands = parser.add_argument_group("Commands")
     new_commands.add_argument("--doctor", action="store_true", help="Diagnose common setup issues")
@@ -2827,6 +2861,150 @@ def run_bidirectional_sync(args) -> int:
     return ExitCode.SUCCESS if result.success else ExitCode.ERROR
 
 
+def run_attachment_sync(args) -> int:
+    """
+    Run attachment sync between markdown and issue tracker.
+
+    Uploads local attachments to tracker and/or downloads remote attachments.
+
+    Args:
+        args: Parsed command-line arguments.
+
+    Returns:
+        Exit code (0 for success, 1 for errors).
+    """
+    from spectra.application.sync.attachments import (
+        AttachmentSyncConfig,
+        AttachmentSyncDirection,
+        AttachmentSyncer,
+        extract_attachments_from_markdown,
+    )
+
+    console = Console(
+        verbose=args.verbose,
+        json_mode=getattr(args, "output", "text") == "json",
+    )
+
+    console.header("Attachment Sync")
+
+    # Validate required arguments
+    if not args.input:
+        console.error("--input/-f is required for attachment sync")
+        return ExitCode.FILE_NOT_FOUND
+
+    if not args.epic:
+        console.error("--epic/-e is required for attachment sync")
+        return ExitCode.ERROR
+
+    markdown_path = Path(args.input)
+    if not markdown_path.exists():
+        console.error(f"File not found: {markdown_path}")
+        return ExitCode.FILE_NOT_FOUND
+
+    # Load config and create adapter
+    config_provider = EnvironmentConfigProvider()
+    try:
+        tracker_config = config_provider.get_tracker_config()
+    except Exception as e:
+        console.error(f"Failed to load configuration: {e}")
+        return ExitCode.CONFIG_ERROR
+
+    dry_run = not args.execute
+    adapter = JiraAdapter(tracker_config, dry_run=dry_run)
+
+    # Test connection
+    if not adapter.test_connection():
+        console.error("Failed to connect to Jira")
+        return ExitCode.CONNECTION_ERROR
+
+    # Parse markdown to get stories
+    parser = MarkdownParser()
+    stories = parser.parse_stories(markdown_path)
+
+    if not stories:
+        console.warning("No stories found in markdown file")
+        return ExitCode.SUCCESS
+
+    console.info(f"Found {len(stories)} stories in {markdown_path.name}")
+
+    # Configure attachment sync
+    direction_map = {
+        "upload": AttachmentSyncDirection.UPLOAD,
+        "download": AttachmentSyncDirection.DOWNLOAD,
+        "bidirectional": AttachmentSyncDirection.BIDIRECTIONAL,
+    }
+
+    config = AttachmentSyncConfig(
+        direction=direction_map.get(args.attachment_direction, AttachmentSyncDirection.UPLOAD),
+        dry_run=dry_run,
+        attachments_dir=args.attachments_dir,
+        skip_existing=args.skip_existing_attachments,
+        max_file_size=args.attachment_max_size,
+    )
+
+    syncer = AttachmentSyncer(adapter, config)
+
+    # Extract attachments from markdown
+    local_attachments = extract_attachments_from_markdown(markdown_path)
+    console.info(f"Found {len(local_attachments)} attachments in markdown")
+
+    if not local_attachments and config.direction == AttachmentSyncDirection.UPLOAD:
+        console.warning("No attachments to upload")
+        return ExitCode.SUCCESS
+
+    # Sync attachments for each story
+    total_uploaded = 0
+    total_downloaded = 0
+    total_skipped = 0
+    total_errors = 0
+
+    for story in stories:
+        issue_key = str(story.external_key) if story.external_key else None
+        if not issue_key:
+            # Try to find by title match in epic
+            console.warning(f"No external key for story {story.id}, skipping attachments")
+            continue
+
+        # Get attachments for this story (simplified: all attachments apply to all stories)
+        result = syncer.sync_story_attachments(
+            story_id=str(story.id),
+            issue_key=issue_key,
+            local_attachments=local_attachments,
+            markdown_path=markdown_path,
+        )
+
+        total_uploaded += result.total_uploaded
+        total_downloaded += result.total_downloaded
+        total_skipped += len(result.skipped)
+        total_errors += len(result.errors)
+
+        if result.uploaded:
+            for att in result.uploaded:
+                console.item(f"{att.filename} → {issue_key}", "success")
+
+        if result.downloaded:
+            for att in result.downloaded:
+                console.item(f"{issue_key} → {att.local_path}", "success")
+
+        if result.errors:
+            for att, error in result.errors:
+                console.item(f"{att.filename}: {error}", "fail")
+
+    # Summary
+    console.print()
+    console.section("Summary")
+    if dry_run:
+        console.info(f"{Symbols.DRY_RUN} DRY RUN - no changes made")
+    console.info(f"Uploaded: {total_uploaded}")
+    console.info(f"Downloaded: {total_downloaded}")
+    console.info(f"Skipped: {total_skipped}")
+    if total_errors > 0:
+        console.error(f"Errors: {total_errors}")
+        return ExitCode.ERROR
+
+    return ExitCode.SUCCESS
+
+
 def run_sync(
     console: Console,
     args: argparse.Namespace,
@@ -3572,6 +3750,12 @@ def main() -> int:
                 "--sync-links and --analyze-links require --input/-i and --epic/-e to be specified"
             )
         return run_sync_links(args)
+
+    # Handle attachment sync
+    if args.sync_attachments:
+        if not args.input or not args.epic:
+            parser.error("--sync-attachments requires --input/-f and --epic/-e to be specified")
+        return run_attachment_sync(args)
 
     # Handle resume-session (loads args from session)
     if args.resume_session:

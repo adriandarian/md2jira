@@ -461,3 +461,74 @@ class IssueTrackerPort(ABC):
             List of link type definitions
         """
         return []
+
+    # -------------------------------------------------------------------------
+    # Attachment Operations (Optional - default implementations provided)
+    # -------------------------------------------------------------------------
+
+    def get_issue_attachments(self, issue_key: str) -> list[dict[str, Any]]:
+        """
+        Get all file attachments for an issue.
+
+        Args:
+            issue_key: Issue to get attachments for
+
+        Returns:
+            List of attachment dictionaries with id, name, url, size, etc.
+        """
+        return []
+
+    def upload_attachment(
+        self,
+        issue_key: str,
+        file_path: str,
+        name: str | None = None,
+    ) -> dict[str, Any]:
+        """
+        Upload a file attachment to an issue.
+
+        Args:
+            issue_key: Issue to attach file to
+            file_path: Path to local file to upload
+            name: Optional display name (defaults to filename)
+
+        Returns:
+            Attachment information dictionary with id, url, etc.
+
+        Raises:
+            NotFoundError: If file doesn't exist
+            IssueTrackerError: On upload failure
+        """
+        raise NotImplementedError(f"{self.name} does not support attachments")
+
+    def download_attachment(
+        self,
+        issue_key: str,
+        attachment_id: str,
+        download_path: str,
+    ) -> bool:
+        """
+        Download an attachment to a local file.
+
+        Args:
+            issue_key: Issue the attachment belongs to
+            attachment_id: Attachment ID to download
+            download_path: Path to save the file
+
+        Returns:
+            True if successful
+        """
+        return False
+
+    def delete_attachment(self, issue_key: str, attachment_id: str) -> bool:
+        """
+        Delete a file attachment from an issue.
+
+        Args:
+            issue_key: Issue the attachment belongs to
+            attachment_id: Attachment ID to delete
+
+        Returns:
+            True if successful
+        """
+        return False
