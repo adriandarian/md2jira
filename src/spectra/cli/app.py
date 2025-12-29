@@ -959,6 +959,28 @@ Environment Variables:
         help="Display epic hierarchy as a tree",
     )
 
+    # Workflow automation options
+    parser.add_argument(
+        "--apply-workflow",
+        action="store_true",
+        help="Apply workflow automation rules (auto-complete stories, etc.)",
+    )
+    parser.add_argument(
+        "--auto-complete",
+        action="store_true",
+        help="Auto-complete parent when all children done",
+    )
+    parser.add_argument(
+        "--auto-start",
+        action="store_true",
+        help="Auto-start parent when any child starts",
+    )
+    parser.add_argument(
+        "--list-workflow-rules",
+        action="store_true",
+        help="List available workflow automation rules",
+    )
+
     # New CLI commands
     new_commands = parser.add_argument_group("Commands")
     new_commands.add_argument("--doctor", action="store_true", help="Diagnose common setup issues")
