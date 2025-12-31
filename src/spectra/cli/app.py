@@ -175,6 +175,15 @@ Examples:
   # Text-based only (no LLM)
   spectra --duplicates -f EPIC.md --no-llm-duplicates
 
+  # AI gap analysis
+  spectra --gaps -f EPIC.md
+
+  # Gap analysis with industry context
+  spectra --gaps -f EPIC.md --industry healthcare --compliance HIPAA,GDPR
+
+  # Gap analysis with expected personas
+  spectra --gaps -f EPIC.md --expected-personas admin,support,guest
+
   # Show status dashboard (static)
   spectra --dashboard -f EPIC.md --epic PROJ-123
 
@@ -1735,6 +1744,40 @@ Environment Variables:
         "--no-llm-duplicates",
         action="store_true",
         help="Use text-based similarity only, skip LLM analysis",
+    )
+    new_commands.add_argument(
+        "--gaps",
+        action="store_true",
+        help="AI-powered gap analysis to identify missing requirements",
+    )
+    new_commands.add_argument(
+        "--industry",
+        type=str,
+        metavar="INDUSTRY",
+        help="Industry context for gap analysis (e.g., healthcare, fintech)",
+    )
+    new_commands.add_argument(
+        "--expected-personas",
+        type=str,
+        metavar="PERSONAS",
+        help="Comma-separated list of expected user personas",
+    )
+    new_commands.add_argument(
+        "--expected-integrations",
+        type=str,
+        metavar="INTEGRATIONS",
+        help="Comma-separated list of expected integrations",
+    )
+    new_commands.add_argument(
+        "--compliance",
+        type=str,
+        metavar="REQS",
+        help="Comma-separated compliance requirements (e.g., GDPR,HIPAA)",
+    )
+    new_commands.add_argument(
+        "--no-suggestions",
+        action="store_true",
+        help="Skip generating story suggestions for gaps",
     )
     new_commands.add_argument(
         "--archive",
@@ -4962,6 +5005,40 @@ def main() -> int:
             min_similarity=getattr(args, "min_similarity", 0.40),
             use_llm=not getattr(args, "no_llm_duplicates", False),
             project_context=getattr(args, "project_context", None),
+            output_format=getattr(args, "output", "text") or "text",
+        )
+
+    # Handle gaps command (AI gap analysis)
+    if getattr(args, "gaps", False):
+        from .ai_gap import run_ai_gap
+
+        console = Console(
+            color=not getattr(args, "no_color", False),
+            verbose=getattr(args, "verbose", False),
+        )
+
+        # Parse comma-separated lists
+        expected_personas = None
+        if getattr(args, "expected_personas", None):
+            expected_personas = [p.strip() for p in args.expected_personas.split(",")]
+
+        expected_integrations = None
+        if getattr(args, "expected_integrations", None):
+            expected_integrations = [i.strip() for i in args.expected_integrations.split(",")]
+
+        compliance = None
+        if getattr(args, "compliance", None):
+            compliance = [c.strip() for c in args.compliance.split(",")]
+
+        return run_ai_gap(
+            console=console,
+            markdown_path=args.input or getattr(args, "markdown", None),
+            project_context=getattr(args, "project_context", None),
+            industry=getattr(args, "industry", None),
+            expected_personas=expected_personas,
+            expected_integrations=expected_integrations,
+            compliance=compliance,
+            no_suggestions=getattr(args, "no_suggestions", False),
             output_format=getattr(args, "output", "text") or "text",
         )
 
