@@ -68,7 +68,7 @@ class TestDetectedTool:
     def test_display_name(self):
         """Test display_name property."""
         tool = DetectedTool(tool=AITool.CLAUDE, command="claude")
-        assert tool.display_name == "Claude CLI"
+        assert tool.display_name == "Claude Code"
 
         tool = DetectedTool(tool=AITool.OLLAMA, command="ollama")
         assert tool.display_name == "Ollama"
@@ -206,7 +206,7 @@ class TestFormatAIToolsList:
 
         result = format_ai_tools_list(tools, color=False)
 
-        assert "Claude CLI" in result
+        assert "Claude Code" in result
         assert "1.0.0" in result
 
     def test_format_multiple_tools(self):
@@ -218,7 +218,7 @@ class TestFormatAIToolsList:
 
         result = format_ai_tools_list(tools)
 
-        assert "Claude CLI" in result
+        assert "Claude Code" in result
         assert "Ollama" in result
 
 

@@ -19,14 +19,28 @@ from .output import Colors, Console, Symbols
 class AITool(Enum):
     """Supported AI CLI tools."""
 
-    CLAUDE = "claude"  # Anthropic Claude CLI
+    # Major AI provider CLIs
+    CLAUDE = "claude"  # Anthropic Claude CLI (claude.ai/code)
+    GEMINI = "gemini"  # Google Gemini CLI (@google/gemini-cli)
+    CODEX = "codex"  # OpenAI Codex CLI
+
+    # Local model tools
     OLLAMA = "ollama"  # Ollama local models
+
+    # GitHub ecosystem
     GH_COPILOT = "gh copilot"  # GitHub Copilot CLI (gh extension)
     COPILOT = "copilot"  # GitHub Copilot CLI (standalone npm package)
+
+    # Coding assistants
     AIDER = "aider"  # Aider coding assistant
+    GOOSE = "goose"  # Block's Goose AI agent
+    CODY = "cody"  # Sourcegraph Cody CLI
+
+    # General LLM CLI tools
     SGPT = "sgpt"  # Shell GPT
     LLM = "llm"  # Simon Willison's LLM CLI
     MODS = "mods"  # Charmbracelet mods
+    FABRIC = "fabric"  # Daniel Miessler's Fabric
 
 
 @dataclass
@@ -42,14 +56,19 @@ class DetectedTool:
     def display_name(self) -> str:
         """Get human-readable name."""
         names = {
-            AITool.CLAUDE: "Claude CLI",
+            AITool.CLAUDE: "Claude Code",
+            AITool.GEMINI: "Gemini CLI",
+            AITool.CODEX: "OpenAI Codex CLI",
             AITool.OLLAMA: "Ollama",
             AITool.GH_COPILOT: "GitHub Copilot (gh extension)",
             AITool.COPILOT: "GitHub Copilot CLI",
             AITool.AIDER: "Aider",
+            AITool.GOOSE: "Goose (Block)",
+            AITool.CODY: "Sourcegraph Cody",
             AITool.SGPT: "Shell GPT",
             AITool.LLM: "LLM CLI",
             AITool.MODS: "Mods",
+            AITool.FABRIC: "Fabric",
         }
         return names.get(self.tool, self.tool.value)
 
@@ -125,6 +144,31 @@ def detect_ai_tools() -> list[DetectedTool]:
     if shutil.which("mods"):
         version = _get_version("mods", ["--version"])
         detected.append(DetectedTool(AITool.MODS, "mods", version))
+
+    # Check for Gemini CLI (Google)
+    if shutil.which("gemini"):
+        version = _get_version("gemini", ["--version"])
+        detected.append(DetectedTool(AITool.GEMINI, "gemini", version))
+
+    # Check for OpenAI Codex CLI
+    if shutil.which("codex"):
+        version = _get_version("codex", ["--version"])
+        detected.append(DetectedTool(AITool.CODEX, "codex", version))
+
+    # Check for Goose (Block's AI agent)
+    if shutil.which("goose"):
+        version = _get_version("goose", ["--version"])
+        detected.append(DetectedTool(AITool.GOOSE, "goose", version))
+
+    # Check for Sourcegraph Cody
+    if shutil.which("cody"):
+        version = _get_version("cody", ["--version"])
+        detected.append(DetectedTool(AITool.CODY, "cody", version))
+
+    # Check for Fabric (Daniel Miessler's tool)
+    if shutil.which("fabric"):
+        version = _get_version("fabric", ["--version"])
+        detected.append(DetectedTool(AITool.FABRIC, "fabric", version))
 
     return detected
 
@@ -436,6 +480,41 @@ def build_ai_command(
             "GitHub Copilot CLI will analyze and suggest fixes",
         )
 
+    if tool.tool == AITool.GEMINI:
+        # Gemini CLI: gemini "prompt" or pipe content
+        return (
+            ["sh", "-c", f'cat "{file_path}" | gemini "{prompt}"'],
+            "Gemini CLI will process and output the fixed content",
+        )
+
+    if tool.tool == AITool.CODEX:
+        # OpenAI Codex CLI
+        return (
+            ["sh", "-c", f'cat "{file_path}" | codex "{prompt}"'],
+            "OpenAI Codex CLI will process and output the fixed content",
+        )
+
+    if tool.tool == AITool.GOOSE:
+        # Goose (Block's AI agent): goose run "prompt"
+        return (
+            ["goose", "run", prompt, "--file", file_path],
+            "Goose will analyze and fix the file",
+        )
+
+    if tool.tool == AITool.CODY:
+        # Sourcegraph Cody CLI
+        return (
+            ["sh", "-c", f'cat "{file_path}" | cody chat "{prompt}"'],
+            "Cody will process and output the fixed content",
+        )
+
+    if tool.tool == AITool.FABRIC:
+        # Fabric: cat file | fabric --pattern "prompt"
+        return (
+            ["sh", "-c", f'cat "{file_path}" | fabric -p "{prompt}"'],
+            "Fabric will process using its patterns",
+        )
+
     # Fallback
     return (["echo", "Unsupported tool"], "Unsupported tool")
 
@@ -643,22 +722,36 @@ def format_fix_suggestion(
     # No tools detected, suggest installing one
     elif color:
         lines.append(f"{Colors.BOLD}Option 3: Install an AI CLI tool for auto-fix{Colors.RESET}")
-        lines.append(f"  {Colors.DIM}Supported tools:{Colors.RESET}")
-        lines.append(f"  {Colors.DIM}  • claude (Anthropic): pip install anthropic{Colors.RESET}")
+        lines.append(f"  {Colors.DIM}Major AI CLIs:{Colors.RESET}")
+        lines.append(f"  {Colors.DIM}  • claude: npm i -g @anthropic-ai/claude-code{Colors.RESET}")
+        lines.append(f"  {Colors.DIM}  • gemini: npm i -g @google/gemini-cli{Colors.RESET}")
+        lines.append(f"  {Colors.DIM}  • codex: npm i -g @openai/codex{Colors.RESET}")
+        lines.append(f"  {Colors.DIM}Local models:{Colors.RESET}")
         lines.append(f"  {Colors.DIM}  • ollama: https://ollama.ai{Colors.RESET}")
+        lines.append(f"  {Colors.DIM}Coding assistants:{Colors.RESET}")
         lines.append(f"  {Colors.DIM}  • aider: pip install aider-chat{Colors.RESET}")
+        lines.append(f"  {Colors.DIM}  • goose: pip install goose-ai{Colors.RESET}")
         lines.append(
             f"  {Colors.DIM}  • gh copilot: gh extension install github/gh-copilot{Colors.RESET}"
         )
+        lines.append(f"  {Colors.DIM}LLM tools:{Colors.RESET}")
         lines.append(f"  {Colors.DIM}  • llm: pip install llm{Colors.RESET}")
+        lines.append(f"  {Colors.DIM}  • fabric: pip install fabric-ai{Colors.RESET}")
     else:
         lines.append("Option 3: Install an AI CLI tool for auto-fix")
-        lines.append("  Supported tools:")
-        lines.append("    • claude (Anthropic): pip install anthropic")
+        lines.append("  Major AI CLIs:")
+        lines.append("    • claude: npm i -g @anthropic-ai/claude-code")
+        lines.append("    • gemini: npm i -g @google/gemini-cli")
+        lines.append("    • codex: npm i -g @openai/codex")
+        lines.append("  Local models:")
         lines.append("    • ollama: https://ollama.ai")
+        lines.append("  Coding assistants:")
         lines.append("    • aider: pip install aider-chat")
+        lines.append("    • goose: pip install goose-ai")
         lines.append("    • gh copilot: gh extension install github/gh-copilot")
+        lines.append("  LLM tools:")
         lines.append("    • llm: pip install llm")
+        lines.append("    • fabric: pip install fabric-ai")
 
     return "\n".join(lines)
 
