@@ -735,7 +735,7 @@ For each new tracker adapter, follow this checklist:
 - [x] **Native LLM Integration** - Direct Anthropic/OpenAI/Google API integration
 - [x] **LLM Provider Abstraction** - Support multiple LLM providers + local models
 - [x] **AI Story Generation** - Generate stories from high-level descriptions
-- [ ] **AI Story Refiner** - Analyze stories for ambiguity or missing AC
+- [x] **AI Story Refiner** - Analyze stories for ambiguity or missing AC
 - [ ] **AI Estimation** - Suggest story points based on complexity
 - [ ] **AI Labeling/Auto-categorization** - Suggest labels/categories based on content
 - [ ] **Smart Splitting** - AI suggests splitting large stories

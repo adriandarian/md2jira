@@ -70,6 +70,18 @@ Examples:
   # AI story generation with detailed style
   spectra --generate-stories --description "Implement checkout flow" --generation-style detailed --max-stories 8
 
+  # AI story refinement - analyze stories for quality issues
+  spectra --refine -f EPIC.md
+
+  # AI story refinement with context
+  spectra --refine -f EPIC.md --project-context "E-commerce platform" --tech-stack "React, Node.js"
+
+  # AI story refinement for specific stories only
+  spectra --refine -f EPIC.md --refine-story US-001,US-002
+
+  # AI story refinement with stricter requirements
+  spectra --refine -f EPIC.md --min-ac 3 --max-sp 8
+
   # Show status dashboard (static)
   spectra --dashboard -f EPIC.md --epic PROJ-123
 
@@ -1345,6 +1357,46 @@ Environment Variables:
         type=str,
         metavar="FILE",
         help="Output file for generated stories (default: stdout)",
+    )
+    new_commands.add_argument(
+        "--refine",
+        action="store_true",
+        help="AI-powered story quality analysis (ambiguity, missing AC, etc.)",
+    )
+    new_commands.add_argument(
+        "--refine-story",
+        type=str,
+        metavar="IDS",
+        help="Comma-separated story IDs to analyze (default: all stories)",
+    )
+    new_commands.add_argument(
+        "--no-check-ambiguity",
+        action="store_true",
+        help="Skip ambiguity checks in refinement",
+    )
+    new_commands.add_argument(
+        "--no-check-ac",
+        action="store_true",
+        help="Skip acceptance criteria checks in refinement",
+    )
+    new_commands.add_argument(
+        "--no-check-scope",
+        action="store_true",
+        help="Skip scope/size checks in refinement",
+    )
+    new_commands.add_argument(
+        "--min-ac",
+        type=int,
+        default=2,
+        metavar="N",
+        help="Minimum acceptance criteria required (default: 2)",
+    )
+    new_commands.add_argument(
+        "--max-sp",
+        type=int,
+        default=13,
+        metavar="N",
+        help="Maximum story points before suggesting split (default: 13)",
     )
     new_commands.add_argument(
         "--archive",
@@ -4347,6 +4399,37 @@ def main() -> int:
             output_file=getattr(args, "generation_output", None),
             output_format=getattr(args, "output", "text") or "text",
             dry_run=not getattr(args, "execute", False),
+        )
+
+    # Handle refine command (AI story quality analysis)
+    if getattr(args, "refine", False) or getattr(args, "refine_story", None):
+        from .ai_refine import run_ai_refine
+
+        console = Console(
+            color=not getattr(args, "no_color", False),
+            verbose=getattr(args, "verbose", False),
+        )
+
+        story_ids = None
+        if getattr(args, "refine_story", None):
+            story_ids = [s.strip() for s in args.refine_story.split(",")]
+
+        return run_ai_refine(
+            console=console,
+            markdown_path=args.input or getattr(args, "markdown", None),
+            story_ids=story_ids,
+            check_ambiguity=not getattr(args, "no_check_ambiguity", False),
+            check_acceptance_criteria=not getattr(args, "no_check_ac", False),
+            check_testability=True,
+            check_scope=not getattr(args, "no_check_scope", False),
+            check_estimation=True,
+            generate_ac=True,
+            min_ac=getattr(args, "min_ac", 2),
+            max_story_points=getattr(args, "max_sp", 13),
+            project_context=getattr(args, "project_context", None),
+            tech_stack=getattr(args, "tech_stack", None),
+            output_format=getattr(args, "output", "text") or "text",
+            show_suggestions=True,
         )
 
     # Handle archive command

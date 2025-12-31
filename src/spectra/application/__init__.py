@@ -16,6 +16,16 @@ from .ai_generate import (
     GenerationStyle,
     generate_stories_from_description,
 )
+from .ai_refine import (
+    AIStoryRefiner,
+    IssueCategory,
+    IssueSeverity,
+    QualityIssue,
+    RefinementOptions,
+    RefinementResult,
+    StoryAnalysis,
+    refine_stories,
+)
 from .commands import (
     AddCommentCommand,
     Command,
@@ -86,6 +96,7 @@ from .webhook_multi import (
 
 __all__ = [
     "AIStoryGenerator",
+    "AIStoryRefiner",
     "AddCommentCommand",
     "AzureDevOpsWebhookParser",
     "Command",
@@ -105,6 +116,8 @@ __all__ = [
     "GitLabWebhookParser",
     "HourlySchedule",
     "IntervalSchedule",
+    "IssueCategory",
+    "IssueSeverity",
     "JiraWebhookParser",
     "LinearWebhookParser",
     "MultiTrackerEvent",
@@ -117,12 +130,16 @@ __all__ = [
     "NotificationManager",
     "NotificationProvider",
     "NotificationType",
+    "QualityIssue",
+    "RefinementOptions",
+    "RefinementResult",
     "Schedule",
     "ScheduleDisplay",
     "ScheduleStats",
     "ScheduleType",
     "ScheduledSyncRunner",
     "SlackNotifier",
+    "StoryAnalysis",
     "SyncOrchestrator",
     "SyncResult",
     "TeamsNotifier",
@@ -146,4 +163,5 @@ __all__ = [
     "create_notification_manager",
     "generate_stories_from_description",
     "parse_schedule",
+    "refine_stories",
 ]
