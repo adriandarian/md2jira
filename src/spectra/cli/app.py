@@ -82,6 +82,21 @@ Examples:
   # AI story refinement with stricter requirements
   spectra --refine -f EPIC.md --min-ac 3 --max-sp 8
 
+  # AI story point estimation
+  spectra --estimate -f EPIC.md
+
+  # AI estimation with context for better accuracy
+  spectra --estimate -f EPIC.md --project-context "Mobile app" --tech-stack "React Native"
+
+  # AI estimation for specific stories
+  spectra --estimate -f EPIC.md --estimate-story US-001,US-002
+
+  # AI estimation with team velocity context
+  spectra --estimate -f EPIC.md --team-velocity 40
+
+  # Apply suggested estimates to file
+  spectra --estimate -f EPIC.md --apply-estimates
+
   # Show status dashboard (static)
   spectra --dashboard -f EPIC.md --epic PROJ-123
 
@@ -1397,6 +1412,47 @@ Environment Variables:
         default=13,
         metavar="N",
         help="Maximum story points before suggesting split (default: 13)",
+    )
+    new_commands.add_argument(
+        "--estimate",
+        action="store_true",
+        help="AI-powered story point estimation based on complexity",
+    )
+    new_commands.add_argument(
+        "--estimate-story",
+        type=str,
+        metavar="IDS",
+        help="Comma-separated story IDs to estimate (default: all stories)",
+    )
+    new_commands.add_argument(
+        "--estimation-scale",
+        type=str,
+        choices=["fibonacci", "linear", "tshirt"],
+        default="fibonacci",
+        metavar="SCALE",
+        help="Estimation scale: fibonacci, linear, tshirt (default: fibonacci)",
+    )
+    new_commands.add_argument(
+        "--team-velocity",
+        type=int,
+        default=0,
+        metavar="N",
+        help="Team velocity (points/sprint) for context",
+    )
+    new_commands.add_argument(
+        "--apply-estimates",
+        action="store_true",
+        help="Apply suggested estimates to the markdown file",
+    )
+    new_commands.add_argument(
+        "--no-complexity",
+        action="store_true",
+        help="Hide complexity breakdown in estimation output",
+    )
+    new_commands.add_argument(
+        "--no-reasoning",
+        action="store_true",
+        help="Hide estimation reasoning in output",
     )
     new_commands.add_argument(
         "--archive",
@@ -4430,6 +4486,33 @@ def main() -> int:
             tech_stack=getattr(args, "tech_stack", None),
             output_format=getattr(args, "output", "text") or "text",
             show_suggestions=True,
+        )
+
+    # Handle estimate command (AI story point estimation)
+    if getattr(args, "estimate", False) or getattr(args, "estimate_story", None):
+        from .ai_estimate import run_ai_estimate
+
+        console = Console(
+            color=not getattr(args, "no_color", False),
+            verbose=getattr(args, "verbose", False),
+        )
+
+        story_ids = None
+        if getattr(args, "estimate_story", None):
+            story_ids = [s.strip() for s in args.estimate_story.split(",")]
+
+        return run_ai_estimate(
+            console=console,
+            markdown_path=args.input or getattr(args, "markdown", None),
+            story_ids=story_ids,
+            scale=getattr(args, "estimation_scale", "fibonacci"),
+            project_context=getattr(args, "project_context", None),
+            tech_stack=getattr(args, "tech_stack", None),
+            team_velocity=getattr(args, "team_velocity", 0),
+            show_complexity=not getattr(args, "no_complexity", False),
+            show_reasoning=not getattr(args, "no_reasoning", False),
+            output_format=getattr(args, "output", "text") or "text",
+            apply_changes=getattr(args, "apply_estimates", False),
         )
 
     # Handle archive command

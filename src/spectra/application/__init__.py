@@ -8,6 +8,16 @@ This layer contains:
 - watch: File watching for auto-sync
 """
 
+from .ai_estimate import (
+    AIEstimator,
+    ComplexityBreakdown,
+    ComplexityFactor,
+    EstimationOptions,
+    EstimationResult,
+    EstimationScale,
+    EstimationSuggestion,
+    estimate_stories,
+)
 from .ai_generate import (
     AIStoryGenerator,
     GeneratedStory,
@@ -95,16 +105,23 @@ from .webhook_multi import (
 
 
 __all__ = [
+    "AIEstimator",
     "AIStoryGenerator",
     "AIStoryRefiner",
     "AddCommentCommand",
     "AzureDevOpsWebhookParser",
     "Command",
     "CommandResult",
+    "ComplexityBreakdown",
+    "ComplexityFactor",
     "CreateSubtaskCommand",
     "CronSchedule",
     "DailySchedule",
     "DiscordNotifier",
+    "EstimationOptions",
+    "EstimationResult",
+    "EstimationScale",
+    "EstimationSuggestion",
     "FileChange",
     "FileWatcher",
     "GeneratedStory",
@@ -161,6 +178,7 @@ __all__ = [
     "WebhookStats",
     "create_multi_tracker_server",
     "create_notification_manager",
+    "estimate_stories",
     "generate_stories_from_description",
     "parse_schedule",
     "refine_stories",
