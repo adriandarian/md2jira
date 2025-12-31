@@ -7,6 +7,7 @@ Provides caching to reduce API calls and improve performance:
 - FileCache: File-based persistent cache
 - RedisCache: Redis-based distributed cache for high-concurrency environments
 - CacheManager: High-level cache management
+- MetadataCache: Smart caching for tracker metadata with aggressive TTLs
 
 Example:
     >>> from spectra.adapters.cache import MemoryCache, CachedClient
@@ -29,6 +30,22 @@ For high-concurrency environments, use RedisCache:
     ...     key_prefix='spectra:',
     ...     default_ttl=300,
     ... )
+
+For smart metadata caching with type-specific TTLs:
+    >>> from spectra.adapters.cache import MetadataCache, MetadataType
+    >>>
+    >>> cache = MetadataCache(tracker="jira")
+    >>>
+    >>> # Cache workflow states (1 hour TTL by default)
+    >>> states = cache.get_or_fetch_states(
+    ...     fetch_fn=lambda: client.get_states(),
+    ... )
+    >>>
+    >>> # Warm up cache at startup
+    >>> cache.warm_up({
+    ...     MetadataType.STATES: lambda: client.get_states(),
+    ...     MetadataType.PRIORITIES: lambda: client.get_priorities(),
+    ... })
 """
 
 from .backend import CacheBackend, CacheEntry, CacheStats
@@ -36,6 +53,14 @@ from .file_cache import FileCache
 from .keys import CacheKeyBuilder
 from .manager import CacheManager
 from .memory import MemoryCache
+from .metadata import (
+    DEFAULT_METADATA_TTLS,
+    MetadataCache,
+    MetadataCacheEntry,
+    MetadataCacheStats,
+    MetadataType,
+    create_metadata_cache,
+)
 
 
 # Redis cache is optional - import only if redis is available
@@ -57,6 +82,13 @@ __all__ = [
     "CacheStats",
     "FileCache",
     "MemoryCache",
+    # Metadata cache exports
+    "DEFAULT_METADATA_TTLS",
+    "MetadataCache",
+    "MetadataCacheEntry",
+    "MetadataCacheStats",
+    "MetadataType",
+    "create_metadata_cache",
     # Redis exports (may be None if redis not installed)
     "RedisCache",
     "create_redis_cache",
