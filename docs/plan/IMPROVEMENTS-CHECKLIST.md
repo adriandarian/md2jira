@@ -738,7 +738,7 @@ For each new tracker adapter, follow this checklist:
 - [x] **AI Story Refiner** - Analyze stories for ambiguity or missing AC
 - [x] **AI Estimation** - Suggest story points based on complexity
 - [x] **AI Labeling/Auto-categorization** - Suggest labels/categories based on content
-- [ ] **Smart Splitting** - AI suggests splitting large stories
+- [x] **Smart Splitting** - AI suggests splitting large stories
 - [ ] **Acceptance Criteria Generation** - AI writes AC from story description
 - [ ] **Dependency Detection** - AI identifies blocked-by relationships
 - [ ] **Story Quality Scoring** - Rate story quality (well-written, testable)

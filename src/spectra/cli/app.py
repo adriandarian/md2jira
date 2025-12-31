@@ -112,6 +112,18 @@ Examples:
   # Apply suggested labels to file
   spectra --label -f EPIC.md --apply-labels
 
+  # AI smart splitting - suggest splitting large stories
+  spectra --split -f EPIC.md
+
+  # Smart splitting with custom thresholds
+  spectra --split -f EPIC.md --max-points 5 --max-ac 6
+
+  # Smart splitting for specific stories
+  spectra --split -f EPIC.md --split-story US-001,US-005
+
+  # Generate markdown for split stories
+  spectra --split -f EPIC.md --generate-markdown
+
   # Show status dashboard (static)
   spectra --dashboard -f EPIC.md --epic PROJ-123
 
@@ -1510,6 +1522,46 @@ Environment Variables:
         "--apply-labels",
         action="store_true",
         help="Apply suggested labels to the markdown file",
+    )
+    new_commands.add_argument(
+        "--split",
+        action="store_true",
+        help="AI-powered analysis to suggest splitting large stories",
+    )
+    new_commands.add_argument(
+        "--split-story",
+        type=str,
+        metavar="IDS",
+        help="Comma-separated story IDs to analyze for splitting (default: all)",
+    )
+    new_commands.add_argument(
+        "--max-points",
+        type=int,
+        default=8,
+        metavar="N",
+        help="Maximum story points before suggesting split (default: 8)",
+    )
+    new_commands.add_argument(
+        "--max-ac",
+        type=int,
+        default=8,
+        metavar="N",
+        help="Maximum acceptance criteria before suggesting split (default: 8)",
+    )
+    new_commands.add_argument(
+        "--no-vertical-slices",
+        action="store_true",
+        help="Don't prefer vertical slices when splitting",
+    )
+    new_commands.add_argument(
+        "--no-mvp-first",
+        action="store_true",
+        help="Don't suggest MVP version first",
+    )
+    new_commands.add_argument(
+        "--generate-markdown",
+        action="store_true",
+        help="Generate markdown for suggested split stories",
     )
     new_commands.add_argument(
         "--archive",
@@ -4605,6 +4657,33 @@ def main() -> int:
             tech_stack=getattr(args, "tech_stack", None),
             output_format=getattr(args, "output", "text") or "text",
             apply_changes=getattr(args, "apply_labels", False),
+        )
+
+    # Handle split command (AI smart splitting)
+    if getattr(args, "split", False) or getattr(args, "split_story", None):
+        from .ai_split import run_ai_split
+
+        console = Console(
+            color=not getattr(args, "no_color", False),
+            verbose=getattr(args, "verbose", False),
+        )
+
+        story_ids = None
+        if getattr(args, "split_story", None):
+            story_ids = [s.strip() for s in args.split_story.split(",")]
+
+        return run_ai_split(
+            console=console,
+            markdown_path=args.input or getattr(args, "markdown", None),
+            story_ids=story_ids,
+            max_points=getattr(args, "max_points", 8),
+            max_ac=getattr(args, "max_ac", 8),
+            prefer_vertical=not getattr(args, "no_vertical_slices", False),
+            prefer_mvp=not getattr(args, "no_mvp_first", False),
+            project_context=getattr(args, "project_context", None),
+            tech_stack=getattr(args, "tech_stack", None),
+            output_format=getattr(args, "output", "text") or "text",
+            generate_markdown=getattr(args, "generate_markdown", False),
         )
 
     # Handle archive command

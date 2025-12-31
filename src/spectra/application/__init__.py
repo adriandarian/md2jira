@@ -45,6 +45,15 @@ from .ai_refine import (
     StoryAnalysis,
     refine_stories,
 )
+from .ai_split import (
+    AIStorySplitter,
+    SplitOptions,
+    SplitReason,
+    SplitResult,
+    SplitStory,
+    SplitSuggestion,
+    suggest_splits,
+)
 from .commands import (
     AddCommentCommand,
     Command,
@@ -118,6 +127,7 @@ __all__ = [
     "AILabeler",
     "AIStoryGenerator",
     "AIStoryRefiner",
+    "AIStorySplitter",
     "AddCommentCommand",
     "AzureDevOpsWebhookParser",
     "Command",
@@ -170,6 +180,11 @@ __all__ = [
     "ScheduleType",
     "ScheduledSyncRunner",
     "SlackNotifier",
+    "SplitOptions",
+    "SplitReason",
+    "SplitResult",
+    "SplitStory",
+    "SplitSuggestion",
     "StoryAnalysis",
     "SuggestedLabel",
     "SyncOrchestrator",
@@ -198,4 +213,5 @@ __all__ = [
     "label_stories",
     "parse_schedule",
     "refine_stories",
+    "suggest_splits",
 ]
