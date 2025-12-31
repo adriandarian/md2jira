@@ -741,7 +741,7 @@ For each new tracker adapter, follow this checklist:
 - [x] **Smart Splitting** - AI suggests splitting large stories
 - [x] **Acceptance Criteria Generation** - AI writes AC from story description
 - [x] **Dependency Detection** - AI identifies blocked-by relationships
-- [ ] **Story Quality Scoring** - Rate story quality (well-written, testable)
+- [x] **Story Quality Scoring** - Rate story quality (well-written, testable)
 - [ ] **Duplicate Detection** - Find similar stories across trackers
 - [ ] **Gap Analysis** - Identify missing requirements
 - [ ] **AI-Generated Sync Summaries** - Human-readable summary of what was synced

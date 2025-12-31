@@ -151,6 +151,18 @@ Examples:
   # Dependency detection with architecture context
   spectra --dependencies -f EPIC.md --architecture microservices
 
+  # AI story quality scoring
+  spectra --quality -f EPIC.md
+
+  # Quality scoring for specific stories
+  spectra --quality -f EPIC.md --quality-story US-001,US-002
+
+  # Quality scoring with custom threshold
+  spectra --quality -f EPIC.md --min-score 70
+
+  # Quality scoring without details
+  spectra --quality -f EPIC.md --no-details
+
   # Show status dashboard (static)
   spectra --dashboard -f EPIC.md --epic PROJ-123
 
@@ -1665,6 +1677,29 @@ Environment Variables:
         "--show-graph",
         action="store_true",
         help="Show ASCII dependency graph",
+    )
+    new_commands.add_argument(
+        "--quality",
+        action="store_true",
+        help="AI-powered story quality scoring based on INVEST principles",
+    )
+    new_commands.add_argument(
+        "--quality-story",
+        type=str,
+        metavar="IDS",
+        help="Comma-separated story IDs to score (default: all stories)",
+    )
+    new_commands.add_argument(
+        "--min-score",
+        type=int,
+        default=50,
+        metavar="N",
+        help="Minimum passing score threshold (default: 50)",
+    )
+    new_commands.add_argument(
+        "--no-details",
+        action="store_true",
+        help="Hide detailed dimension scores",
     )
     new_commands.add_argument(
         "--archive",
@@ -4841,6 +4876,30 @@ def main() -> int:
             architecture=getattr(args, "architecture", None),
             output_format=getattr(args, "output", "text") or "text",
             show_graph=getattr(args, "show_graph", False),
+        )
+
+    # Handle quality command (AI story quality scoring)
+    if getattr(args, "quality", False) or getattr(args, "quality_story", None):
+        from .ai_quality import run_ai_quality
+
+        console = Console(
+            color=not getattr(args, "no_color", False),
+            verbose=getattr(args, "verbose", False),
+        )
+
+        story_ids = None
+        if getattr(args, "quality_story", None):
+            story_ids = [s.strip() for s in args.quality_story.split(",")]
+
+        return run_ai_quality(
+            console=console,
+            markdown_path=args.input or getattr(args, "markdown", None),
+            story_ids=story_ids,
+            min_score=getattr(args, "min_score", 50),
+            show_details=not getattr(args, "no_details", False),
+            project_context=getattr(args, "project_context", None),
+            tech_stack=getattr(args, "tech_stack", None),
+            output_format=getattr(args, "output", "text") or "text",
         )
 
     # Handle archive command
