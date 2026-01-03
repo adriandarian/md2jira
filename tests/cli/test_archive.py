@@ -182,9 +182,7 @@ class TestFindArchiveCandidates:
             {"key": "US-2", "status": "done"},
         ]
 
-        candidates = find_archive_candidates(
-            stories, days_threshold=0, status_filter=["archived"]
-        )
+        candidates = find_archive_candidates(stories, days_threshold=0, status_filter=["archived"])
         assert len(candidates) == 1
         assert candidates[0].key == "US-1"
 

@@ -20,7 +20,8 @@ ruff format src tests && ruff check src tests --fix && mypy src/spectra && pytes
 
 ## ⚡ Performance Notes
 
-- Tests run in **parallel** using `pytest-xdist` (auto-detects CPU cores)
+- Tests run **sequentially by default** to prevent memory issues
+- For faster runs on high-memory machines, use: `pytest -n 2` (2 workers)
 - Tests have a **30-second timeout** to prevent hangs
 - Heavy tests (slow, stress, chaos, e2e, benchmark) are **skipped by default**
 - Use "Quick Check" task for rapid iteration, "All Checks" for final validation

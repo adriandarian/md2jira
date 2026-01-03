@@ -137,12 +137,11 @@ python_functions = ["test_*"]
 asyncio_mode = "auto"
 addopts = [
     "-ra",
-    "-v",
     "--tb=short",
     "--strict-markers",
     "--strict-config",
-    # Parallel execution with 4 workers (safe for memory)
-    "-n", "4",
+    # DISABLED parallel execution to reduce memory consumption
+    # Use -n 2 explicitly when needed: pytest -n 2
     # Timeout per test to prevent hangs (30 seconds)
     "--timeout", "30",
     # Skip slow/heavy tests by default - run explicitly with -m "slow" etc

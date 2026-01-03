@@ -215,9 +215,7 @@ class TestFormatMigrationPlan:
 
     def test_format_truncates_many_mappings(self):
         """Test truncation with many mappings."""
-        mapping = MigrationMapping(
-            status_map={f"Status{i}": f"target{i}" for i in range(10)}
-        )
+        mapping = MigrationMapping(status_map={f"Status{i}": f"target{i}" for i in range(10)})
 
         result = format_migration_plan(
             source="jira", target="github", issues_count=5, mapping=mapping, color=False
@@ -244,9 +242,7 @@ class TestRunMigrate:
     def test_unsupported_source_tracker(self, mock_console):
         """Test with unsupported source tracker."""
         with patch("spectra.cli.logging.setup_logging"):
-            result = run_migrate(
-                mock_console, source_type="unsupported", target_type="github"
-            )
+            result = run_migrate(mock_console, source_type="unsupported", target_type="github")
 
         assert result == ExitCode.CONFIG_ERROR
         mock_console.error.assert_called()
@@ -254,9 +250,7 @@ class TestRunMigrate:
     def test_unsupported_target_tracker(self, mock_console):
         """Test with unsupported target tracker."""
         with patch("spectra.cli.logging.setup_logging"):
-            result = run_migrate(
-                mock_console, source_type="jira", target_type="unsupported"
-            )
+            result = run_migrate(mock_console, source_type="jira", target_type="unsupported")
 
         assert result == ExitCode.CONFIG_ERROR
         mock_console.error.assert_called()
@@ -264,9 +258,7 @@ class TestRunMigrate:
     def test_same_source_and_target(self, mock_console):
         """Test source and target cannot be the same."""
         with patch("spectra.cli.logging.setup_logging"):
-            result = run_migrate(
-                mock_console, source_type="jira", target_type="jira"
-            )
+            result = run_migrate(mock_console, source_type="jira", target_type="jira")
 
         assert result == ExitCode.CONFIG_ERROR
         mock_console.error.assert_called()
@@ -274,9 +266,7 @@ class TestRunMigrate:
     def test_migrate_to_markdown(self, mock_console):
         """Test migration to markdown."""
         with patch("spectra.cli.logging.setup_logging"):
-            result = run_migrate(
-                mock_console, source_type="jira", target_type="markdown"
-            )
+            result = run_migrate(mock_console, source_type="jira", target_type="markdown")
 
         assert result == ExitCode.SUCCESS
 
@@ -354,35 +344,27 @@ class TestRunMigrate:
             for target in supported[2:4]:  # And a couple as target
                 if source != target:
                     with patch("spectra.cli.logging.setup_logging"):
-                        result = run_migrate(
-                            mock_console, source_type=source, target_type=target
-                        )
+                        result = run_migrate(mock_console, source_type=source, target_type=target)
                     assert result == ExitCode.SUCCESS
 
     def test_migration_github_to_jira(self, mock_console):
         """Test GitHub to Jira migration."""
         with patch("spectra.cli.logging.setup_logging"):
-            result = run_migrate(
-                mock_console, source_type="github", target_type="jira"
-            )
+            result = run_migrate(mock_console, source_type="github", target_type="jira")
 
         assert result == ExitCode.SUCCESS
 
     def test_migration_linear_to_jira(self, mock_console):
         """Test Linear to Jira migration."""
         with patch("spectra.cli.logging.setup_logging"):
-            result = run_migrate(
-                mock_console, source_type="linear", target_type="jira"
-            )
+            result = run_migrate(mock_console, source_type="linear", target_type="jira")
 
         assert result == ExitCode.SUCCESS
 
     def test_migration_jira_to_linear(self, mock_console):
         """Test Jira to Linear migration."""
         with patch("spectra.cli.logging.setup_logging"):
-            result = run_migrate(
-                mock_console, source_type="jira", target_type="linear"
-            )
+            result = run_migrate(mock_console, source_type="jira", target_type="linear")
 
         assert result == ExitCode.SUCCESS
 
