@@ -23,13 +23,81 @@ import time
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Any, TypeVar, cast
+from typing import TYPE_CHECKING, Protocol, TypeVar, cast, runtime_checkable
 
 
 # Type variable for generic decorators
-F = TypeVar("F", bound=Callable[..., Any])
+F = TypeVar("F", bound=Callable[..., object])
 
 logger = logging.getLogger(__name__)
+
+
+# Protocol definitions for optional dependency types
+@runtime_checkable
+class TracerProtocol(Protocol):
+    """Protocol for OpenTelemetry Tracer."""
+
+    def start_as_current_span(
+        self, name: str, **kwargs: object
+    ) -> Generator[SpanProtocol, None, None]: ...
+
+
+@runtime_checkable
+class SpanProtocol(Protocol):
+    """Protocol for OpenTelemetry Span."""
+
+    def set_attribute(self, key: str, value: object) -> None: ...
+    def set_status(self, status: object) -> None: ...
+    def record_exception(self, exception: BaseException) -> None: ...
+
+
+@runtime_checkable
+class MeterProtocol(Protocol):
+    """Protocol for OpenTelemetry Meter."""
+
+    def create_counter(self, name: str, **kwargs: object) -> CounterProtocol: ...
+    def create_histogram(self, name: str, **kwargs: object) -> HistogramProtocol: ...
+
+
+@runtime_checkable
+class CounterProtocol(Protocol):
+    """Protocol for OpenTelemetry Counter."""
+
+    def add(self, amount: int, attributes: dict[str, str] | None = None) -> None: ...
+
+
+@runtime_checkable
+class HistogramProtocol(Protocol):
+    """Protocol for OpenTelemetry Histogram."""
+
+    def record(self, amount: float, attributes: dict[str, str] | None = None) -> None: ...
+
+
+@runtime_checkable
+class PromCounterProtocol(Protocol):
+    """Protocol for Prometheus Counter."""
+
+    def labels(self, **kwargs: str) -> PromCounterProtocol: ...
+    def inc(self, amount: float = 1) -> None: ...
+
+
+@runtime_checkable
+class PromHistogramProtocol(Protocol):
+    """Protocol for Prometheus Histogram."""
+
+    def labels(self, **kwargs: str) -> PromHistogramProtocol: ...
+    def observe(self, amount: float) -> None: ...
+
+
+@runtime_checkable
+class PromGaugeProtocol(Protocol):
+    """Protocol for Prometheus Gauge."""
+
+    def labels(self, **kwargs: str) -> PromGaugeProtocol: ...
+    def inc(self, amount: float = 1) -> None: ...
+    def dec(self, amount: float = 1) -> None: ...
+    def set(self, value: float) -> None: ...
+
 
 # Track whether OpenTelemetry is available
 OTEL_AVAILABLE = False
@@ -146,27 +214,27 @@ class TelemetryProvider:
             config: Telemetry configuration.
         """
         self.config = config
-        self._tracer: Any | None = None
-        self._meter: Any | None = None
+        self._tracer: TracerProtocol | None = None
+        self._meter: MeterProtocol | None = None
         self._initialized = False
         self._prometheus_initialized = False
 
         # OpenTelemetry Metrics
-        self._sync_counter: Any | None = None
-        self._sync_duration: Any | None = None
-        self._stories_counter: Any | None = None
-        self._api_calls_counter: Any | None = None
-        self._api_duration: Any | None = None
-        self._errors_counter: Any | None = None
+        self._sync_counter: CounterProtocol | None = None
+        self._sync_duration: HistogramProtocol | None = None
+        self._stories_counter: CounterProtocol | None = None
+        self._api_calls_counter: CounterProtocol | None = None
+        self._api_duration: HistogramProtocol | None = None
+        self._errors_counter: CounterProtocol | None = None
 
         # Prometheus Metrics (direct prometheus_client)
-        self._prom_sync_counter: Any | None = None
-        self._prom_sync_duration: Any | None = None
-        self._prom_stories_counter: Any | None = None
-        self._prom_api_calls_counter: Any | None = None
-        self._prom_api_duration: Any | None = None
-        self._prom_errors_counter: Any | None = None
-        self._prom_active_syncs: Any | None = None
+        self._prom_sync_counter: PromCounterProtocol | None = None
+        self._prom_sync_duration: PromHistogramProtocol | None = None
+        self._prom_stories_counter: PromCounterProtocol | None = None
+        self._prom_api_calls_counter: PromCounterProtocol | None = None
+        self._prom_api_duration: PromHistogramProtocol | None = None
+        self._prom_errors_counter: PromCounterProtocol | None = None
+        self._prom_active_syncs: PromGaugeProtocol | None = None
 
     @classmethod
     def get_instance(cls) -> TelemetryProvider:
@@ -443,12 +511,12 @@ class TelemetryProvider:
         )
 
     @property
-    def tracer(self) -> Any:
+    def tracer(self) -> TracerProtocol | None:
         """Get the tracer instance."""
         return self._tracer
 
     @property
-    def meter(self) -> Any:
+    def meter(self) -> MeterProtocol | None:
         """Get the meter instance."""
         return self._meter
 
@@ -456,9 +524,9 @@ class TelemetryProvider:
     def span(
         self,
         name: str,
-        attributes: dict[str, Any] | None = None,
+        attributes: dict[str, str | int | float | bool] | None = None,
         record_exception: bool = True,
-    ) -> Generator[Any | None, None, None]:
+    ) -> Generator[SpanProtocol | None, None, None]:
         """
         Create a tracing span context manager.
 
@@ -640,7 +708,7 @@ class TelemetryProvider:
 
 def traced(
     name: str | None = None,
-    attributes: dict[str, Any] | None = None,
+    attributes: dict[str, str | int | float | bool] | None = None,
 ) -> Callable[[F], F]:
     """
     Decorator to trace a function.
@@ -662,13 +730,13 @@ def traced(
         span_name = name or f"{func.__module__}.{func.__qualname__}"
 
         @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
+        def wrapper(*args: object, **kwargs: object) -> object:
             provider = TelemetryProvider.get_instance()
 
             with provider.span(span_name, attributes=attributes):
                 return func(*args, **kwargs)
 
-        return wrapper  # type: ignore
+        return cast(F, wrapper)
 
     return decorator
 
@@ -691,7 +759,7 @@ def timed_api_call(operation: str) -> Callable[[F], F]:
 
     def decorator(func: F) -> F:
         @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
+        def wrapper(*args: object, **kwargs: object) -> object:
             provider = TelemetryProvider.get_instance()
             start = time.perf_counter()
             success = True
@@ -709,7 +777,7 @@ def timed_api_call(operation: str) -> Callable[[F], F]:
                     duration_ms=duration_ms,
                 )
 
-        return wrapper  # type: ignore
+        return cast(F, wrapper)
 
     return decorator
 

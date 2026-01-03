@@ -10,6 +10,7 @@ https://www.jetbrains.com/help/youtrack/server/rest-api.html
 
 import logging
 import time
+from types import TracebackType
 from typing import Any
 
 import requests
@@ -1654,9 +1655,9 @@ class YouTrackApiClient:
 
     def __exit__(
         self,
-        exc_type: type | None,
-        exc_val: Exception | None,
-        exc_tb: Any,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> None:
         """Context manager exit."""
         self.close()

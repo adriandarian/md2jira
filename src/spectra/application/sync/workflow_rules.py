@@ -12,7 +12,7 @@ This module provides workflow automation:
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 from spectra.core.domain.enums import Status
 
@@ -21,7 +21,20 @@ if TYPE_CHECKING:
     from spectra.core.domain.entities import Epic, UserStory
     from spectra.core.ports.issue_tracker import IssueTrackerPort
 
+
 logger = logging.getLogger(__name__)
+
+
+# Protocol for entities that can be evaluated by workflow rules
+@runtime_checkable
+class WorkflowEntity(Protocol):
+    """Protocol for entities that workflow rules can operate on."""
+
+    status: Status
+
+
+# More permissive type for duck-typed entity access
+EntityLike = object  # Used where we need duck-typed attribute access
 
 
 class RuleType(Enum):
@@ -78,9 +91,9 @@ class RuleCondition:
 
     field: str  # Field to check (status, subtasks, labels, etc.)
     operator: str  # Comparison operator (eq, ne, gt, lt, contains, all, any)
-    value: Any  # Value to compare against
+    value: object  # Value to compare against
 
-    def evaluate(self, entity: Any) -> bool:
+    def evaluate(self, entity: EntityLike) -> bool:
         """
         Evaluate the condition against an entity.
 
@@ -124,7 +137,7 @@ class RuleCondition:
 
         return False
 
-    def _check_item(self, item: Any) -> bool:
+    def _check_item(self, item: object) -> bool:
         """Check a single item against the value condition."""
         if isinstance(self.value, dict):
             # Value is a sub-condition
@@ -185,7 +198,7 @@ class WorkflowRule:
     priority: int = 0  # Higher priority rules evaluated first
     description: str = ""
 
-    def matches(self, entity: Any) -> bool:
+    def matches(self, entity: EntityLike) -> bool:
         """
         Check if all conditions match.
 
@@ -205,7 +218,7 @@ class WorkflowRule:
         # For custom rules, evaluate all conditions
         return all(cond.evaluate(entity) for cond in self.conditions)
 
-    def _evaluate_builtin(self, entity: Any) -> bool:
+    def _evaluate_builtin(self, entity: EntityLike) -> bool:
         """Evaluate built-in rule types."""
         if self.rule_type == RuleType.ALL_SUBTASKS_DONE:
             return self._check_all_subtasks_done(entity)
@@ -219,7 +232,7 @@ class WorkflowRule:
             return self._check_parent_blocked(entity)
         return False
 
-    def _check_all_subtasks_done(self, entity: Any) -> bool:
+    def _check_all_subtasks_done(self, entity: EntityLike) -> bool:
         """Check if all subtasks are done."""
         if not hasattr(entity, "subtasks"):
             return False
@@ -228,14 +241,14 @@ class WorkflowRule:
             return False
         return all(st.status.is_complete() for st in subtasks)
 
-    def _check_any_subtask_in_progress(self, entity: Any) -> bool:
+    def _check_any_subtask_in_progress(self, entity: EntityLike) -> bool:
         """Check if any subtask is in progress."""
         if not hasattr(entity, "subtasks"):
             return False
         subtasks = entity.subtasks
         return any(st.status == Status.IN_PROGRESS for st in subtasks)
 
-    def _check_all_stories_done(self, entity: Any) -> bool:
+    def _check_all_stories_done(self, entity: EntityLike) -> bool:
         """Check if all stories in epic are done."""
         if not hasattr(entity, "stories"):
             return False
@@ -244,13 +257,13 @@ class WorkflowRule:
             return False
         return all(s.status.is_complete() for s in stories)
 
-    def _check_any_story_in_progress(self, entity: Any) -> bool:
+    def _check_any_story_in_progress(self, entity: EntityLike) -> bool:
         """Check if any story in epic is in progress."""
         if not hasattr(entity, "stories"):
             return False
         return any(s.status == Status.IN_PROGRESS for s in entity.stories)
 
-    def _check_parent_blocked(self, entity: Any) -> bool:
+    def _check_parent_blocked(self, entity: EntityLike) -> bool:
         """Check if parent is blocked."""
         if hasattr(entity, "status"):
             return entity.status == Status.BLOCKED
@@ -471,7 +484,7 @@ class WorkflowEngine:
     def _evaluate_rule(
         self,
         rule: WorkflowRule,
-        entity: Any,
+        entity: EntityLike,
         dry_run: bool,
     ) -> RuleExecutionResult:
         """Evaluate a single rule against an entity."""
@@ -507,7 +520,7 @@ class WorkflowEngine:
 
     def _execute_action(
         self,
-        entity: Any,
+        entity: EntityLike,
         action_spec: RuleActionSpec,
         dry_run: bool,
     ) -> str | None:

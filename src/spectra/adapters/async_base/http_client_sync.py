@@ -14,6 +14,7 @@ import logging
 import random
 import time
 from abc import ABC, abstractmethod
+from types import TracebackType
 from typing import Any
 
 import requests
@@ -321,7 +322,12 @@ class BaseHttpClient(ABC):
         """Context manager entry."""
         return self
 
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Context manager exit - close session."""
         self.close()
 

@@ -22,7 +22,8 @@ Testing:
 """
 
 import logging
-from typing import Any
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 from .container import Container, Lifecycle
 from .ports.config_provider import SyncConfig, TrackerConfig
@@ -30,6 +31,10 @@ from .ports.document_formatter import DocumentFormatterPort
 from .ports.document_output import DocumentOutputPort
 from .ports.document_parser import DocumentParserPort
 from .ports.issue_tracker import IssueTrackerPort
+
+
+if TYPE_CHECKING:
+    from spectra.application.sync import SyncOrchestrator
 
 
 logger = logging.getLogger("Services")
@@ -55,7 +60,7 @@ class DryRunMode:
 
 def create_tracker_factory(
     tracker_type: str = "jira",
-) -> Any:
+) -> Callable[[Container], IssueTrackerPort]:
     """
     Create a factory function for the issue tracker.
 
@@ -242,7 +247,7 @@ def create_tracker_factory(
 
 def create_parser_factory(
     parser_type: str = "markdown",
-) -> Any:
+) -> Callable[[Container], DocumentParserPort]:
     """
     Create a factory function for the document parser.
 
@@ -304,7 +309,7 @@ def create_parser_factory(
     return factory
 
 
-def create_formatter_factory() -> Any:
+def create_formatter_factory() -> Callable[[Container], DocumentFormatterPort]:
     """
     Create a factory function for the document formatter.
 
@@ -322,7 +327,7 @@ def create_formatter_factory() -> Any:
 
 def create_output_factory(
     output_type: str = "confluence",
-) -> Any:
+) -> Callable[[Container], DocumentOutputPort]:
     """
     Create a factory function for the document output.
 
@@ -344,17 +349,16 @@ def create_output_factory(
     return factory
 
 
-def create_orchestrator_factory() -> Any:
+def create_orchestrator_factory() -> Callable[[Container], "SyncOrchestrator"]:
     """
     Create a factory function for the sync orchestrator.
 
     Returns:
         Factory function that creates the orchestrator
     """
+    from spectra.application.sync import SyncOrchestrator
 
-    def factory(container: Container) -> Any:
-        from spectra.application.sync import SyncOrchestrator
-
+    def factory(container: Container) -> SyncOrchestrator:
         tracker = container.get(IssueTrackerPort)
         parser = container.get(DocumentParserPort)
         formatter = container.get(DocumentFormatterPort)
@@ -512,7 +516,7 @@ def create_test_container(
 def create_sync_orchestrator(
     container: Container,
     sync_config: SyncConfig | None = None,
-) -> Any:
+) -> "SyncOrchestrator":
     """
     Create a SyncOrchestrator from a container.
 

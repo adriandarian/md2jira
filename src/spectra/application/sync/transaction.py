@@ -17,6 +17,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
+from types import TracebackType
 from typing import TYPE_CHECKING, Any
 
 from spectra.application.sync.backup import BackupManager, IssueSnapshot
@@ -559,7 +560,12 @@ class TransactionalSync:
         self.manager.begin(self.epic_key)
         return self
 
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """End the transaction (commit or rollback)."""
         if exc_type is not None:
             # Exception occurred, rollback

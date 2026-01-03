@@ -16,6 +16,7 @@ Example:
 import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
+from types import TracebackType
 from typing import Any
 
 from spectra.core.ports.async_tracker import AsyncIssueTrackerPort
@@ -110,7 +111,12 @@ class AsyncAsanaAdapter(AsyncIssueTrackerPort):
         await self.connect()
         return self
 
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         await self.disconnect()
 
     def _ensure_connected(self) -> aiohttp.ClientSession:

@@ -11,6 +11,7 @@ import logging
 import sys
 import traceback
 from datetime import datetime, timezone
+from types import TracebackType
 from typing import Any
 
 
@@ -462,7 +463,12 @@ class SuppressLogsForProgress:
             logger.setLevel(self.suppress_level)
         return self
 
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Restore original log levels."""
         for name, level in self._original_levels.items():
             logging.getLogger(name).setLevel(level)

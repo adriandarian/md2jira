@@ -346,8 +346,8 @@ def run_webhook(args) -> int:
     # Create reverse sync orchestrator
     reverse_sync = ReverseSyncOrchestrator(
         tracker=tracker,
+        config=config.sync,
         writer=writer,
-        dry_run=dry_run,
     )
 
     # Create display handler
@@ -358,19 +358,19 @@ def run_webhook(args) -> int:
 
     # Create webhook server
     server = WebhookServer(
-        orchestrator=reverse_sync,
+        reverse_sync=reverse_sync,
         epic_key=epic_key,
         output_path=output_path,
         host=host,
         port=port,
         secret=secret,
-        on_event_received=display.show_event_received,
-        on_sync_triggered=display.show_sync_triggered,
-        on_sync_completed=display.show_sync_completed,
+        on_event=display.show_event,
+        on_sync_start=display.show_sync_start,
+        on_sync_complete=display.show_sync_complete,
     )
 
     # Show start message
-    display.show_start(host, port, epic_key, output_path)
+    display.show_start(host, port, epic_key)
 
     try:
         # Run webhook server (blocks until Ctrl+C)

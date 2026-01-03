@@ -36,6 +36,7 @@ from collections.abc import Callable, Generator, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from functools import lru_cache
+from types import TracebackType
 from typing import Any, Generic, TypeVar
 
 
@@ -691,7 +692,12 @@ class MemoryTracker:
 
         return self
 
-    def __exit__(self, *args: Any) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Stop tracking and compute stats."""
         gc.collect()
 

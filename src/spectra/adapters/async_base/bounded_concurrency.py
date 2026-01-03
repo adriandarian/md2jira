@@ -25,6 +25,7 @@ from collections.abc import Callable, Coroutine
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, field
 from enum import IntEnum
+from types import TracebackType
 from typing import Any, Generic, TypeVar
 
 from spectra.core.ports.config_provider import TrackerType
@@ -465,7 +466,12 @@ class BoundedExecutor:
     def __enter__(self) -> "BoundedExecutor":
         return self
 
-    def __exit__(self, *args: Any) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         self.shutdown(wait=True)
 
 
@@ -652,7 +658,12 @@ class AsyncBoundedExecutor:
     async def __aenter__(self) -> "AsyncBoundedExecutor":
         return self
 
-    async def __aexit__(self, *args: Any) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         pass  # No cleanup needed for async executor
 
 
