@@ -35,6 +35,26 @@ from .issue_tracker import (
     TransientError,
     TransitionError,
 )
+from .plugin_marketplace import (
+    AuthenticationError as MarketplaceAuthError,
+)
+from .plugin_marketplace import (
+    InstallationError,
+    InstallResult,
+    MarketplaceInfo,
+    MarketplacePlugin,
+    PluginAuthor,
+    PluginCategory,
+    PluginMarketplaceError,
+    PluginMarketplacePort,
+    PluginNotFoundError,
+    PluginStatus,
+    PluginVersionInfo,
+    PublishError,
+    PublishResult,
+    SearchQuery,
+    SearchResult,
+)
 from .state_store import (
     ConnectionError as StateConnectionError,
 )
@@ -109,6 +129,23 @@ __all__ = [
     "SyncOutcome",
     "SyncStatistics",
     "VelocityMetrics",
+    # Plugin marketplace
+    "InstallationError",
+    "InstallResult",
+    "MarketplaceAuthError",
+    "MarketplaceInfo",
+    "MarketplacePlugin",
+    "PluginAuthor",
+    "PluginCategory",
+    "PluginMarketplaceError",
+    "PluginMarketplacePort",
+    "PluginNotFoundError",
+    "PluginStatus",
+    "PluginVersionInfo",
+    "PublishError",
+    "PublishResult",
+    "SearchQuery",
+    "SearchResult",
     "TransientError",
     "TransitionError",
 ]
