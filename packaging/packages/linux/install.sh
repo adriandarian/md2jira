@@ -2,7 +2,7 @@
 # ==============================================================================
 # spectra Universal Linux Installer
 # ==============================================================================
-# 
+#
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/adriandarian/spectra/main/packaging/linux/install.sh | bash
 #
@@ -60,7 +60,7 @@ done
 # Check Python version
 check_python() {
     log_info "Checking Python installation..."
-    
+
     if command -v python3 &> /dev/null; then
         PYTHON_CMD="python3"
     elif command -v python &> /dev/null; then
@@ -74,57 +74,57 @@ check_python() {
         log_info "  macOS:         brew install python@3.12"
         exit 1
     fi
-    
+
     # Check version
     PYTHON_VERSION=$($PYTHON_CMD -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
     MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
     MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
-    
+
     if [[ "$MAJOR" -lt 3 ]] || [[ "$MAJOR" -eq 3 && "$MINOR" -lt 10 ]]; then
         log_error "Python 3.10+ is required, but found Python $PYTHON_VERSION"
         exit 1
     fi
-    
+
     log_success "Found Python $PYTHON_VERSION"
 }
 
 # Install via pip
 install_pip() {
     log_info "Installing spectra via pip..."
-    
+
     if [[ "$VERSION" == "latest" ]]; then
         $PYTHON_CMD -m pip install --upgrade spectra
     else
         $PYTHON_CMD -m pip install --upgrade "spectra==$VERSION"
     fi
-    
+
     log_success "spectra installed successfully!"
 }
 
 # Install via pipx (isolated environment)
 install_pipx() {
     log_info "Installing spectra via pipx..."
-    
+
     # Check if pipx is installed
     if ! command -v pipx &> /dev/null; then
         log_info "pipx not found, installing..."
         $PYTHON_CMD -m pip install --user pipx
         $PYTHON_CMD -m pipx ensurepath
     fi
-    
+
     if [[ "$VERSION" == "latest" ]]; then
         pipx install spectra --force
     else
         pipx install "spectra==$VERSION" --force
     fi
-    
+
     log_success "spectra installed successfully via pipx!"
 }
 
 # Verify installation
 verify_install() {
     log_info "Verifying installation..."
-    
+
     if command -v spectra &> /dev/null; then
         INSTALLED_VERSION=$(spectra --version 2>/dev/null | head -1)
         log_success "spectra is installed: $INSTALLED_VERSION"
@@ -165,9 +165,9 @@ main() {
     echo "           spectra Installer"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
-    
+
     check_python
-    
+
     case "$INSTALL_METHOD" in
         pip)
             install_pip
@@ -180,7 +180,7 @@ main() {
             exit 1
             ;;
     esac
-    
+
     verify_install
     show_next_steps
 }

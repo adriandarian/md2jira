@@ -1,6 +1,6 @@
 /**
  * Diagnostics provider for spectra validation
- * 
+ *
  * Shows validation errors and warnings in the Problems panel.
  */
 
@@ -70,7 +70,7 @@ export class DiagnosticsProvider implements vscode.Disposable {
      * Parse a regex match into a diagnostic
      */
     private parseDiagnostic(
-        match: RegExpExecArray, 
+        match: RegExpExecArray,
         document: vscode.TextDocument
     ): vscode.Diagnostic | null {
         let line = 0;

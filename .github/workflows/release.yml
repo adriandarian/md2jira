@@ -48,17 +48,17 @@ jobs:
           else
             VERSION="${GITHUB_REF#refs/tags/v}"
           fi
-          
+
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
-          
+
           # Check if prerelease
           if [[ "$VERSION" == *"-"* ]]; then
             echo "prerelease=true" >> $GITHUB_OUTPUT
           else
             echo "prerelease=false" >> $GITHUB_OUTPUT
           fi
-          
+
           echo "📦 Version: $VERSION"
 
       - name: ✅ Validate Version Format
@@ -154,63 +154,63 @@ jobs:
         id: release_notes
         run: |
           VERSION="${{ needs.validate.outputs.version }}"
-          
+
           # Extract changelog section for this version
           NOTES=$(awk "/## \[$VERSION\]/,/## \[/{if(/## \[/ && !/## \[$VERSION\]/)exit; print}" CHANGELOG.md | tail -n +2)
-          
+
           if [ -z "$NOTES" ]; then
             NOTES="Release $VERSION"
           fi
-          
+
           # Create release notes file
           cat > release_notes.md << 'EOF'
           ## What's New in v${{ needs.validate.outputs.version }}
-          
+
           $NOTES
-          
+
           ---
-          
+
           ## Installation
-          
+
           ### pip (recommended)
           ```bash
           pip install spectra==${{ needs.validate.outputs.version }}
           ```
-          
+
           ### pipx
           ```bash
           pipx install spectra==${{ needs.validate.outputs.version }}
           ```
-          
+
           ### Homebrew (macOS/Linux)
           ```bash
           brew install adriandarian/spectra/spectra
           ```
-          
+
           ### Docker
           ```bash
           docker pull adriandarian/spectra:${{ needs.validate.outputs.version }}
           ```
-          
+
           ### From Source
           ```bash
           pip install git+https://github.com/adriandarian/spectra.git@v${{ needs.validate.outputs.version }}
           ```
-          
+
           ---
-          
+
           ## Checksums
-          
+
           SHA256 checksums for release assets:
           ```
           $(cd artifacts && find . -type f -exec sha256sum {} \; 2>/dev/null || echo "See individual files")
           ```
-          
+
           ---
-          
+
           **Full Changelog**: https://github.com/adriandarian/spectra/compare/v$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "1.0.0")...v${{ needs.validate.outputs.version }}
           EOF
-          
+
           echo "Generated release notes"
 
       - name: 🏷️ Create Tag (if workflow_dispatch)
@@ -399,16 +399,16 @@ jobs:
       - name: 📝 Update Formula
         run: |
           VERSION="${{ needs.validate.outputs.version }}"
-          
+
           # Download the release tarball to get SHA256
           curl -sL "https://github.com/adriandarian/spectra/archive/refs/tags/v${VERSION}.tar.gz" -o spectra.tar.gz
           SHA256=$(sha256sum spectra.tar.gz | cut -d' ' -f1)
-          
+
           # Update formula
           sed -i "s|url \".*\"|url \"https://github.com/adriandarian/spectra/archive/refs/tags/v${VERSION}.tar.gz\"|" packaging/packages/homebrew/spectra.rb
           sed -i "s|sha256 \".*\"|sha256 \"${SHA256}\"|" packaging/packages/homebrew/spectra.rb
           sed -i "s|version \".*\"|version \"${VERSION}\"|" packaging/packages/homebrew/spectra.rb
-          
+
           echo "Updated formula with version $VERSION and SHA256 $SHA256"
 
       - name: 🚀 Push to Homebrew Tap
@@ -440,10 +440,10 @@ jobs:
         run: |
           $version = "${{ needs.validate.outputs.version }}"
           $nuspec = "packaging/packages/chocolatey/spectra.nuspec"
-          
+
           # Update version in nuspec
           (Get-Content $nuspec) -replace '<version>.*</version>', "<version>$version</version>" | Set-Content $nuspec
-          
+
           # Update download URL
           $url = "https://github.com/adriandarian/spectra/releases/download/v$version/spectra-$version.tar.gz"
           (Get-Content "packaging/packages/chocolatey/tools/chocolateyinstall.ps1") -replace '\$url = .*', "`$url = '$url'" | Set-Content "packaging/packages/chocolatey/tools/chocolateyinstall.ps1"
@@ -490,11 +490,11 @@ jobs:
         run: |
           VERSION="${{ needs.validate.outputs.version }}"
           PKG_DIR="spectra_${VERSION}_all"
-          
+
           mkdir -p $PKG_DIR/DEBIAN
           mkdir -p $PKG_DIR/usr/local/bin
           mkdir -p $PKG_DIR/usr/local/lib/python3/dist-packages
-          
+
           # Control file
           cat > $PKG_DIR/DEBIAN/control << EOF
           Package: spectra
@@ -510,14 +510,14 @@ jobs:
            GitHub Issues, Azure DevOps, and Linear.
           Homepage: https://github.com/adriandarian/spectra
           EOF
-          
+
           # Post-install script
           cat > $PKG_DIR/DEBIAN/postinst << 'POSTINST'
           #!/bin/bash
           pip3 install spectra==$VERSION || true
           POSTINST
           chmod 755 $PKG_DIR/DEBIAN/postinst
-          
+
           # Build the package
           dpkg-deb --build $PKG_DIR
 
@@ -545,20 +545,20 @@ jobs:
       - name: 🏗️ Build RPM Package
         run: |
           VERSION="${{ needs.validate.outputs.version }}"
-          
+
           # Create RPM build structure
           mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
-          
+
           # Copy spec file
           cp packaging/packages/linux/spectra.spec ~/rpmbuild/SPECS/
-          
+
           # Update version in spec
           sed -i "s/^Version:.*/Version: $VERSION/" ~/rpmbuild/SPECS/spectra.spec
-          
+
           # Download source
           curl -sL "https://github.com/adriandarian/spectra/archive/refs/tags/v${VERSION}.tar.gz" -o ~/rpmbuild/SOURCES/spectra-${VERSION}.tar.gz || \
             tar czf ~/rpmbuild/SOURCES/spectra-${VERSION}.tar.gz .
-          
+
           # Build RPM
           rpmbuild -ba ~/rpmbuild/SPECS/spectra.spec || echo "RPM build skipped - source not available yet"
 

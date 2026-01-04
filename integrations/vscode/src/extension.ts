@@ -1,6 +1,6 @@
 /**
  * spectra VS Code Extension
- * 
+ *
  * Provides integration with spectra CLI for syncing markdown with Jira.
  */
 

@@ -9,34 +9,34 @@
   --vp-c-brand-2: #0065ff;
   --vp-c-brand-3: #2684ff;
   --vp-c-brand-soft: rgba(38, 132, 255, 0.14);
-  
+
   /* Accent colors */
   --vp-c-tip-1: #36b37e;
   --vp-c-tip-2: #00875a;
   --vp-c-tip-3: #006644;
   --vp-c-tip-soft: rgba(54, 179, 126, 0.14);
-  
+
   --vp-c-warning-1: #ff991f;
   --vp-c-warning-2: #ff8b00;
   --vp-c-warning-3: #ff7452;
   --vp-c-warning-soft: rgba(255, 139, 0, 0.14);
-  
+
   --vp-c-danger-1: #de350b;
   --vp-c-danger-2: #ff5630;
   --vp-c-danger-3: #ff7452;
   --vp-c-danger-soft: rgba(222, 53, 11, 0.14);
-  
+
   /* Typography - JetBrains Mono for code, modern sans for text */
   --vp-font-family-base: 'Outfit', 'Inter var', 'Inter', ui-sans-serif, system-ui, sans-serif;
   --vp-font-family-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, monospace;
-  
+
   /* Hero gradient */
   --vp-home-hero-name-color: transparent;
   --vp-home-hero-name-background: linear-gradient(135deg, #0052cc 0%, #2684ff 50%, #36b37e 100%);
-  
+
   --vp-home-hero-image-background-image: linear-gradient(135deg, rgba(38, 132, 255, 0.3) 0%, rgba(54, 179, 126, 0.3) 100%);
   --vp-home-hero-image-filter: blur(44px);
-  
+
   /* Button styling */
   --vp-button-brand-border: transparent;
   --vp-button-brand-text: #fff;
@@ -55,16 +55,16 @@
   --vp-c-brand-2: #4c9aff;
   --vp-c-brand-3: #79b8ff;
   --vp-c-brand-soft: rgba(38, 132, 255, 0.2);
-  
+
   /* Dark mode background */
   --vp-c-bg: #0d1117;
   --vp-c-bg-soft: #161b22;
   --vp-c-bg-mute: #21262d;
   --vp-c-bg-alt: #161b22;
-  
+
   /* Sidebar in dark mode */
   --vp-sidebar-bg-color: #0d1117;
-  
+
   /* Hero gradient for dark mode */
   --vp-home-hero-name-background: linear-gradient(135deg, #2684ff 0%, #4c9aff 50%, #36b37e 100%);
   --vp-home-hero-image-background-image: linear-gradient(135deg, rgba(38, 132, 255, 0.4) 0%, rgba(54, 179, 126, 0.4) 100%);
