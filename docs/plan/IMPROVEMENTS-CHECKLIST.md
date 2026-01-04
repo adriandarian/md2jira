@@ -881,7 +881,7 @@ For each new tracker adapter, follow this checklist:
 ## 📋 Parser Improvements
 
 - [x] **Stronger Markdown Parsing** - Tolerate formatting variants; precise parse errors ✅ **COMPLETED**
-- [ ] **Round-trip Edits** - Modify source markdown while preserving formatting
+- [x] **Round-trip Edits** - Modify source markdown while preserving formatting ✅ **COMPLETED** - Implemented `RoundtripParser` for span-tracking parse, `RoundtripEditor` for surgical edits. Supports field updates, title changes, AC toggling, and batch updates. 43 unit tests passing.
 - [ ] **Schema Validation** - Optional strict mode for required fields
 - [ ] **Extensible Frontmatter** - YAML frontmatter as alternative to tables
 - [ ] **Inline Task References** - Parse `[ ]` checkboxes as subtasks

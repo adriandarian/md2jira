@@ -41,6 +41,22 @@ from .openapi_parser import OpenAPIParser
 from .orgmode_parser import OrgModeParser
 from .parser_utils import parse_blockquote_comments, parse_datetime
 from .protobuf_parser import ProtobufParser
+
+# Round-trip editing
+from .roundtrip import (
+    EditOperation,
+    EditType,
+    FieldSpan,
+    ParsedStoryWithSpans,
+    RoundtripEditor,
+    RoundtripParser,
+    RoundtripParseResult,
+    SectionSpan,
+    SourceSpan,
+    StorySpan,
+    batch_update_stories,
+    update_story_in_file,
+)
 from .rst_parser import RstParser
 from .streaming import (
     ChunkedFileProcessor,
@@ -90,7 +106,11 @@ __all__ = [
     "ConfluenceParser",
     "CsvParser",
     "DiagramParser",
+    # Round-trip editing exports
+    "EditOperation",
+    "EditType",
     "ExcelParser",
+    "FieldSpan",
     "GoogleDocsParser",
     "GoogleSheetsParser",
     "GraphQLParser",
@@ -110,9 +130,16 @@ __all__ = [
     "ParseResult",
     "ParseSeverity",
     "ParseWarning",
+    "ParsedStoryWithSpans",
     "ProtobufParser",
+    "RoundtripEditor",
+    "RoundtripParseResult",
+    "RoundtripParser",
     "RstParser",
+    "SectionSpan",
+    "SourceSpan",
     "StoryBuffer",
+    "StorySpan",
     "StreamingConfig",
     "StreamingMarkdownParser",
     "StreamingStats",
@@ -123,6 +150,7 @@ __all__ = [
     "ToonParser",
     "YamlParser",
     "YamlParserPlugin",
+    "batch_update_stories",
     "estimate_file_stories",
     "get_column_number",
     "get_context_lines",
@@ -136,4 +164,5 @@ __all__ = [
     "parse_description_tolerant",
     "stream_stories_from_directory",
     "stream_stories_from_file",
+    "update_story_in_file",
 ]
