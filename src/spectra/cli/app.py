@@ -1165,6 +1165,12 @@ def main() -> int:
             args.use_aiohttp = False
         return run_websocket(args)
 
+    # Handle GraphQL API server
+    if getattr(args, "graphql", False):
+        from .commands.graphql import run_graphql
+
+        return run_graphql(args)
+
     # Handle multi-epic sync
     if args.multi_epic or args.list_epics:
         if not args.input:

@@ -377,17 +377,13 @@ class WebSocketError(Exception):
     """Base exception for WebSocket operations."""
 
 
-
 class ConnectionError(WebSocketError):
     """Error related to WebSocket connections."""
-
 
 
 class BroadcastError(WebSocketError):
     """Error when broadcasting messages."""
 
 
-
 class RoomError(WebSocketError):
     """Error related to room operations."""
-

@@ -1113,7 +1113,9 @@ class SyncEventBroadcaster:
                 # Store task reference to prevent garbage collection
                 task = asyncio.create_task(self._broadcast(message))
                 # Add done callback to handle any exceptions
-                task.add_done_callback(lambda t: t.exception() if t.done() and not t.cancelled() else None)
+                task.add_done_callback(
+                    lambda t: t.exception() if t.done() and not t.cancelled() else None
+                )
             else:
                 loop.run_until_complete(self._broadcast(message))
         except RuntimeError:
@@ -1235,7 +1237,9 @@ class WebSocketBridge:
             if loop.is_running():
                 # Store task reference to prevent garbage collection
                 task = asyncio.create_task(self.server.broadcast(msg))
-                task.add_done_callback(lambda t: t.exception() if t.done() and not t.cancelled() else None)
+                task.add_done_callback(
+                    lambda t: t.exception() if t.done() and not t.cancelled() else None
+                )
             else:
                 loop.run_until_complete(self.server.broadcast(msg))
         except RuntimeError:

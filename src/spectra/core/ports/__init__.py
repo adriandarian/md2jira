@@ -25,6 +25,24 @@ from .document_output import (
     RateLimitError as OutputRateLimitError,
 )
 from .document_parser import DocumentParserPort, ParserError
+from .graphql_api import (
+    Connection,
+    Edge,
+    ErrorCode,
+    ExecutionContext,
+    GraphQLError,
+    GraphQLRequest,
+    GraphQLResponse,
+    GraphQLServerPort,
+    OperationType,
+    PageInfo,
+    ResolverRegistry,
+    ServerConfig,
+    SubscriptionEvent,
+)
+from .graphql_api import (
+    ServerStats as GraphQLServerStats,
+)
 from .issue_tracker import (
     AuthenticationError,
     IssueTrackerError,
@@ -171,4 +189,19 @@ __all__ = [
     "WebSocketError",
     "WebSocketMessage",
     "WebSocketServerPort",
+    # GraphQL API
+    "Connection",
+    "Edge",
+    "ErrorCode",
+    "ExecutionContext",
+    "GraphQLError",
+    "GraphQLRequest",
+    "GraphQLResponse",
+    "GraphQLServerPort",
+    "GraphQLServerStats",
+    "OperationType",
+    "PageInfo",
+    "ResolverRegistry",
+    "ServerConfig",
+    "SubscriptionEvent",
 ]

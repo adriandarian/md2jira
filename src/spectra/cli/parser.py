@@ -50,6 +50,7 @@ def create_parser() -> argparse.ArgumentParser:
     _add_schedule_arguments(parser)
     _add_webhook_arguments(parser)
     _add_websocket_arguments(parser)
+    _add_graphql_arguments(parser)
     _add_notification_arguments(parser)
     _add_llm_arguments(parser)
     _add_multi_epic_arguments(parser)
@@ -822,6 +823,46 @@ def _add_websocket_arguments(parser: argparse.ArgumentParser) -> None:
         "--no-aiohttp",
         action="store_true",
         help="Force use of simple stdlib WebSocket server",
+    )
+
+
+def _add_graphql_arguments(parser: argparse.ArgumentParser) -> None:
+    """Add GraphQL API server arguments."""
+    parser.add_argument(
+        "--graphql",
+        action="store_true",
+        help="Start GraphQL API server for queries, mutations, and subscriptions",
+    )
+    parser.add_argument(
+        "--graphql-host",
+        type=str,
+        default="0.0.0.0",
+        metavar="HOST",
+        help="Host to bind GraphQL server to (default: 0.0.0.0)",
+    )
+    parser.add_argument(
+        "--graphql-port",
+        type=int,
+        default=8080,
+        metavar="PORT",
+        help="Port for GraphQL server (default: 8080)",
+    )
+    parser.add_argument(
+        "--graphql-path",
+        type=str,
+        default="/graphql",
+        metavar="PATH",
+        help="GraphQL endpoint path (default: /graphql)",
+    )
+    parser.add_argument(
+        "--no-playground",
+        action="store_true",
+        help="Disable GraphQL Playground UI",
+    )
+    parser.add_argument(
+        "--no-introspection",
+        action="store_true",
+        help="Disable GraphQL schema introspection",
     )
 
 
