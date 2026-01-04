@@ -3,6 +3,13 @@ Markdown Parser - Parse markdown epic files into domain entities.
 
 Implements the DocumentParserPort interface.
 Supports both single-epic and multi-epic formats.
+
+Enhanced with tolerant parsing for:
+- Multiple formatting variants (table, inline, blockquote)
+- Case-insensitive field and section names
+- Field name aliases (Story Points / Points / SP)
+- Flexible whitespace handling
+- Precise parse error reporting with line numbers
 """
 
 import logging
@@ -22,6 +29,21 @@ from spectra.core.domain.value_objects import (
 from spectra.core.ports.document_parser import DocumentParserPort
 
 from .parser_utils import parse_blockquote_comments
+from .tolerant_markdown import (
+    ParseErrorCode,
+    ParseErrorInfo,
+    ParseLocation,
+    ParseResult,
+    ParseWarning,
+    TolerantFieldExtractor,
+    TolerantPatterns,
+    TolerantSectionExtractor,
+    get_context_lines,
+    get_line_number,
+    location_from_match,
+    parse_checkboxes_tolerant,
+    parse_description_tolerant,
+)
 
 
 class MarkdownParser(DocumentParserPort):
@@ -254,6 +276,242 @@ class MarkdownParser(DocumentParserPort):
         self._detected_format = self._detect_format(content)
         self.logger.debug(f"Detected markdown format: {self._detected_format}")
         return self._parse_all_stories(content)
+
+    def parse_stories_tolerant(
+        self, source: str | Path, source_name: str | None = None
+    ) -> ParseResult:
+        """
+        Parse user stories with tolerant parsing and detailed error reporting.
+
+        This method is more forgiving of formatting variants and provides
+        precise error locations for debugging. Use this when you want
+        detailed diagnostics about the parse process.
+
+        Args:
+            source: File path, directory path, or markdown content string.
+            source_name: Optional name for error reporting (defaults to file path).
+
+        Returns:
+            ParseResult with stories, errors, and warnings.
+
+        Example:
+            >>> parser = MarkdownParser()
+            >>> result = parser.parse_stories_tolerant("# Epic\\n### US-001: Story...")
+            >>> if result.errors:
+            ...     for error in result.errors:
+            ...         print(f"Line {error.line}: {error.message}")
+            >>> stories = result.stories
+        """
+        # Determine source name for error reporting
+        if source_name is None:
+            if isinstance(source, Path):
+                source_name = str(source)
+            elif isinstance(source, str) and "\n" not in source and len(source) < 256:
+                source_name = source  # Likely a file path
+
+        content = self._get_content(source)
+        self._detected_format = self._detect_format(content)
+
+        return self._parse_all_stories_tolerant(content, source_name)
+
+    def _parse_all_stories_tolerant(self, content: str, source: str | None = None) -> ParseResult:
+        """
+        Parse all stories with tolerant parsing and error collection.
+
+        Args:
+            content: Markdown content to parse
+            source: Source file path for error reporting
+
+        Returns:
+            ParseResult with stories, errors, and warnings
+        """
+        result = ParseResult(source=source)
+
+        # Detect format
+        detected_format = self._detect_format(content)
+        self.logger.debug(f"Detected format: {detected_format} for tolerant parse")
+
+        # Find all story headers
+        story_matches: list[tuple[re.Match[str], str]] = []
+
+        if detected_format == self.FORMAT_STANDALONE:
+            # Try h1 pattern for standalone files
+            for match in TolerantPatterns.STORY_HEADER_H1.finditer(content):
+                story_matches.append((match, "h1"))
+        else:
+            # Try h3 patterns
+            for match in TolerantPatterns.STORY_HEADER.finditer(content):
+                story_matches.append((match, "h3"))
+
+        if not story_matches:
+            result.errors.append(
+                ParseErrorInfo(
+                    message="No user stories found in document",
+                    location=ParseLocation(line=1, source=source),
+                    context=get_context_lines(content, 1, before=0, after=3),
+                    suggestion="Stories should start with '### STORY-ID: Title' (e.g., ### US-001: My Story)",
+                    code=ParseErrorCode.NO_STORIES,
+                )
+            )
+            return result
+
+        # Track seen story IDs for duplicate detection
+        seen_ids: dict[str, int] = {}
+
+        # Parse each story
+        for i, (match, _header_type) in enumerate(story_matches):
+            story_id = match.group(1)
+            title = match.group(2).strip()
+
+            # Clean title of trailing emoji/status
+            title = re.sub(r"\s*[✅🔲🟡⏸️🔄📋]+\s*$", "", title).strip()
+
+            # Check for duplicates
+            if story_id in seen_ids:
+                location = location_from_match(content, match, source)
+                result.warnings.append(
+                    ParseWarning(
+                        message=f"Duplicate story ID '{story_id}' (first seen at line {seen_ids[story_id]})",
+                        location=location,
+                        suggestion="Use a unique story ID",
+                        code=ParseErrorCode.DUPLICATE_STORY_ID,
+                    )
+                )
+            else:
+                seen_ids[story_id] = get_line_number(content, match.start())
+
+            # Determine content boundaries
+            start = match.end()
+            end = story_matches[i + 1][0].start() if i + 1 < len(story_matches) else len(content)
+            story_content = content[start:end]
+
+            # Parse story with tolerant methods
+            try:
+                story, story_warnings = self._parse_story_tolerant(
+                    story_id, title, story_content, source
+                )
+                if story:
+                    result.stories.append(story)
+                result.warnings.extend(story_warnings)
+            except Exception as e:
+                location = location_from_match(content, match, source)
+                result.errors.append(
+                    ParseErrorInfo(
+                        message=f"Failed to parse story '{story_id}': {e}",
+                        location=location,
+                        context=get_context_lines(content, location.line),
+                        code="PARSE_EXCEPTION",
+                    )
+                )
+
+        return result
+
+    def _parse_story_tolerant(
+        self, story_id: str, title: str, content: str, source: str | None = None
+    ) -> tuple[UserStory | None, list[ParseWarning]]:
+        """
+        Parse a single story with tolerant extraction and warning collection.
+
+        Args:
+            story_id: Story identifier
+            title: Story title
+            content: Story content block
+            source: Source file for error reporting
+
+        Returns:
+            Tuple of (UserStory or None, list of warnings)
+        """
+        warnings: list[ParseWarning] = []
+
+        # Use tolerant field extractor
+        field_extractor = TolerantFieldExtractor(content, source)
+
+        # Extract fields with tolerance
+        story_points_str, _ = field_extractor.extract_field("Story Points", "0")
+        priority_str, _ = field_extractor.extract_field("Priority", "Medium")
+        status_str, _ = field_extractor.extract_field("Status", "Planned")
+        warnings.extend(field_extractor.warnings)
+
+        # Parse story points with validation
+        try:
+            story_points = int(story_points_str) if story_points_str.isdigit() else 0
+        except ValueError:
+            warnings.append(
+                ParseWarning(
+                    message=f"Invalid story points value '{story_points_str}', using 0",
+                    location=ParseLocation(line=1, source=source),
+                    suggestion="Story Points should be a number (e.g., 3, 5, 8)",
+                    code=ParseErrorCode.INVALID_STORY_POINTS,
+                )
+            )
+            story_points = 0
+
+        # Extract description with tolerance
+        desc_dict, desc_warnings = parse_description_tolerant(content, source)
+        warnings.extend(desc_warnings)
+
+        description = None
+        if desc_dict:
+            description = Description(
+                role=desc_dict.get("role", ""),
+                want=desc_dict.get("want", ""),
+                benefit=desc_dict.get("benefit", ""),
+            )
+
+        # Extract acceptance criteria with tolerance
+        section_extractor = TolerantSectionExtractor(content, source)
+        ac_content, _ = section_extractor.extract_section("Acceptance Criteria")
+        warnings.extend(section_extractor.warnings)
+
+        ac_items, ac_warnings = (
+            parse_checkboxes_tolerant(ac_content, source) if ac_content else ([], [])
+        )
+        warnings.extend(ac_warnings)
+
+        acceptance = AcceptanceCriteria.from_list(
+            [item[0] for item in ac_items],
+            [item[1] for item in ac_items],
+        )
+
+        # Extract subtasks (use existing method)
+        subtasks = self._extract_subtasks(content)
+
+        # Extract commits (use existing method)
+        commits = self._extract_commits(content)
+
+        # Extract technical notes (use existing method)
+        tech_notes = self._extract_technical_notes(content)
+
+        # Extract links (use existing method)
+        links = self._extract_links(content)
+
+        # Extract comments (use existing method)
+        comments = self._extract_comments(content)
+
+        # Extract tracker info (use existing method)
+        external_key, external_url, last_synced, sync_status, content_hash = (
+            self._extract_tracker_info(content)
+        )
+
+        return UserStory(
+            id=StoryId(story_id),
+            title=title,
+            description=description,
+            acceptance_criteria=acceptance,
+            technical_notes=tech_notes,
+            story_points=story_points,
+            priority=Priority.from_string(priority_str),
+            status=Status.from_string(status_str),
+            subtasks=subtasks,
+            commits=commits,
+            links=links,
+            comments=comments,
+            external_key=IssueKey(external_key) if external_key else None,
+            external_url=external_url,
+            last_synced=last_synced,
+            sync_status=sync_status,
+            content_hash=content_hash,
+        ), warnings
 
     def _is_story_file(self, file_path: Path) -> bool:
         """
@@ -676,6 +934,116 @@ class MarkdownParser(DocumentParserPort):
                 errors.append(f"{story_id}: Missing 'As a' description")
 
         return errors
+
+    def validate_detailed(
+        self, source: str | Path, source_name: str | None = None
+    ) -> tuple[list[ParseErrorInfo], list[ParseWarning]]:
+        """
+        Validate markdown source with precise error locations.
+
+        Enhanced validation that provides line numbers, column positions,
+        and context for each error or warning.
+
+        Args:
+            source: File path or markdown content string.
+            source_name: Optional source identifier for error reporting.
+
+        Returns:
+            Tuple of (errors, warnings) with detailed location information.
+
+        Example:
+            >>> parser = MarkdownParser()
+            >>> errors, warnings = parser.validate_detailed("# Empty file")
+            >>> for error in errors:
+            ...     print(f"Line {error.line}: {error.message}")
+        """
+        content = self._get_content(source)
+
+        # Determine source name
+        if source_name is None:
+            if isinstance(source, Path):
+                source_name = str(source)
+
+        errors: list[ParseErrorInfo] = []
+        warnings: list[ParseWarning] = []
+
+        # Check for story pattern using tolerant patterns
+        story_matches = list(TolerantPatterns.STORY_HEADER.finditer(content))
+        if not story_matches:
+            story_matches = list(TolerantPatterns.STORY_HEADER_H1.finditer(content))
+
+        if not story_matches:
+            errors.append(
+                ParseErrorInfo(
+                    message="No user stories found in document",
+                    location=ParseLocation(line=1, source=source_name),
+                    context=get_context_lines(content, 1, before=0, after=5),
+                    suggestion=(
+                        "Add a story header like '### US-001: Story Title' or "
+                        "'# PROJ-001: Story Title' for standalone files"
+                    ),
+                    code=ParseErrorCode.NO_STORIES,
+                )
+            )
+            return errors, warnings
+
+        # Validate each story
+        for i, match in enumerate(story_matches):
+            story_id = match.group(1)
+            story_line = get_line_number(content, match.start())
+            start = match.end()
+            end = story_matches[i + 1].start() if i + 1 < len(story_matches) else len(content)
+            story_content = content[start:end]
+
+            # Use tolerant extractor to check fields
+            extractor = TolerantFieldExtractor(story_content, source_name)
+
+            # Check Story Points
+            points_value, points_location = extractor.extract_field("Story Points")
+            if not points_value:
+                errors.append(
+                    ParseErrorInfo(
+                        message=f"Missing Story Points field in story '{story_id}'",
+                        location=ParseLocation(line=story_line, source=source_name),
+                        context=get_context_lines(content, story_line, after=5),
+                        suggestion=(
+                            "Add '| **Story Points** | 3 |' in a table or "
+                            "'**Story Points**: 3' inline"
+                        ),
+                        code=ParseErrorCode.MISSING_REQUIRED_FIELD,
+                    )
+                )
+            elif not points_value.isdigit():
+                line = points_location.line if points_location else story_line
+                warnings.append(
+                    ParseWarning(
+                        message=f"Story Points '{points_value}' is not a valid number in '{story_id}'",
+                        location=ParseLocation(line=line, source=source_name),
+                        suggestion="Story Points should be a whole number (e.g., 1, 2, 3, 5, 8)",
+                        code=ParseErrorCode.INVALID_STORY_POINTS,
+                    )
+                )
+
+            # Check description
+            desc_dict, desc_warnings = parse_description_tolerant(story_content, source_name)
+            if not desc_dict:
+                warnings.append(
+                    ParseWarning(
+                        message=f"Missing user story description in '{story_id}'",
+                        location=ParseLocation(line=story_line, source=source_name),
+                        suggestion=(
+                            "Add '**As a** [role] **I want** [feature] **So that** [benefit]'"
+                        ),
+                        code=ParseErrorCode.INCOMPLETE_DESCRIPTION,
+                    )
+                )
+            else:
+                warnings.extend(desc_warnings)
+
+            # Collect extractor warnings
+            warnings.extend(extractor.warnings)
+
+        return errors, warnings
 
     # -------------------------------------------------------------------------
     # Private Methods

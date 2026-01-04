@@ -55,6 +55,27 @@ from .streaming import (
     stream_stories_from_directory,
     stream_stories_from_file,
 )
+
+# Tolerant parsing utilities
+from .tolerant_markdown import (
+    ParseErrorCode,
+    ParseErrorInfo,
+    ParseIssue,
+    ParseLocation,
+    ParseResult,
+    ParseSeverity,
+    ParseWarning,
+    TolerantFieldExtractor,
+    TolerantPatterns,
+    TolerantSectionExtractor,
+    get_column_number,
+    get_context_lines,
+    get_line_content,
+    get_line_number,
+    location_from_match,
+    parse_checkboxes_tolerant,
+    parse_description_tolerant,
+)
 from .toml_parser import TomlParser
 from .toon_parser import ToonParser
 from .yaml_parser import YamlParser
@@ -81,6 +102,14 @@ __all__ = [
     "ObsidianParser",
     "OpenAPIParser",
     "OrgModeParser",
+    # Tolerant parsing exports
+    "ParseErrorCode",
+    "ParseErrorInfo",
+    "ParseIssue",
+    "ParseLocation",
+    "ParseResult",
+    "ParseSeverity",
+    "ParseWarning",
     "ProtobufParser",
     "RstParser",
     "StoryBuffer",
@@ -88,13 +117,23 @@ __all__ = [
     "StreamingMarkdownParser",
     "StreamingStats",
     "TomlParser",
+    "TolerantFieldExtractor",
+    "TolerantPatterns",
+    "TolerantSectionExtractor",
     "ToonParser",
     "YamlParser",
     "YamlParserPlugin",
     "estimate_file_stories",
+    "get_column_number",
+    "get_context_lines",
     "get_file_stats",
+    "get_line_content",
+    "get_line_number",
+    "location_from_match",
     "parse_blockquote_comments",
+    "parse_checkboxes_tolerant",
     "parse_datetime",
+    "parse_description_tolerant",
     "stream_stories_from_directory",
     "stream_stories_from_file",
 ]

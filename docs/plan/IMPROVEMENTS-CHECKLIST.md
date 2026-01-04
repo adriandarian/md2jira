@@ -880,7 +880,7 @@ For each new tracker adapter, follow this checklist:
 
 ## 📋 Parser Improvements
 
-- [ ] **Stronger Markdown Parsing** - Tolerate formatting variants; precise parse errors
+- [x] **Stronger Markdown Parsing** - Tolerate formatting variants; precise parse errors ✅ **COMPLETED**
 - [ ] **Round-trip Edits** - Modify source markdown while preserving formatting
 - [ ] **Schema Validation** - Optional strict mode for required fields
 - [ ] **Extensible Frontmatter** - YAML frontmatter as alternative to tables
