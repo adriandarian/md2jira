@@ -248,7 +248,7 @@ jobs:
       - uses: docker/build-push-action@v5
         with:
           context: .
-          file: dist/docker/Dockerfile
+          file: packaging/docker/Dockerfile
           push: false
           load: true
           tags: spectra:test

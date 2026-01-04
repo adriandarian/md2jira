@@ -18,10 +18,10 @@ from spectra.core.exceptions import (
     AuthenticationError,
     ConfigError,
     ConfigFileError,
-    Md2JiraError,
     ParserError,
     RateLimitError,
     ResourceNotFoundError,
+    SpectraError,
     TrackerError,
     TransientError,
     TransitionError,
@@ -322,7 +322,7 @@ class TestErrorFormatter:
     def test_verbose_includes_details(self):
         """Test verbose mode includes technical details."""
         cause = ValueError("underlying issue")
-        exc = Md2JiraError("High level error", cause=cause)
+        exc = SpectraError("High level error", cause=cause)
 
         formatter_normal = ErrorFormatter(color=False, verbose=False)
         formatter_verbose = ErrorFormatter(color=False, verbose=True)

@@ -90,13 +90,13 @@ require("spectra").setup({
 
 | Command | Description |
 |---------|-------------|
-| `:Md2JiraValidate` | Validate markdown file |
-| `:Md2JiraValidate!` | Validate with strict mode |
-| `:Md2JiraSync [epic]` | Sync to Jira (dry-run) |
-| `:Md2JiraSyncExecute [epic]` | Sync to Jira (execute) |
-| `:Md2JiraDashboard` | Show status dashboard |
-| `:Md2JiraInit` | Run setup wizard |
-| `:Md2JiraStories` | Browse stories |
+| `:SpectraValidate` | Validate markdown file |
+| `:SpectraValidate!` | Validate with strict mode |
+| `:SpectraSync [epic]` | Sync to Jira (dry-run) |
+| `:SpectraSyncExecute [epic]` | Sync to Jira (execute) |
+| `:SpectraDashboard` | Show status dashboard |
+| `:SpectraInit` | Run setup wizard |
+| `:SpectraStories` | Browse stories |
 
 ## 🔭 Telescope
 

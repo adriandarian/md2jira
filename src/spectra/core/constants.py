@@ -220,7 +220,7 @@ class GitHubLabel:
     EPIC: Final[str] = "epic"
     STORY: Final[str] = "story"
     SUBTASK: Final[str] = "subtask"
-    MD2JIRA: Final[str] = "spectra"
+    SPECTRA: Final[str] = "spectra"
 
 
 # =============================================================================
@@ -277,7 +277,7 @@ class ConfluenceLabel:
 
     EPIC: Final[str] = "epic"
     STORY: Final[str] = "story"
-    MD2JIRA: Final[str] = "spectra"
+    SPECTRA: Final[str] = "spectra"
 
 
 # =============================================================================

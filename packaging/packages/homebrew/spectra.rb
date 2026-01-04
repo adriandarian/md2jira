@@ -8,7 +8,7 @@
 # Or install directly:
 #   brew install adriandarian/spectra/spectra
 
-class Md2jira < Formula
+class Spectra < Formula
   include Language::Python::Virtualenv
 
   desc "Production-grade CLI tool for synchronizing markdown documentation with Jira"

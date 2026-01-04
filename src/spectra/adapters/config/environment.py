@@ -259,8 +259,8 @@ class EnvironmentConfigProvider(ConfigProviderPort):
             "JIRA_EMAIL": "jira_email",
             "JIRA_API_TOKEN": "jira_api_token",
             "JIRA_PROJECT": "project_key",
-            "MD2JIRA_VERBOSE": "verbose",
-            "MD2JIRA_LOG_FORMAT": "log_format",
+            "SPECTRA_VERBOSE": "verbose",
+            "SPECTRA_LOG_FORMAT": "log_format",
         }
 
         for env_key, config_key in env_mapping.items():

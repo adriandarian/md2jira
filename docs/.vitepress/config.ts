@@ -1,19 +1,19 @@
 import { defineConfig } from 'vitepress'
 
 export default defineConfig({
-  title: 'md2jira',
+  title: 'spectra',
   description: 'Sync markdown documentation to Jira with ease',
 
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
     ['meta', { name: 'theme-color', content: '#0052cc' }],
     ['meta', { property: 'og:type', content: 'website' }],
-    ['meta', { property: 'og:title', content: 'md2jira - Markdown to Jira Sync' }],
+    ['meta', { property: 'og:title', content: 'spectra - Markdown to Jira Sync' }],
     ['meta', { property: 'og:description', content: 'A production-grade CLI tool for synchronizing markdown documentation with Jira' }],
-    ['meta', { property: 'og:url', content: 'https://adriandarian.github.io/md2jira/' }],
+    ['meta', { property: 'og:url', content: 'https://adriandarian.github.io/spectra/' }],
   ],
 
-  base: '/md2jira/',
+  base: '/spectra/',
 
   themeConfig: {
     logo: '/logo.svg',
@@ -143,7 +143,7 @@ export default defineConfig({
     },
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/adriandarian/md2jira' }
+      { icon: 'github', link: 'https://github.com/adriandarian/spectra' }
     ],
 
     footer: {
@@ -156,7 +156,7 @@ export default defineConfig({
     },
 
     editLink: {
-      pattern: 'https://github.com/adriandarian/md2jira/edit/main/website/:path',
+      pattern: 'https://github.com/adriandarian/spectra/edit/main/website/:path',
       text: 'Edit this page on GitHub'
     },
 

@@ -6,7 +6,7 @@
 
 import * as vscode from 'vscode';
 
-interface Md2JiraResult {
+interface SpectraResult {
     code: number;
     stdout: string;
     stderr: string;
@@ -22,7 +22,7 @@ export class DiagnosticsProvider implements vscode.Disposable {
     /**
      * Update diagnostics based on spectra output
      */
-    updateDiagnostics(document: vscode.TextDocument, result: Md2JiraResult): void {
+    updateDiagnostics(document: vscode.TextDocument, result: SpectraResult): void {
         const diagnostics: vscode.Diagnostic[] = [];
 
         if (result.code !== 0) {

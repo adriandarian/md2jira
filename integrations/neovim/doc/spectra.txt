@@ -99,24 +99,24 @@ Call `setup()` with a configuration table: >lua
 ==============================================================================
 5. COMMANDS                                                 *spectra-commands*
 
-*:Md2JiraValidate*[!]
+*:SpectraValidate*[!]
     Validate the current markdown file.
     With `!`, uses strict mode (warnings as errors).
 
-*:Md2JiraSync* [epic_key]
+*:SpectraSync* [epic_key]
     Sync current markdown to Jira (dry-run mode).
     If epic_key is not provided, it's auto-detected from the file.
 
-*:Md2JiraSyncExecute* [epic_key]
+*:SpectraSyncExecute* [epic_key]
     Sync current markdown to Jira (execute mode - makes changes).
 
-*:Md2JiraDashboard*
+*:SpectraDashboard*
     Show the spectra status dashboard.
 
-*:Md2JiraInit*
+*:SpectraInit*
     Run the spectra first-time setup wizard.
 
-*:Md2JiraStories*
+*:SpectraStories*
     Open Telescope picker to browse stories in the current file.
 
 ==============================================================================

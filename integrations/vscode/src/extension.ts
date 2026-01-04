@@ -29,7 +29,7 @@ interface Epic {
     line: number;
 }
 
-interface Md2JiraResult {
+interface SpectraResult {
     code: number;
     stdout: string;
     stderr: string;
@@ -152,7 +152,7 @@ function registerCommands(context: vscode.ExtensionContext) {
                 }
             }
 
-            const result = await runMd2Jira(args);
+            const result = await runSpectra(args);
             showResultPanel('spectra Dashboard', result.stdout);
         })
     );
@@ -176,7 +176,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 
             if (!epicKey) return;
 
-            const result = await runMd2Jira(['--generate', '--epic', epicKey]);
+            const result = await runSpectra(['--generate', '--epic', epicKey]);
             if (result.code === 0) {
                 vscode.window.showInformationMessage('Template generated successfully');
                 showResultPanel('Generated Template', result.stdout);
@@ -341,7 +341,7 @@ async function runValidate(document: vscode.TextDocument, silent: boolean = fals
             title: 'Validating markdown...',
             cancellable: false
         }, async () => {
-            const result = await runMd2Jira(args);
+            const result = await runSpectra(args);
             diagnosticsProvider.updateDiagnostics(document, result);
 
             if (result.code === 0) {
@@ -352,7 +352,7 @@ async function runValidate(document: vscode.TextDocument, silent: boolean = fals
             }
         });
     } else {
-        const result = await runMd2Jira(args);
+        const result = await runSpectra(args);
         diagnosticsProvider.updateDiagnostics(document, result);
     }
 }
@@ -372,7 +372,7 @@ async function runSync(document: vscode.TextDocument, epicKey: string, execute: 
         title: execute ? 'Syncing to Jira...' : 'Running dry-run sync...',
         cancellable: false
     }, async () => {
-        const result = await runMd2Jira(args);
+        const result = await runSpectra(args);
 
         if (result.code === 0) {
             const msg = execute ? '✓ Sync completed' : '✓ Dry-run completed';
@@ -485,7 +485,7 @@ function updateStatusBar(): void {
 /**
  * Run spectra CLI command
  */
-function runMd2Jira(args: string[]): Promise<Md2JiraResult> {
+function runSpectra(args: string[]): Promise<SpectraResult> {
     return new Promise((resolve) => {
         const executable = getExecutable();
         const cmd = [executable, ...args].join(' ');

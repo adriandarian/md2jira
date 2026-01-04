@@ -137,7 +137,7 @@ verbose = true
 | `BITBUCKET_WORKSPACE` | Workspace slug (Cloud) or project key (Server) |
 | `BITBUCKET_REPO` | Repository slug |
 | `BITBUCKET_BASE_URL` | API base URL (default: `https://api.bitbucket.org/2.0`) |
-| `MD2JIRA_VERBOSE` | Enable verbose output (`true`/`false`) |
+| `SPECTRA_VERBOSE` | Enable verbose output (`true`/`false`) |
 
 ## .env File
 

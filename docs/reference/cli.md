@@ -281,8 +281,8 @@ See [Exit Codes Reference](/reference/exit-codes) for detailed exit code documen
 | `JIRA_EMAIL` | Jira account email |
 | `JIRA_API_TOKEN` | Jira API token |
 | `JIRA_PROJECT` | Default project key |
-| `MD2JIRA_VERBOSE` | Enable verbose output |
-| `MD2JIRA_NO_COLOR` | Disable colored output |
+| `SPECTRA_VERBOSE` | Enable verbose output |
+| `SPECTRA_NO_COLOR` | Disable colored output |
 
 See [Environment Variables](/guide/environment) for complete documentation.
 

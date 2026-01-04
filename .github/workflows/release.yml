@@ -131,7 +131,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: completions
-          path: dist/completions/
+          path: packaging/completions/
 
   # ============================================================================
   # Create GitHub Release
@@ -302,7 +302,7 @@ jobs:
         if: ${{ !inputs.dry_run }}
         with:
           context: .
-          file: dist/docker/Dockerfile
+          file: packaging/docker/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -405,9 +405,9 @@ jobs:
           SHA256=$(sha256sum spectra.tar.gz | cut -d' ' -f1)
           
           # Update formula
-          sed -i "s|url \".*\"|url \"https://github.com/adriandarian/spectra/archive/refs/tags/v${VERSION}.tar.gz\"|" dist/packages/homebrew/spectra.rb
-          sed -i "s|sha256 \".*\"|sha256 \"${SHA256}\"|" dist/packages/homebrew/spectra.rb
-          sed -i "s|version \".*\"|version \"${VERSION}\"|" dist/packages/homebrew/spectra.rb
+          sed -i "s|url \".*\"|url \"https://github.com/adriandarian/spectra/archive/refs/tags/v${VERSION}.tar.gz\"|" packaging/packages/homebrew/spectra.rb
+          sed -i "s|sha256 \".*\"|sha256 \"${SHA256}\"|" packaging/packages/homebrew/spectra.rb
+          sed -i "s|version \".*\"|version \"${VERSION}\"|" packaging/packages/homebrew/spectra.rb
           
           echo "Updated formula with version $VERSION and SHA256 $SHA256"
 
@@ -417,7 +417,7 @@ jobs:
         env:
           SSH_DEPLOY_KEY: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
         with:
-          source-directory: 'dist/packages/homebrew'
+          source-directory: 'packaging/packages/homebrew'
           destination-github-username: 'adriandarian'
           destination-repository-name: 'homebrew-spectra'
           user-email: 'github-actions[bot]@users.noreply.github.com'
@@ -439,26 +439,26 @@ jobs:
         shell: pwsh
         run: |
           $version = "${{ needs.validate.outputs.version }}"
-          $nuspec = "dist/packages/chocolatey/spectra.nuspec"
+          $nuspec = "packaging/packages/chocolatey/spectra.nuspec"
           
           # Update version in nuspec
           (Get-Content $nuspec) -replace '<version>.*</version>', "<version>$version</version>" | Set-Content $nuspec
           
           # Update download URL
           $url = "https://github.com/adriandarian/spectra/releases/download/v$version/spectra-$version.tar.gz"
-          (Get-Content "dist/packages/chocolatey/tools/chocolateyinstall.ps1") -replace '\$url = .*', "`$url = '$url'" | Set-Content "dist/packages/chocolatey/tools/chocolateyinstall.ps1"
+          (Get-Content "packaging/packages/chocolatey/tools/chocolateyinstall.ps1") -replace '\$url = .*', "`$url = '$url'" | Set-Content "packaging/packages/chocolatey/tools/chocolateyinstall.ps1"
 
       - name: 📦 Pack Chocolatey Package
         shell: pwsh
         run: |
-          cd dist/packages/chocolatey
+          cd packaging/packages/chocolatey
           choco pack
 
       - name: 🚀 Push to Chocolatey
         if: ${{ !inputs.dry_run }}
         shell: pwsh
         run: |
-          cd dist/packages/chocolatey
+          cd packaging/packages/chocolatey
           choco push spectra.${{ needs.validate.outputs.version }}.nupkg --source https://push.chocolatey.org/ --api-key ${{ secrets.CHOCOLATEY_API_KEY }}
         continue-on-error: true
 
@@ -550,7 +550,7 @@ jobs:
           mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
           
           # Copy spec file
-          cp dist/packages/linux/spectra.spec ~/rpmbuild/SPECS/
+          cp packaging/packages/linux/spectra.spec ~/rpmbuild/SPECS/
           
           # Update version in spec
           sed -i "s/^Version:.*/Version: $VERSION/" ~/rpmbuild/SPECS/spectra.spec

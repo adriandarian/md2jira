@@ -34,8 +34,6 @@ from spectra.core.exceptions import (
     IssueNotFoundError,
     # Backward compatibility aliases
     IssueTrackerError,
-    # Base
-    Md2JiraError,
     MissingConfigError,
     NetworkUnreachableError,
     NotFoundError,
@@ -56,6 +54,8 @@ from spectra.core.exceptions import (
     RequiredFieldError,
     ResourceNotFoundError,
     ServiceUnavailableError,
+    # Base
+    SpectraError,
     SSLError,
     StaleDataError,
     StructureError,
@@ -77,12 +77,12 @@ from spectra.core.exceptions import (
 # =============================================================================
 
 
-class TestMd2JiraError:
-    """Tests for the base Md2JiraError class."""
+class TestSpectraError:
+    """Tests for the base SpectraError class."""
 
     def test_basic_message(self):
         """Test basic error message."""
-        error = Md2JiraError("Something went wrong")
+        error = SpectraError("Something went wrong")
         assert str(error) == "Something went wrong"
         assert error.message == "Something went wrong"
         assert error.cause is None
@@ -90,14 +90,14 @@ class TestMd2JiraError:
     def test_with_cause(self):
         """Test error with a cause."""
         cause = ValueError("Original error")
-        error = Md2JiraError("Wrapper error", cause=cause)
+        error = SpectraError("Wrapper error", cause=cause)
         assert "Wrapper error" in str(error)
         assert "caused by" in str(error)
         assert error.cause is cause
 
     def test_exception_inheritance(self):
-        """Test that Md2JiraError inherits from Exception."""
-        error = Md2JiraError("test")
+        """Test that SpectraError inherits from Exception."""
+        error = SpectraError("test")
         assert isinstance(error, Exception)
 
 
@@ -121,9 +121,9 @@ class TestTrackerError:
         assert error.issue_key == "PROJ-123"
 
     def test_inheritance(self):
-        """Test that TrackerError inherits from Md2JiraError."""
+        """Test that TrackerError inherits from SpectraError."""
         error = TrackerError("test")
-        assert isinstance(error, Md2JiraError)
+        assert isinstance(error, SpectraError)
 
 
 class TestAuthenticationErrors:
@@ -392,7 +392,7 @@ class TestParserErrors:
     def test_parser_error_basic(self):
         """Test basic ParserError."""
         error = ParserError("Parse failed")
-        assert isinstance(error, Md2JiraError)
+        assert isinstance(error, SpectraError)
         assert str(error) == "Parse failed"
 
     def test_parser_error_with_location(self):
@@ -465,7 +465,7 @@ class TestOutputErrors:
     def test_output_error(self):
         """Test basic OutputError."""
         error = OutputError("Output failed", page_id="12345")
-        assert isinstance(error, Md2JiraError)
+        assert isinstance(error, SpectraError)
         assert error.page_id == "12345"
 
     def test_output_authentication_error(self):
@@ -502,7 +502,7 @@ class TestConfigErrors:
     def test_config_error_basic(self):
         """Test basic ConfigError."""
         error = ConfigError("Config invalid")
-        assert isinstance(error, Md2JiraError)
+        assert isinstance(error, SpectraError)
         assert str(error) == "Config invalid"
 
     def test_config_error_with_path(self):
@@ -607,8 +607,8 @@ class TestExceptionChaining:
 class TestExceptionHierarchy:
     """Tests verifying the exception class hierarchy."""
 
-    def test_all_tracker_errors_are_md2jira_errors(self):
-        """Test that all tracker errors inherit from Md2JiraError."""
+    def test_all_tracker_errors_are_spectra_errors(self):
+        """Test that all tracker errors inherit from SpectraError."""
         tracker_errors = [
             TrackerError("test"),
             AuthenticationError("test"),
@@ -643,15 +643,15 @@ class TestExceptionHierarchy:
         ]
 
         for error in tracker_errors:
-            assert isinstance(error, Md2JiraError), (
-                f"{type(error).__name__} should inherit from Md2JiraError"
+            assert isinstance(error, SpectraError), (
+                f"{type(error).__name__} should inherit from SpectraError"
             )
             assert isinstance(error, TrackerError), (
                 f"{type(error).__name__} should inherit from TrackerError"
             )
 
-    def test_all_parser_errors_are_md2jira_errors(self):
-        """Test that all parser errors inherit from Md2JiraError."""
+    def test_all_parser_errors_are_spectra_errors(self):
+        """Test that all parser errors inherit from SpectraError."""
         parser_errors = [
             ParserError("test"),
             ParserSyntaxError("test"),
@@ -661,15 +661,15 @@ class TestExceptionHierarchy:
         ]
 
         for error in parser_errors:
-            assert isinstance(error, Md2JiraError), (
-                f"{type(error).__name__} should inherit from Md2JiraError"
+            assert isinstance(error, SpectraError), (
+                f"{type(error).__name__} should inherit from SpectraError"
             )
             assert isinstance(error, ParserError), (
                 f"{type(error).__name__} should inherit from ParserError"
             )
 
-    def test_all_config_errors_are_md2jira_errors(self):
-        """Test that all config errors inherit from Md2JiraError."""
+    def test_all_config_errors_are_spectra_errors(self):
+        """Test that all config errors inherit from SpectraError."""
         config_errors = [
             ConfigError("test"),
             ConfigFileError("test"),
@@ -678,15 +678,15 @@ class TestExceptionHierarchy:
         ]
 
         for error in config_errors:
-            assert isinstance(error, Md2JiraError), (
-                f"{type(error).__name__} should inherit from Md2JiraError"
+            assert isinstance(error, SpectraError), (
+                f"{type(error).__name__} should inherit from SpectraError"
             )
             assert isinstance(error, ConfigError), (
                 f"{type(error).__name__} should inherit from ConfigError"
             )
 
-    def test_all_output_errors_are_md2jira_errors(self):
-        """Test that all output errors inherit from Md2JiraError."""
+    def test_all_output_errors_are_spectra_errors(self):
+        """Test that all output errors inherit from SpectraError."""
         output_errors = [
             OutputError("test"),
             OutputAuthenticationError("test"),
@@ -696,8 +696,8 @@ class TestExceptionHierarchy:
         ]
 
         for error in output_errors:
-            assert isinstance(error, Md2JiraError), (
-                f"{type(error).__name__} should inherit from Md2JiraError"
+            assert isinstance(error, SpectraError), (
+                f"{type(error).__name__} should inherit from SpectraError"
             )
             assert isinstance(error, OutputError), (
                 f"{type(error).__name__} should inherit from OutputError"

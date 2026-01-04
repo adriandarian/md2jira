@@ -13,8 +13,8 @@
 
 set -euo pipefail
 
-VERSION="${MD2JIRA_VERSION:-latest}"
-INSTALL_METHOD="${MD2JIRA_INSTALL_METHOD:-pip}"
+VERSION="${SPECTRA_VERSION:-latest}"
+INSTALL_METHOD="${SPECTRA_INSTALL_METHOD:-pip}"
 
 # Colors for output
 RED='\033[0;31m'

@@ -17,7 +17,6 @@ from spectra.core.exceptions import (
     ConfigError,
     ConfigFileError,
     ConfigValidationError,
-    Md2JiraError,
     OutputAccessDeniedError,
     OutputAuthenticationError,
     OutputNotFoundError,
@@ -25,6 +24,7 @@ from spectra.core.exceptions import (
     ParserError,
     RateLimitError,
     ResourceNotFoundError,
+    SpectraError,
     TrackerError,
     TransientError,
     TransitionError,
@@ -272,7 +272,7 @@ class ErrorFormatter:
             return self._format_file_permission_error(exc)
         if isinstance(exc, ConnectionError):
             return self._format_connection_error(exc)
-        if isinstance(exc, Md2JiraError):
+        if isinstance(exc, SpectraError):
             return self._format_generic_spectra_error(exc)
 
         return self._format_unknown_error(exc)
@@ -797,7 +797,7 @@ class ErrorFormatter:
             details=f"Issue: {issue_key}" if issue_key else None,
         )
 
-    def _format_generic_spectra_error(self, exc: Md2JiraError) -> FormattedError:
+    def _format_generic_spectra_error(self, exc: SpectraError) -> FormattedError:
         """Format generic spectra error."""
         message = str(exc) if str(exc) else "An error occurred."
 
@@ -834,7 +834,7 @@ class ErrorFormatter:
     # Helpers
     # -------------------------------------------------------------------------
 
-    def _get_cause_details(self, exc: Md2JiraError) -> str | None:
+    def _get_cause_details(self, exc: SpectraError) -> str | None:
         """Get details about the exception cause."""
         cause = getattr(exc, "cause", None)
         if cause:

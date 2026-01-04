@@ -321,27 +321,28 @@ end
 
 -- Create user commands
 function M._create_commands()
-  vim.api.nvim_create_user_command("Md2JiraValidate", function(opts)
+  -- New Spectra* commands (preferred)
+  vim.api.nvim_create_user_command("SpectraValidate", function(opts)
     M.validate({ strict = opts.bang })
   end, { bang = true, desc = "Validate markdown file" })
 
-  vim.api.nvim_create_user_command("Md2JiraSync", function(opts)
+  vim.api.nvim_create_user_command("SpectraSync", function(opts)
     M.sync({ epic = opts.args ~= "" and opts.args or nil })
   end, { nargs = "?", desc = "Sync markdown to Jira (dry-run)" })
 
-  vim.api.nvim_create_user_command("Md2JiraSyncExecute", function(opts)
+  vim.api.nvim_create_user_command("SpectraSyncExecute", function(opts)
     M.sync_execute({ epic = opts.args ~= "" and opts.args or nil })
   end, { nargs = "?", desc = "Sync markdown to Jira (execute)" })
 
-  vim.api.nvim_create_user_command("Md2JiraDashboard", function()
+  vim.api.nvim_create_user_command("SpectraDashboard", function()
     M.dashboard()
   end, { desc = "Show spectra dashboard" })
 
-  vim.api.nvim_create_user_command("Md2JiraInit", function()
+  vim.api.nvim_create_user_command("SpectraInit", function()
     M.init()
   end, { desc = "Run spectra init wizard" })
 
-  vim.api.nvim_create_user_command("Md2JiraStories", function()
+  vim.api.nvim_create_user_command("SpectraStories", function()
     M.telescope_stories()
   end, { desc = "Browse stories with Telescope" })
 end

@@ -287,7 +287,7 @@ class TestEnvironmentConfigProvider:
         )
 
         monkeypatch.setenv("JIRA_URL", "https://env.atlassian.net")
-        monkeypatch.setenv("MD2JIRA_VERBOSE", "false")
+        monkeypatch.setenv("SPECTRA_VERBOSE", "false")
 
         provider = EnvironmentConfigProvider(
             config_file=config_file,

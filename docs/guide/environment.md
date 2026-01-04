@@ -24,9 +24,9 @@ These are required for spectra to connect to Jira:
 | `PLANE_WORKSPACE_SLUG` | Plane.so workspace slug | None |
 | `PLANE_PROJECT_ID` | Plane.so project ID | None |
 | `PLANE_API_URL` | Plane.so API endpoint (for self-hosted) | `https://app.plane.so/api/v1` |
-| `MD2JIRA_VERBOSE` | Enable verbose output | `false` |
-| `MD2JIRA_LOG_LEVEL` | Logging level | `INFO` |
-| `MD2JIRA_NO_COLOR` | Disable colored output | `false` |
+| `SPECTRA_VERBOSE` | Enable verbose output | `false` |
+| `SPECTRA_LOG_LEVEL` | Logging level | `INFO` |
+| `SPECTRA_NO_COLOR` | Disable colored output | `false` |
 
 ## Setting Environment Variables
 
@@ -66,7 +66,7 @@ JIRA_API_TOKEN=your-api-token
 
 # Optional
 JIRA_PROJECT=MYPROJ
-MD2JIRA_VERBOSE=true
+SPECTRA_VERBOSE=true
 ```
 
 spectra automatically loads `.env` files from:

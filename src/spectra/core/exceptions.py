@@ -2,10 +2,10 @@
 Centralized exception hierarchy for spectra.
 
 This module defines a consistent exception hierarchy for all error conditions
-in the application. All custom exceptions inherit from Md2JiraError.
+in the application. All custom exceptions inherit from SpectraError.
 
 Exception Hierarchy:
-    Md2JiraError (base)
+    SpectraError (base)
     ├── TrackerError (issue tracker operations)
     │   ├── AuthenticationError
     │   │   ├── InvalidCredentialsError
@@ -48,7 +48,7 @@ Exception Hierarchy:
 """
 
 
-class Md2JiraError(Exception):
+class SpectraError(Exception):
     """
     Base exception for all spectra errors.
 
@@ -76,7 +76,7 @@ class Md2JiraError(Exception):
 # =============================================================================
 
 
-class TrackerError(Md2JiraError):
+class TrackerError(SpectraError):
     """
     Base exception for issue tracker errors.
 
@@ -614,7 +614,7 @@ class DuplicateResourceError(ConflictError):
 # =============================================================================
 
 
-class ParserError(Md2JiraError):
+class ParserError(SpectraError):
     """
     Error during document parsing.
 
@@ -760,7 +760,7 @@ class InvalidFieldValueError(ParserError):
 # =============================================================================
 
 
-class OutputError(Md2JiraError):
+class OutputError(SpectraError):
     """
     Base exception for document output errors.
 
@@ -807,7 +807,7 @@ class OutputRateLimitError(OutputError):
 # =============================================================================
 
 
-class ConfigError(Md2JiraError):
+class ConfigError(SpectraError):
     """
     Base exception for configuration errors.
 
@@ -927,8 +927,6 @@ __all__ = [
     # Backward compatibility aliases
     "IssueNotFoundError",
     "IssueTrackerError",
-    # Base
-    "Md2JiraError",
     "MissingConfigError",
     "NetworkUnreachableError",
     "NotFoundError",
@@ -949,6 +947,8 @@ __all__ = [
     "ResourceNotFoundError",
     "SSLError",
     "ServiceUnavailableError",
+    # New base class
+    "SpectraError",
     "StaleDataError",
     "StructureError",
     "TimeoutError",

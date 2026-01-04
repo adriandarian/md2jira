@@ -38,7 +38,7 @@ choco install spectra
 ### Universal Linux Installer
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/adriandarian/spectra/main/dist/packages/linux/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/adriandarian/spectra/main/packaging/packages/linux/install.sh | bash
 ```
 
 ## Docker
