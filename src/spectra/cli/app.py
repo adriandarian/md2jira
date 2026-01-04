@@ -1171,6 +1171,12 @@ def main() -> int:
 
         return run_graphql(args)
 
+    # Handle REST API server
+    if getattr(args, "rest_api", False):
+        from .commands.rest_api import run_rest_api
+
+        return run_rest_api(args)
+
     # Handle multi-epic sync
     if args.multi_epic or args.list_epics:
         if not args.input:

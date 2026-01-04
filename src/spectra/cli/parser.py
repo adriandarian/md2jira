@@ -51,6 +51,7 @@ def create_parser() -> argparse.ArgumentParser:
     _add_webhook_arguments(parser)
     _add_websocket_arguments(parser)
     _add_graphql_arguments(parser)
+    _add_rest_api_arguments(parser)
     _add_notification_arguments(parser)
     _add_llm_arguments(parser)
     _add_multi_epic_arguments(parser)
@@ -863,6 +864,46 @@ def _add_graphql_arguments(parser: argparse.ArgumentParser) -> None:
         "--no-introspection",
         action="store_true",
         help="Disable GraphQL schema introspection",
+    )
+
+
+def _add_rest_api_arguments(parser: argparse.ArgumentParser) -> None:
+    """Add REST API server arguments."""
+    parser.add_argument(
+        "--rest-api",
+        action="store_true",
+        help="Start REST API server for CRUD operations on epics, stories, subtasks",
+    )
+    parser.add_argument(
+        "--rest-host",
+        type=str,
+        default="0.0.0.0",
+        metavar="HOST",
+        help="Host to bind REST API server to (default: 0.0.0.0)",
+    )
+    parser.add_argument(
+        "--rest-port",
+        type=int,
+        default=8080,
+        metavar="PORT",
+        help="Port for REST API server (default: 8080)",
+    )
+    parser.add_argument(
+        "--rest-base-path",
+        type=str,
+        default="/api/v1",
+        metavar="PATH",
+        help="Base path for REST API endpoints (default: /api/v1)",
+    )
+    parser.add_argument(
+        "--no-cors",
+        action="store_true",
+        help="Disable CORS support",
+    )
+    parser.add_argument(
+        "--no-docs",
+        action="store_true",
+        help="Disable API documentation endpoint",
     )
 
 

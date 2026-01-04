@@ -8,6 +8,7 @@ better code organization and maintainability.
 from .backup import list_backups, list_sessions, run_diff, run_restore, run_rollback
 from .fields import run_generate_field_mapping, run_list_custom_fields, run_list_sprints
 from .pull import run_bidirectional_sync, run_pull
+from .rest_api import run_rest_api
 from .snapshot import run_clear_snapshot, run_list_snapshots
 from .sync import (
     run_attachment_sync,
@@ -52,4 +53,6 @@ __all__ = [
     "run_list_custom_fields",
     "run_generate_field_mapping",
     "run_list_sprints",
+    # API commands
+    "run_rest_api",
 ]

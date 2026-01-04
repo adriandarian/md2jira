@@ -28,7 +28,6 @@ from .document_parser import DocumentParserPort, ParserError
 from .graphql_api import (
     Connection,
     Edge,
-    ErrorCode,
     ExecutionContext,
     GraphQLError,
     GraphQLRequest,
@@ -37,8 +36,13 @@ from .graphql_api import (
     OperationType,
     PageInfo,
     ResolverRegistry,
-    ServerConfig,
     SubscriptionEvent,
+)
+from .graphql_api import (
+    ErrorCode as GraphQLErrorCode,
+)
+from .graphql_api import (
+    ServerConfig as GraphQLServerConfig,
 )
 from .graphql_api import (
     ServerStats as GraphQLServerStats,
@@ -72,6 +76,35 @@ from .plugin_marketplace import (
     PublishResult,
     SearchQuery,
     SearchResult,
+)
+from .rest_api import (
+    ConflictError as RestConflictError,
+)
+from .rest_api import (
+    ErrorCode as RestErrorCode,
+)
+from .rest_api import (
+    HttpMethod,
+    HttpStatus,
+    PagedResponse,
+    RestApiError,
+    RestApiServerPort,
+    RestError,
+    RestRequest,
+    RestResponse,
+    RouteInfo,
+)
+from .rest_api import (
+    NotFoundError as RestNotFoundError,
+)
+from .rest_api import (
+    ServerConfig as RestServerConfig,
+)
+from .rest_api import (
+    ServerStats as RestServerStats,
+)
+from .rest_api import (
+    ValidationError as RestValidationError,
 )
 from .state_store import (
     ConnectionError as StateConnectionError,
@@ -192,16 +225,32 @@ __all__ = [
     # GraphQL API
     "Connection",
     "Edge",
-    "ErrorCode",
     "ExecutionContext",
     "GraphQLError",
+    "GraphQLErrorCode",
     "GraphQLRequest",
     "GraphQLResponse",
+    "GraphQLServerConfig",
     "GraphQLServerPort",
     "GraphQLServerStats",
     "OperationType",
     "PageInfo",
     "ResolverRegistry",
-    "ServerConfig",
     "SubscriptionEvent",
+    # REST API
+    "HttpMethod",
+    "HttpStatus",
+    "PagedResponse",
+    "RestApiError",
+    "RestApiServerPort",
+    "RestConflictError",
+    "RestError",
+    "RestErrorCode",
+    "RestNotFoundError",
+    "RestRequest",
+    "RestResponse",
+    "RestServerConfig",
+    "RestServerStats",
+    "RestValidationError",
+    "RouteInfo",
 ]
