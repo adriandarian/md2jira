@@ -810,3 +810,406 @@ class TestDataClasses:
         assert data["total_syncs"] == 5
         assert "period_start" in data
         assert "period_end" in data
+
+
+# =============================================================================
+# Test Timestamp-Based Rollback
+# =============================================================================
+
+
+class TestTimestampBasedRollback:
+    """Tests for timestamp-based rollback functionality."""
+
+    @pytest.fixture
+    def history_with_entries(
+        self, sqlite_store: SQLiteSyncHistoryStore, tmp_path: Path
+    ) -> tuple[SQLiteSyncHistoryStore, list[SyncHistoryEntry], list[ChangeRecord]]:
+        """Create a store with multiple entries and changes for rollback testing."""
+        base_time = datetime.now()
+        entries = []
+        all_changes = []
+
+        # Entry 1: 3 hours ago
+        entry1 = SyncHistoryEntry(
+            entry_id=generate_entry_id(),
+            session_id="session-1",
+            markdown_path="/path/to/stories.md",
+            epic_key="PROJ-100",
+            tracker_type="jira",
+            outcome=SyncOutcome.SUCCESS,
+            started_at=base_time - timedelta(hours=3, minutes=5),
+            completed_at=base_time - timedelta(hours=3),
+            duration_seconds=300.0,
+            operations_total=3,
+            operations_succeeded=3,
+            dry_run=False,
+        )
+        entries.append(entry1)
+        sqlite_store.record(entry1)
+
+        # Changes for entry 1
+        changes1 = [
+            ChangeRecord(
+                change_id=generate_change_id(),
+                entry_id=entry1.entry_id,
+                operation_type="create",
+                entity_type="story",
+                entity_id="PROJ-101",
+                story_id="US-1",
+                timestamp=base_time - timedelta(hours=3, minutes=2),
+            ),
+            ChangeRecord(
+                change_id=generate_change_id(),
+                entry_id=entry1.entry_id,
+                operation_type="update",
+                entity_type="story",
+                entity_id="PROJ-101",
+                story_id="US-1",
+                field_name="description",
+                old_value="Initial",
+                new_value="Updated",
+                timestamp=base_time - timedelta(hours=3, minutes=1),
+            ),
+        ]
+        all_changes.extend(changes1)
+        sqlite_store.record_changes(changes1)
+
+        # Entry 2: 1 hour ago
+        entry2 = SyncHistoryEntry(
+            entry_id=generate_entry_id(),
+            session_id="session-2",
+            markdown_path="/path/to/stories.md",
+            epic_key="PROJ-100",
+            tracker_type="jira",
+            outcome=SyncOutcome.SUCCESS,
+            started_at=base_time - timedelta(hours=1, minutes=5),
+            completed_at=base_time - timedelta(hours=1),
+            duration_seconds=300.0,
+            operations_total=2,
+            operations_succeeded=2,
+            dry_run=False,
+        )
+        entries.append(entry2)
+        sqlite_store.record(entry2)
+
+        # Changes for entry 2
+        changes2 = [
+            ChangeRecord(
+                change_id=generate_change_id(),
+                entry_id=entry2.entry_id,
+                operation_type="create",
+                entity_type="story",
+                entity_id="PROJ-102",
+                story_id="US-2",
+                timestamp=base_time - timedelta(hours=1, minutes=2),
+            ),
+            ChangeRecord(
+                change_id=generate_change_id(),
+                entry_id=entry2.entry_id,
+                operation_type="update",
+                entity_type="epic",
+                entity_id="PROJ-100",
+                story_id="EPIC",
+                field_name="summary",
+                old_value="Old Summary",
+                new_value="New Summary",
+                timestamp=base_time - timedelta(hours=1, minutes=1),
+            ),
+        ]
+        all_changes.extend(changes2)
+        sqlite_store.record_changes(changes2)
+
+        return sqlite_store, entries, all_changes
+
+    def test_get_state_at_timestamp(
+        self,
+        history_with_entries: tuple[
+            SQLiteSyncHistoryStore, list[SyncHistoryEntry], list[ChangeRecord]
+        ],
+    ) -> None:
+        """Test getting state at a specific timestamp."""
+        store, entries, _all_changes = history_with_entries
+        base_time = datetime.now()
+
+        # Get state at 2 hours ago (should only include entry 1's changes)
+        state = store.get_state_at_timestamp(base_time - timedelta(hours=2))
+
+        # Should have 2 changes from entry 1
+        assert len(state) == 2
+        assert all(c.entry_id == entries[0].entry_id for c in state)
+
+    def test_get_state_at_timestamp_with_filters(
+        self,
+        history_with_entries: tuple[
+            SQLiteSyncHistoryStore, list[SyncHistoryEntry], list[ChangeRecord]
+        ],
+    ) -> None:
+        """Test getting state with epic_key filter."""
+        store, _entries, _ = history_with_entries
+        base_time = datetime.now()
+
+        # Filter by epic_key
+        state = store.get_state_at_timestamp(
+            base_time,
+            epic_key="PROJ-100",
+        )
+
+        # Should have all 4 changes (all are for PROJ-100)
+        assert len(state) == 4
+
+        # Filter by non-existent epic
+        state_empty = store.get_state_at_timestamp(
+            base_time,
+            epic_key="NONEXISTENT",
+        )
+        assert len(state_empty) == 0
+
+    def test_get_changes_since_timestamp(
+        self,
+        history_with_entries: tuple[
+            SQLiteSyncHistoryStore, list[SyncHistoryEntry], list[ChangeRecord]
+        ],
+    ) -> None:
+        """Test getting changes since a specific timestamp."""
+        store, entries, _ = history_with_entries
+        base_time = datetime.now()
+
+        # Get changes since 2 hours ago (should include entry 2's changes)
+        changes = store.get_changes_since_timestamp(base_time - timedelta(hours=2))
+
+        # Should have 2 changes from entry 2
+        assert len(changes) == 2
+        assert all(c.entry_id == entries[1].entry_id for c in changes)
+        # Should be ordered newest first
+        assert changes[0].timestamp > changes[1].timestamp
+
+    def test_get_changes_since_timestamp_all(
+        self,
+        history_with_entries: tuple[
+            SQLiteSyncHistoryStore, list[SyncHistoryEntry], list[ChangeRecord]
+        ],
+    ) -> None:
+        """Test getting all changes since a very old timestamp."""
+        store, _, _ = history_with_entries
+
+        # Get changes since a long time ago
+        changes = store.get_changes_since_timestamp(datetime.now() - timedelta(days=30))
+
+        # Should have all 4 changes
+        assert len(changes) == 4
+
+    def test_get_entry_at_timestamp(
+        self,
+        history_with_entries: tuple[
+            SQLiteSyncHistoryStore, list[SyncHistoryEntry], list[ChangeRecord]
+        ],
+    ) -> None:
+        """Test getting the most recent entry at a timestamp."""
+        store, entries, _ = history_with_entries
+        base_time = datetime.now()
+
+        # Get entry at 2 hours ago (should be entry 1)
+        entry = store.get_entry_at_timestamp(base_time - timedelta(hours=2))
+        assert entry is not None
+        assert entry.entry_id == entries[0].entry_id
+
+        # Get entry at now (should be entry 2)
+        entry = store.get_entry_at_timestamp(base_time)
+        assert entry is not None
+        assert entry.entry_id == entries[1].entry_id
+
+        # Get entry at very old timestamp (should be None)
+        entry = store.get_entry_at_timestamp(base_time - timedelta(days=30))
+        assert entry is None
+
+    def test_list_rollback_points(
+        self,
+        history_with_entries: tuple[
+            SQLiteSyncHistoryStore, list[SyncHistoryEntry], list[ChangeRecord]
+        ],
+    ) -> None:
+        """Test listing available rollback points."""
+        store, _entries, _ = history_with_entries
+
+        # List rollback points
+        points = store.list_rollback_points()
+
+        # Should have 2 rollback points (both are successful syncs)
+        assert len(points) == 2
+        # Should be ordered by completed_at descending
+        assert points[0].completed_at > points[1].completed_at
+
+    def test_list_rollback_points_with_filter(
+        self,
+        history_with_entries: tuple[
+            SQLiteSyncHistoryStore, list[SyncHistoryEntry], list[ChangeRecord]
+        ],
+    ) -> None:
+        """Test listing rollback points with filters."""
+        store, _, _ = history_with_entries
+
+        # Filter by epic
+        points = store.list_rollback_points(epic_key="PROJ-100")
+        assert len(points) == 2
+
+        # Filter by non-existent epic
+        points = store.list_rollback_points(epic_key="NONEXISTENT")
+        assert len(points) == 0
+
+    def test_create_rollback_plan(
+        self,
+        history_with_entries: tuple[
+            SQLiteSyncHistoryStore, list[SyncHistoryEntry], list[ChangeRecord]
+        ],
+    ) -> None:
+        """Test creating a rollback plan."""
+        store, entries, _ = history_with_entries
+        base_time = datetime.now()
+
+        # Create plan to roll back to 2 hours ago
+        plan = store.create_rollback_plan(base_time - timedelta(hours=2))
+
+        assert plan.target_timestamp == base_time - timedelta(hours=2)
+        assert plan.target_entry is not None
+        assert plan.target_entry.entry_id == entries[0].entry_id
+        assert plan.total_changes == 2  # Changes from entry 2
+        assert len(plan.changes_to_rollback) == 2
+        assert plan.can_rollback is True
+        assert "PROJ-102" in plan.affected_entities
+        assert "PROJ-100" in plan.affected_entities
+
+    def test_create_rollback_plan_no_changes(
+        self,
+        history_with_entries: tuple[
+            SQLiteSyncHistoryStore, list[SyncHistoryEntry], list[ChangeRecord]
+        ],
+    ) -> None:
+        """Test creating a rollback plan when there are no changes to roll back."""
+        store, _, _ = history_with_entries
+        base_time = datetime.now()
+
+        # Create plan to roll back to now (no changes to roll back)
+        plan = store.create_rollback_plan(base_time + timedelta(hours=1))
+
+        assert plan.total_changes == 0
+        assert plan.can_rollback is False
+        assert any("Nothing to roll back" in w for w in plan.warnings)
+
+    def test_create_rollback_plan_with_create_operations(
+        self,
+        history_with_entries: tuple[
+            SQLiteSyncHistoryStore, list[SyncHistoryEntry], list[ChangeRecord]
+        ],
+    ) -> None:
+        """Test rollback plan warns about create operations."""
+        store, _, _ = history_with_entries
+        base_time = datetime.now()
+
+        # Create plan that includes create operations
+        plan = store.create_rollback_plan(base_time - timedelta(hours=4))
+
+        # Should warn about create operations
+        assert any("create operations" in w.lower() for w in plan.warnings)
+
+    def test_execute_rollback_plan(
+        self,
+        history_with_entries: tuple[
+            SQLiteSyncHistoryStore, list[SyncHistoryEntry], list[ChangeRecord]
+        ],
+    ) -> None:
+        """Test executing a rollback plan."""
+        store, _, _ = history_with_entries
+        base_time = datetime.now()
+
+        # Create and execute plan
+        plan = store.create_rollback_plan(base_time - timedelta(hours=2))
+        rollback_entry_id = generate_entry_id()
+
+        count = store.execute_rollback_plan(plan, rollback_entry_id)
+
+        assert count == 2
+
+        # Verify changes are marked as rolled back
+        for change in plan.changes_to_rollback:
+            changes = store.get_changes(change.entry_id)
+            for c in changes:
+                if c.change_id == change.change_id:
+                    assert c.rolled_back is True
+                    assert c.rollback_entry_id == rollback_entry_id
+
+    def test_execute_rollback_plan_no_changes(
+        self,
+        sqlite_store: SQLiteSyncHistoryStore,
+    ) -> None:
+        """Test executing a rollback plan with no changes."""
+        from spectra.core.ports.sync_history import RollbackPlan
+
+        plan = RollbackPlan(
+            target_timestamp=datetime.now(),
+            can_rollback=True,
+            changes_to_rollback=[],
+        )
+        rollback_entry_id = generate_entry_id()
+
+        count = sqlite_store.execute_rollback_plan(plan, rollback_entry_id)
+        assert count == 0
+
+    def test_execute_rollback_plan_cannot_execute(
+        self,
+        sqlite_store: SQLiteSyncHistoryStore,
+    ) -> None:
+        """Test that executing an invalid plan raises an error."""
+        from spectra.core.ports.sync_history import RollbackError, RollbackPlan
+
+        plan = RollbackPlan(
+            target_timestamp=datetime.now(),
+            can_rollback=False,
+            warnings=["Test warning"],
+        )
+
+        with pytest.raises(RollbackError):
+            sqlite_store.execute_rollback_plan(plan, "rollback-123")
+
+    def test_rollback_plan_to_dict(self) -> None:
+        """Test RollbackPlan.to_dict() serialization."""
+        from spectra.core.ports.sync_history import RollbackPlan
+
+        plan = RollbackPlan(
+            target_timestamp=datetime.now(),
+            epic_key="PROJ-100",
+            tracker_type="jira",
+            can_rollback=True,
+            warnings=["Warning 1"],
+        )
+        data = plan.to_dict()
+
+        assert "target_timestamp" in data
+        assert data["epic_key"] == "PROJ-100"
+        assert data["tracker_type"] == "jira"
+        assert data["can_rollback"] is True
+        assert "Warning 1" in data["warnings"]
+
+    def test_rollback_plan_from_dict(self) -> None:
+        """Test RollbackPlan.from_dict() deserialization."""
+        from spectra.core.ports.sync_history import RollbackPlan
+
+        data = {
+            "target_timestamp": datetime.now().isoformat(),
+            "created_at": datetime.now().isoformat(),
+            "target_entry": None,
+            "changes_to_rollback": [],
+            "epic_key": "PROJ-200",
+            "tracker_type": "github",
+            "total_changes": 5,
+            "affected_entities": ["ENT-1", "ENT-2"],
+            "affected_stories": ["US-1"],
+            "can_rollback": True,
+            "warnings": [],
+        }
+        plan = RollbackPlan.from_dict(data)
+
+        assert plan.epic_key == "PROJ-200"
+        assert plan.tracker_type == "github"
+        assert plan.total_changes == 5
+        assert "ENT-1" in plan.affected_entities
+        assert "US-1" in plan.affected_stories

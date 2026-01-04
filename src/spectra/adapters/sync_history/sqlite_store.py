@@ -32,6 +32,7 @@ from spectra.core.ports.sync_history import (
     HistoryQuery,
     HistoryStoreInfo,
     RollbackError,
+    RollbackPlan,
     SyncHistoryEntry,
     SyncHistoryError,
     SyncHistoryPort,
@@ -764,6 +765,286 @@ class SQLiteSyncHistoryStore(SyncHistoryPort):
                 logger.debug("WAL checkpoint completed")
             except sqlite3.Error as e:
                 raise SyncHistoryError(f"Failed to checkpoint: {e}") from e
+
+    # =========================================================================
+    # Timestamp-Based Rollback
+    # =========================================================================
+
+    def get_state_at_timestamp(
+        self,
+        timestamp: datetime,
+        epic_key: str | None = None,
+        tracker_type: str | None = None,
+    ) -> list[ChangeRecord]:
+        """Get the cumulative state of changes at a specific point in time."""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Build WHERE clause for filters
+            conditions = ["c.timestamp <= ?", "c.rolled_back = 0"]
+            params: list[Any] = [timestamp.isoformat()]
+
+            if epic_key:
+                conditions.append("h.epic_key = ?")
+                params.append(epic_key)
+
+            if tracker_type:
+                conditions.append("h.tracker_type = ?")
+                params.append(tracker_type)
+
+            where_clause = " AND ".join(conditions)
+
+            cursor.execute(
+                f"""
+                SELECT c.*
+                FROM sync_changes c
+                JOIN sync_history h ON c.entry_id = h.entry_id
+                WHERE {where_clause}
+                ORDER BY c.timestamp ASC
+                """,
+                params,
+            )
+            rows = cursor.fetchall()
+            cursor.close()
+
+            return [self._row_to_change(row) for row in rows]
+        except sqlite3.Error as e:
+            raise SyncHistoryError(f"Failed to get state at timestamp: {e}") from e
+
+    def get_changes_since_timestamp(
+        self,
+        timestamp: datetime,
+        epic_key: str | None = None,
+        tracker_type: str | None = None,
+    ) -> list[ChangeRecord]:
+        """Get all changes made after a specific timestamp."""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Build WHERE clause for filters
+            conditions = ["c.timestamp > ?", "c.rolled_back = 0"]
+            params: list[Any] = [timestamp.isoformat()]
+
+            if epic_key:
+                conditions.append("h.epic_key = ?")
+                params.append(epic_key)
+
+            if tracker_type:
+                conditions.append("h.tracker_type = ?")
+                params.append(tracker_type)
+
+            where_clause = " AND ".join(conditions)
+
+            cursor.execute(
+                f"""
+                SELECT c.*
+                FROM sync_changes c
+                JOIN sync_history h ON c.entry_id = h.entry_id
+                WHERE {where_clause}
+                ORDER BY c.timestamp DESC
+                """,
+                params,
+            )
+            rows = cursor.fetchall()
+            cursor.close()
+
+            return [self._row_to_change(row) for row in rows]
+        except sqlite3.Error as e:
+            raise SyncHistoryError(f"Failed to get changes since timestamp: {e}") from e
+
+    def get_entry_at_timestamp(
+        self,
+        timestamp: datetime,
+        epic_key: str | None = None,
+        tracker_type: str | None = None,
+    ) -> SyncHistoryEntry | None:
+        """Get the most recent sync entry before or at a timestamp."""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Build WHERE clause for filters
+            conditions = ["completed_at <= ?"]
+            params: list[Any] = [timestamp.isoformat()]
+
+            if epic_key:
+                conditions.append("epic_key = ?")
+                params.append(epic_key)
+
+            if tracker_type:
+                conditions.append("tracker_type = ?")
+                params.append(tracker_type)
+
+            where_clause = " AND ".join(conditions)
+
+            cursor.execute(
+                f"""
+                SELECT * FROM sync_history
+                WHERE {where_clause}
+                ORDER BY completed_at DESC
+                LIMIT 1
+                """,
+                params,
+            )
+            row = cursor.fetchone()
+            cursor.close()
+
+            if row is None:
+                return None
+
+            return self._row_to_entry(row)
+        except sqlite3.Error as e:
+            raise SyncHistoryError(f"Failed to get entry at timestamp: {e}") from e
+
+    def list_rollback_points(
+        self,
+        epic_key: str | None = None,
+        tracker_type: str | None = None,
+        limit: int = 20,
+    ) -> list[SyncHistoryEntry]:
+        """List available rollback points (successful syncs)."""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Build WHERE clause for filters
+            conditions = ["outcome IN ('success', 'partial')", "dry_run = 0"]
+            params: list[Any] = []
+
+            if epic_key:
+                conditions.append("epic_key = ?")
+                params.append(epic_key)
+
+            if tracker_type:
+                conditions.append("tracker_type = ?")
+                params.append(tracker_type)
+
+            where_clause = " AND ".join(conditions)
+            params.append(limit)
+
+            cursor.execute(
+                f"""
+                SELECT * FROM sync_history
+                WHERE {where_clause}
+                ORDER BY completed_at DESC
+                LIMIT ?
+                """,
+                params,
+            )
+            rows = cursor.fetchall()
+            cursor.close()
+
+            return [self._row_to_entry(row) for row in rows]
+        except sqlite3.Error as e:
+            raise SyncHistoryError(f"Failed to list rollback points: {e}") from e
+
+    def create_rollback_plan(
+        self,
+        target_timestamp: datetime,
+        epic_key: str | None = None,
+        tracker_type: str | None = None,
+    ) -> RollbackPlan:
+        """Create a plan for rolling back to a specific timestamp."""
+        try:
+            # Get the target entry (the state we want to restore to)
+            target_entry = self.get_entry_at_timestamp(
+                timestamp=target_timestamp,
+                epic_key=epic_key,
+                tracker_type=tracker_type,
+            )
+
+            # Get all changes that need to be rolled back
+            changes = self.get_changes_since_timestamp(
+                timestamp=target_timestamp,
+                epic_key=epic_key,
+                tracker_type=tracker_type,
+            )
+
+            # Build the plan
+            plan = RollbackPlan(
+                target_timestamp=target_timestamp,
+                target_entry=target_entry,
+                changes_to_rollback=changes,
+                epic_key=epic_key,
+                tracker_type=tracker_type,
+            )
+
+            # Add warnings if applicable
+            if not target_entry:
+                plan.warnings.append(
+                    f"No sync entry found before {target_timestamp.isoformat()}. "
+                    "Rolling back will undo all changes up to the first sync."
+                )
+
+            if not changes:
+                plan.warnings.append(
+                    "No changes found after the target timestamp. Nothing to roll back."
+                )
+                plan.can_rollback = False
+
+            # Check for create operations that may not be fully reversible
+            create_ops = [c for c in changes if c.operation_type == "create"]
+            if create_ops:
+                plan.warnings.append(
+                    f"{len(create_ops)} create operations found. "
+                    "Created entities may need manual deletion in the tracker."
+                )
+
+            # Check for delete operations that cannot be undone
+            delete_ops = [c for c in changes if c.operation_type == "delete"]
+            if delete_ops:
+                plan.warnings.append(
+                    f"{len(delete_ops)} delete operations found. "
+                    "Deleted entities cannot be automatically restored."
+                )
+
+            logger.debug(
+                f"Created rollback plan: {len(changes)} changes, "
+                f"{len(plan.affected_entities)} entities affected"
+            )
+
+            return plan
+        except sqlite3.Error as e:
+            raise RollbackError(f"Failed to create rollback plan: {e}") from e
+
+    def execute_rollback_plan(
+        self,
+        plan: RollbackPlan,
+        rollback_entry_id: str,
+    ) -> int:
+        """Execute a rollback plan by marking changes as rolled back."""
+        if not plan.can_rollback:
+            raise RollbackError("Rollback plan cannot be executed: " + "; ".join(plan.warnings))
+
+        if not plan.changes_to_rollback:
+            logger.debug("No changes to roll back")
+            return 0
+
+        try:
+            change_ids = [c.change_id for c in plan.changes_to_rollback]
+
+            with self._transaction() as cursor:
+                # Mark all changes in the plan as rolled back
+                placeholders = ",".join("?" for _ in change_ids)
+                cursor.execute(
+                    f"""
+                    UPDATE sync_changes
+                    SET rolled_back = 1, rollback_entry_id = ?
+                    WHERE change_id IN ({placeholders})
+                    """,
+                    [rollback_entry_id, *change_ids],
+                )
+                count = cursor.rowcount
+
+            logger.info(
+                f"Executed rollback plan: marked {count} changes as rolled back "
+                f"(rollback_entry_id={rollback_entry_id})"
+            )
+            return count
+        except sqlite3.Error as e:
+            raise RollbackError(f"Failed to execute rollback plan: {e}") from e
 
     # =========================================================================
     # Helper Methods

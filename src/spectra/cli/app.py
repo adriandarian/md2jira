@@ -31,10 +31,13 @@ from spectra.core.domain.events import EventBus
 
 from .commands.backup import (
     list_backups,
+    list_rollback_points,
     list_sessions,
     run_diff,
     run_restore,
     run_rollback,
+    run_rollback_preview,
+    run_rollback_to_timestamp,
 )
 from .commands.fields import run_generate_field_mapping, run_list_custom_fields, run_list_sprints
 from .commands.pull import run_bidirectional_sync, run_pull
@@ -1115,6 +1118,18 @@ def main() -> int:
     # Handle rollback
     if args.rollback:
         return run_rollback(args)
+
+    # Handle list-rollback-points
+    if getattr(args, "list_rollback_points", False):
+        return list_rollback_points(args)
+
+    # Handle rollback-preview
+    if getattr(args, "rollback_preview", None):
+        return run_rollback_preview(args)
+
+    # Handle rollback-to-timestamp
+    if getattr(args, "rollback_to_timestamp", None):
+        return run_rollback_to_timestamp(args)
 
     # Handle bidirectional sync
     if getattr(args, "bidirectional", False):

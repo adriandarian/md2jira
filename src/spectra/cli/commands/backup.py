@@ -7,9 +7,13 @@ This module contains handlers for backup-related commands:
 - run_restore: Restore from a backup
 - run_diff: Show diff between backup and current state
 - run_rollback: Rollback to most recent backup
+- list_rollback_points: List available rollback points
+- run_rollback_to_timestamp: Rollback to a specific timestamp
+- run_rollback_preview: Preview a timestamp rollback
 """
 
 import logging
+from datetime import datetime
 from pathlib import Path
 
 from ..exit_codes import ExitCode
@@ -18,10 +22,13 @@ from ..output import Console
 
 __all__ = [
     "list_backups",
+    "list_rollback_points",
     "list_sessions",
     "run_diff",
     "run_restore",
     "run_rollback",
+    "run_rollback_preview",
+    "run_rollback_to_timestamp",
 ]
 
 
@@ -503,3 +510,428 @@ def run_rollback(args) -> int:
             console.detail(f"... and {len(result.errors) - 10} more")
 
     return ExitCode.SUCCESS if result.success else ExitCode.ERROR
+
+
+def _parse_timestamp(timestamp_str: str) -> datetime:
+    """
+    Parse a timestamp string into a datetime object.
+
+    Supports ISO 8601 formats:
+    - Full: 2024-01-15T10:30:00
+    - With timezone: 2024-01-15T10:30:00+00:00
+    - Date only: 2024-01-15 (assumes end of day)
+    - With space: 2024-01-15 10:30:00
+
+    Args:
+        timestamp_str: Timestamp string to parse.
+
+    Returns:
+        Parsed datetime object.
+
+    Raises:
+        ValueError: If the timestamp format is invalid.
+    """
+    formats = [
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S%z",
+        "%Y-%m-%dT%H:%M:%S.%f",
+        "%Y-%m-%dT%H:%M:%S.%f%z",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d",
+    ]
+
+    for fmt in formats:
+        try:
+            dt = datetime.strptime(timestamp_str, fmt)
+            # If only date was provided, use end of day
+            if fmt == "%Y-%m-%d":
+                dt = dt.replace(hour=23, minute=59, second=59)
+            return dt
+        except ValueError:
+            continue
+
+    raise ValueError(
+        f"Invalid timestamp format: '{timestamp_str}'. "
+        "Use ISO 8601 format (e.g., '2024-01-15T10:30:00' or '2024-01-15')"
+    )
+
+
+def list_rollback_points(args) -> int:
+    """
+    List available rollback points (successful syncs with timestamps).
+
+    Args:
+        args: Parsed command-line arguments.
+
+    Returns:
+        Exit code.
+    """
+    from spectra.adapters.sync_history import SQLiteSyncHistoryStore
+
+    from ..logging import setup_logging
+
+    # Setup logging
+    log_level = logging.DEBUG if getattr(args, "verbose", False) else logging.INFO
+    log_format = getattr(args, "log_format", "text")
+    setup_logging(level=log_level, log_format=log_format)
+
+    # Create console
+    console = Console(
+        color=not getattr(args, "no_color", False),
+        verbose=getattr(args, "verbose", False),
+        quiet=getattr(args, "quiet", False),
+    )
+
+    epic_key = getattr(args, "epic", None)
+    tracker_type = getattr(args, "tracker", None)
+
+    console.header("spectra Rollback Points")
+
+    # Initialize sync history store
+    history_store = SQLiteSyncHistoryStore()
+
+    # Get rollback points
+    rollback_points = history_store.list_rollback_points(
+        epic_key=epic_key,
+        tracker_type=tracker_type,
+        limit=20,
+    )
+
+    if not rollback_points:
+        console.warning("No rollback points found.")
+        if epic_key:
+            console.info(f"Epic filter: {epic_key}")
+        if tracker_type:
+            console.info(f"Tracker filter: {tracker_type}")
+        console.info("Rollback points are created after each successful sync operation.")
+        return ExitCode.SUCCESS
+
+    # Display rollback points
+    console.print()
+    console.info(f"Found {len(rollback_points)} rollback points:")
+    console.print()
+
+    # Table header
+    header = f"{'#':<3} {'Timestamp':<22} {'Epic':<15} {'Tracker':<10} {'Outcome':<10} {'Ops':<8}"
+    console.print(header)
+    console.print("-" * len(header))
+
+    for idx, entry in enumerate(rollback_points, 1):
+        timestamp = entry.completed_at.strftime("%Y-%m-%d %H:%M:%S")
+        epic = entry.epic_key[:13] + ".." if len(entry.epic_key) > 15 else entry.epic_key
+        tracker = entry.tracker_type[:8] if len(entry.tracker_type) > 10 else entry.tracker_type
+        outcome = entry.outcome.value[:8]
+        ops = f"{entry.operations_succeeded}/{entry.operations_total}"
+
+        console.print(f"{idx:<3} {timestamp:<22} {epic:<15} {tracker:<10} {outcome:<10} {ops:<8}")
+
+    console.print()
+    console.info("To roll back to a specific point:")
+    console.detail("  spectra --rollback-to-timestamp <TIMESTAMP> --execute")
+    console.info("To preview a rollback:")
+    console.detail("  spectra --rollback-preview <TIMESTAMP>")
+
+    history_store.close()
+    return ExitCode.SUCCESS
+
+
+def run_rollback_preview(args) -> int:
+    """
+    Preview what would be rolled back to a specific timestamp.
+
+    Args:
+        args: Parsed command-line arguments.
+
+    Returns:
+        Exit code.
+    """
+    from spectra.adapters.sync_history import SQLiteSyncHistoryStore
+
+    from ..logging import setup_logging
+
+    # Setup logging
+    log_level = logging.DEBUG if getattr(args, "verbose", False) else logging.INFO
+    log_format = getattr(args, "log_format", "text")
+    setup_logging(level=log_level, log_format=log_format)
+
+    # Create console
+    console = Console(
+        color=not getattr(args, "no_color", False),
+        verbose=getattr(args, "verbose", False),
+        quiet=getattr(args, "quiet", False),
+    )
+
+    timestamp_str = getattr(args, "rollback_preview", None)
+    epic_key = getattr(args, "epic", None)
+    tracker_type = getattr(args, "tracker", None)
+
+    console.header("spectra Rollback Preview")
+
+    # Parse timestamp
+    try:
+        target_timestamp = _parse_timestamp(timestamp_str)
+    except ValueError as e:
+        console.error(str(e))
+        return ExitCode.CONFIG_ERROR
+
+    console.info(f"Target timestamp: {target_timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
+    if epic_key:
+        console.info(f"Epic filter: {epic_key}")
+    if tracker_type:
+        console.info(f"Tracker filter: {tracker_type}")
+
+    # Initialize sync history store
+    history_store = SQLiteSyncHistoryStore()
+
+    # Create rollback plan
+    console.section("Creating Rollback Plan")
+
+    try:
+        plan = history_store.create_rollback_plan(
+            target_timestamp=target_timestamp,
+            epic_key=epic_key,
+            tracker_type=tracker_type,
+        )
+    except Exception as e:
+        console.error(f"Failed to create rollback plan: {e}")
+        history_store.close()
+        return ExitCode.ERROR
+
+    # Display plan details
+    console.print()
+
+    if plan.target_entry:
+        console.success(f"Target entry found: {plan.target_entry.entry_id}")
+        console.detail(
+            f"  Completed: {plan.target_entry.completed_at.strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+        console.detail(f"  Epic: {plan.target_entry.epic_key}")
+        console.detail(f"  Tracker: {plan.target_entry.tracker_type}")
+        console.detail(f"  Outcome: {plan.target_entry.outcome.value}")
+    else:
+        console.warning("No sync entry found at or before the target timestamp")
+
+    console.print()
+    console.info(f"Changes to roll back: {plan.total_changes}")
+    console.info(f"Affected entities: {len(plan.affected_entities)}")
+    console.info(f"Affected stories: {len(plan.affected_stories)}")
+
+    # Show warnings
+    if plan.warnings:
+        console.print()
+        console.warning("Warnings:")
+        for warning in plan.warnings:
+            console.item(warning, "warn")
+
+    # Show change details
+    if plan.changes_to_rollback:
+        console.print()
+        console.section("Changes to Undo")
+
+        # Group by operation type
+        creates = [c for c in plan.changes_to_rollback if c.operation_type == "create"]
+        updates = [c for c in plan.changes_to_rollback if c.operation_type == "update"]
+        deletes = [c for c in plan.changes_to_rollback if c.operation_type == "delete"]
+
+        if creates:
+            console.info(f"Create operations ({len(creates)}):")
+            for change in creates[:5]:
+                console.detail(
+                    f"  {change.entity_type}: {change.entity_id} (story: {change.story_id})"
+                )
+            if len(creates) > 5:
+                console.detail(f"  ... and {len(creates) - 5} more")
+
+        if updates:
+            console.info(f"Update operations ({len(updates)}):")
+            for change in updates[:5]:
+                field_info = f" [{change.field_name}]" if change.field_name else ""
+                console.detail(f"  {change.entity_type}: {change.entity_id}{field_info}")
+            if len(updates) > 5:
+                console.detail(f"  ... and {len(updates) - 5} more")
+
+        if deletes:
+            console.info(f"Delete operations ({len(deletes)}):")
+            for change in deletes[:5]:
+                console.detail(f"  {change.entity_type}: {change.entity_id}")
+            if len(deletes) > 5:
+                console.detail(f"  ... and {len(deletes) - 5} more")
+
+    console.print()
+    if plan.can_rollback:
+        console.success("Rollback plan is valid")
+        console.info("To execute this rollback:")
+        console.detail(f"  spectra --rollback-to-timestamp '{timestamp_str}' --execute")
+    else:
+        console.error("Rollback plan cannot be executed")
+
+    history_store.close()
+    return ExitCode.SUCCESS
+
+
+def run_rollback_to_timestamp(args) -> int:
+    """
+    Roll back to a specific point in time.
+
+    This command:
+    1. Creates a rollback plan for the target timestamp
+    2. Marks all changes after that timestamp as rolled back
+    3. Optionally updates the tracker (requires --execute)
+
+    Args:
+        args: Parsed command-line arguments.
+
+    Returns:
+        Exit code.
+    """
+    from spectra.adapters.sync_history import SQLiteSyncHistoryStore, generate_entry_id
+    from spectra.core.ports.sync_history import SyncHistoryEntry, SyncOutcome
+
+    from ..logging import setup_logging
+
+    # Setup logging
+    log_level = logging.DEBUG if getattr(args, "verbose", False) else logging.INFO
+    log_format = getattr(args, "log_format", "text")
+    setup_logging(level=log_level, log_format=log_format)
+
+    # Create console
+    console = Console(
+        color=not getattr(args, "no_color", False),
+        verbose=getattr(args, "verbose", False),
+        quiet=getattr(args, "quiet", False),
+    )
+
+    timestamp_str = getattr(args, "rollback_to_timestamp", None)
+    epic_key = getattr(args, "epic", None)
+    tracker_type = getattr(args, "tracker", None)
+    dry_run = not getattr(args, "execute", False)
+
+    console.header("spectra Rollback to Timestamp")
+
+    # Parse timestamp
+    try:
+        target_timestamp = _parse_timestamp(timestamp_str)
+    except ValueError as e:
+        console.error(str(e))
+        return ExitCode.CONFIG_ERROR
+
+    console.info(f"Target timestamp: {target_timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
+    if epic_key:
+        console.info(f"Epic filter: {epic_key}")
+    if tracker_type:
+        console.info(f"Tracker filter: {tracker_type}")
+
+    if dry_run:
+        console.dry_run_banner()
+
+    # Initialize sync history store
+    history_store = SQLiteSyncHistoryStore()
+
+    # Create rollback plan
+    console.section("Creating Rollback Plan")
+
+    try:
+        plan = history_store.create_rollback_plan(
+            target_timestamp=target_timestamp,
+            epic_key=epic_key,
+            tracker_type=tracker_type,
+        )
+    except Exception as e:
+        console.error(f"Failed to create rollback plan: {e}")
+        history_store.close()
+        return ExitCode.ERROR
+
+    if not plan.can_rollback:
+        console.error("Cannot execute rollback:")
+        for warning in plan.warnings:
+            console.item(warning, "warn")
+        history_store.close()
+        return ExitCode.ERROR
+
+    # Display plan summary
+    console.print()
+    console.info(f"Changes to roll back: {plan.total_changes}")
+    console.info(f"Affected entities: {len(plan.affected_entities)}")
+
+    # Show warnings
+    if plan.warnings:
+        console.print()
+        console.warning("Warnings:")
+        for warning in plan.warnings:
+            console.item(warning, "warn")
+
+    # Confirmation
+    if not dry_run and not getattr(args, "no_confirm", False):
+        console.print()
+        console.warning("This will mark changes as rolled back in the sync history!")
+        console.detail(f"  {plan.total_changes} changes will be marked as rolled back")
+        console.detail("  Note: This does NOT automatically undo changes in the tracker.")
+        console.detail("  You may need to manually restore data or use --restore-backup.")
+        if not console.confirm("Proceed with rollback?"):
+            console.warning("Cancelled by user")
+            history_store.close()
+            return ExitCode.CANCELLED
+
+    # Execute rollback plan
+    console.section("Executing Rollback")
+    start_time = datetime.now()
+
+    rollback_entry_id = generate_entry_id()
+
+    if dry_run:
+        console.info(f"[DRY-RUN] Would mark {plan.total_changes} changes as rolled back")
+        rolled_back_count = plan.total_changes
+    else:
+        try:
+            rolled_back_count = history_store.execute_rollback_plan(plan, rollback_entry_id)
+        except Exception as e:
+            console.error(f"Failed to execute rollback: {e}")
+            history_store.close()
+            return ExitCode.ERROR
+
+    end_time = datetime.now()
+    duration = (end_time - start_time).total_seconds()
+
+    # Record the rollback operation in history
+    if not dry_run:
+        rollback_record = SyncHistoryEntry(
+            entry_id=rollback_entry_id,
+            session_id=f"rollback-{rollback_entry_id}",
+            markdown_path="<rollback-operation>",
+            epic_key=epic_key or "<all>",
+            tracker_type=tracker_type or "<all>",
+            outcome=SyncOutcome.SUCCESS,
+            started_at=start_time,
+            completed_at=end_time,
+            duration_seconds=duration,
+            operations_total=rolled_back_count,
+            operations_succeeded=rolled_back_count,
+            dry_run=False,
+            metadata={
+                "operation": "rollback_to_timestamp",
+                "target_timestamp": target_timestamp.isoformat(),
+                "changes_rolled_back": rolled_back_count,
+            },
+        )
+        history_store.record(rollback_record)
+
+    # Show results
+    console.print()
+    if dry_run:
+        console.success("Rollback preview completed (dry-run)")
+        console.info("Use --execute to perform the actual rollback")
+    else:
+        console.success("Rollback completed successfully!")
+        console.detail(f"  Changes rolled back: {rolled_back_count}")
+        console.detail(f"  Rollback entry ID: {rollback_entry_id}")
+        console.detail(f"  Duration: {duration:.2f}s")
+
+    console.print()
+    console.info("Note: The tracker state has NOT been modified.")
+    console.info("To restore the actual tracker data, you may need to:")
+    console.detail("  1. Use --restore-backup to restore from a backup")
+    console.detail("  2. Manually update issues in the tracker")
+    console.detail("  3. Re-sync from the original markdown file")
+
+    history_store.close()
+    return ExitCode.SUCCESS

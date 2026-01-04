@@ -864,7 +864,7 @@ For each new tracker adapter, follow this checklist:
 
 ### Reliability
 - [x] **Rate Limiting + Retries** - Centralized backoff strategy per adapter. Implemented `RateLimiterPort`, `RetryPolicyPort`, `CircuitBreakerPort`, and unified `ResiliencePort` interfaces in `core/ports/rate_limiting.py`. Features: 5 backoff strategies (exponential, linear, constant, fibonacci, decorrelated jitter), token bucket & sliding window rate limiters, circuit breaker pattern (closed/open/half-open states), 18 tracker presets (Jira, GitHub, GitLab, Linear, etc.) with sensible defaults. Adapters: `TokenBucketRateLimiter`, `SlidingWindowRateLimiter`, `RetryPolicy`, `AdaptiveRetryPolicy`, `CircuitBreaker`, `ResilienceManager` in `adapters/resilience/`. Factory: `create_resilience_manager(TrackerType|str)`. Zero dependencies. 115 unit tests passing.
-- [ ] **Rollback by Timestamp** - Restore to specific point in time
+- [x] **Rollback by Timestamp** - Restore to specific point in time. Implemented in `SyncHistoryPort` interface with methods: `get_state_at_timestamp()`, `get_changes_since_timestamp()`, `get_entry_at_timestamp()`, `list_rollback_points()`, `create_rollback_plan()`, `execute_rollback_plan()`. Added `RollbackPlan` dataclass for planning and previewing rollbacks. CLI commands: `--list-rollback-points` (show available restore points), `--rollback-preview <TIMESTAMP>` (preview changes), `--rollback-to-timestamp <TIMESTAMP>` (execute rollback). Supports ISO 8601 timestamps, epic/tracker filters. 15 unit tests passing.
 
 ---
 

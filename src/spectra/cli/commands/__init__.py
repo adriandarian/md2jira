@@ -5,7 +5,16 @@ This package contains command handler modules extracted from app.py for
 better code organization and maintainability.
 """
 
-from .backup import list_backups, list_sessions, run_diff, run_restore, run_rollback
+from .backup import (
+    list_backups,
+    list_rollback_points,
+    list_sessions,
+    run_diff,
+    run_restore,
+    run_rollback,
+    run_rollback_preview,
+    run_rollback_to_timestamp,
+)
 from .fields import run_generate_field_mapping, run_list_custom_fields, run_list_sprints
 from .pull import run_bidirectional_sync, run_pull
 from .rest_api import run_rest_api
@@ -28,9 +37,12 @@ __all__ = [
     # Backup commands
     "list_sessions",
     "list_backups",
+    "list_rollback_points",
     "run_restore",
     "run_diff",
     "run_rollback",
+    "run_rollback_preview",
+    "run_rollback_to_timestamp",
     # Sync commands
     "run_sync",
     "run_sync_links",

@@ -211,6 +211,89 @@ class ChangeRecord:
 
 
 @dataclass
+class RollbackPlan:
+    """
+    Plan for rolling back to a specific point in time.
+
+    Contains all the information needed to undo changes made after
+    a target timestamp.
+
+    Attributes:
+        target_timestamp: The point in time to roll back to.
+        created_at: When this plan was created.
+        target_entry: The sync entry at the target timestamp (if any).
+        changes_to_rollback: Changes that need to be undone, ordered newest first.
+        epic_key: Epic key filter used (if any).
+        tracker_type: Tracker type filter used (if any).
+        total_changes: Total number of changes to roll back.
+        affected_entities: Set of entity IDs that will be affected.
+        affected_stories: Set of story IDs that will be affected.
+        can_rollback: Whether the rollback can be executed.
+        warnings: Any warnings about the rollback plan.
+    """
+
+    target_timestamp: datetime
+    created_at: datetime = field(default_factory=datetime.now)
+    target_entry: SyncHistoryEntry | None = None
+    changes_to_rollback: list[ChangeRecord] = field(default_factory=list)
+    epic_key: str | None = None
+    tracker_type: str | None = None
+    total_changes: int = 0
+    affected_entities: set[str] = field(default_factory=set)
+    affected_stories: set[str] = field(default_factory=set)
+    can_rollback: bool = True
+    warnings: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        """Compute derived fields."""
+        if self.changes_to_rollback and not self.affected_entities:
+            self.affected_entities = {c.entity_id for c in self.changes_to_rollback}
+        if self.changes_to_rollback and not self.affected_stories:
+            self.affected_stories = {c.story_id for c in self.changes_to_rollback}
+        if self.changes_to_rollback and not self.total_changes:
+            self.total_changes = len(self.changes_to_rollback)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for serialization."""
+        return {
+            "target_timestamp": self.target_timestamp.isoformat(),
+            "created_at": self.created_at.isoformat(),
+            "target_entry": self.target_entry.to_dict() if self.target_entry else None,
+            "changes_to_rollback": [c.to_dict() for c in self.changes_to_rollback],
+            "epic_key": self.epic_key,
+            "tracker_type": self.tracker_type,
+            "total_changes": self.total_changes,
+            "affected_entities": list(self.affected_entities),
+            "affected_stories": list(self.affected_stories),
+            "can_rollback": self.can_rollback,
+            "warnings": self.warnings,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> RollbackPlan:
+        """Create from dictionary."""
+        return cls(
+            target_timestamp=datetime.fromisoformat(data["target_timestamp"]),
+            created_at=datetime.fromisoformat(data["created_at"]),
+            target_entry=(
+                SyncHistoryEntry.from_dict(data["target_entry"])
+                if data.get("target_entry")
+                else None
+            ),
+            changes_to_rollback=[
+                ChangeRecord.from_dict(c) for c in data.get("changes_to_rollback", [])
+            ],
+            epic_key=data.get("epic_key"),
+            tracker_type=data.get("tracker_type"),
+            total_changes=data.get("total_changes", 0),
+            affected_entities=set(data.get("affected_entities", [])),
+            affected_stories=set(data.get("affected_stories", [])),
+            can_rollback=data.get("can_rollback", True),
+            warnings=data.get("warnings", []),
+        )
+
+
+@dataclass
 class HistoryQuery:
     """
     Query parameters for finding sync history entries.
@@ -685,3 +768,143 @@ class SyncHistoryPort(ABC):
         )
         entries = self.query(query)
         return entries[0] if entries else None
+
+    # =========================================================================
+    # Timestamp-Based Rollback
+    # =========================================================================
+
+    @abstractmethod
+    def get_state_at_timestamp(
+        self,
+        timestamp: datetime,
+        epic_key: str | None = None,
+        tracker_type: str | None = None,
+    ) -> list[ChangeRecord]:
+        """
+        Get the cumulative state of changes at a specific point in time.
+
+        Returns all changes that were applied up to and including the
+        given timestamp that have not been subsequently rolled back.
+
+        Args:
+            timestamp: Point in time to query state.
+            epic_key: Optional filter by epic key.
+            tracker_type: Optional filter by tracker type.
+
+        Returns:
+            List of change records representing the state at that time.
+        """
+
+    @abstractmethod
+    def get_changes_since_timestamp(
+        self,
+        timestamp: datetime,
+        epic_key: str | None = None,
+        tracker_type: str | None = None,
+    ) -> list[ChangeRecord]:
+        """
+        Get all changes made after a specific timestamp.
+
+        Returns changes that need to be rolled back to restore state
+        to the given point in time.
+
+        Args:
+            timestamp: Point in time from which to get changes.
+            epic_key: Optional filter by epic key.
+            tracker_type: Optional filter by tracker type.
+
+        Returns:
+            List of change records made after the timestamp, ordered
+            newest first (for rollback order).
+        """
+
+    @abstractmethod
+    def get_entry_at_timestamp(
+        self,
+        timestamp: datetime,
+        epic_key: str | None = None,
+        tracker_type: str | None = None,
+    ) -> SyncHistoryEntry | None:
+        """
+        Get the most recent sync entry before or at a timestamp.
+
+        Useful for finding a known good state to restore to.
+
+        Args:
+            timestamp: Point in time to query.
+            epic_key: Optional filter by epic key.
+            tracker_type: Optional filter by tracker type.
+
+        Returns:
+            The most recent entry before or at the timestamp, or None.
+        """
+
+    @abstractmethod
+    def list_rollback_points(
+        self,
+        epic_key: str | None = None,
+        tracker_type: str | None = None,
+        limit: int = 20,
+    ) -> list[SyncHistoryEntry]:
+        """
+        List available rollback points (successful syncs).
+
+        Returns recent successful sync entries that can be used as
+        rollback targets.
+
+        Args:
+            epic_key: Optional filter by epic key.
+            tracker_type: Optional filter by tracker type.
+            limit: Maximum number of rollback points to return.
+
+        Returns:
+            List of successful sync entries, most recent first.
+        """
+
+    @abstractmethod
+    def create_rollback_plan(
+        self,
+        target_timestamp: datetime,
+        epic_key: str | None = None,
+        tracker_type: str | None = None,
+    ) -> RollbackPlan:
+        """
+        Create a plan for rolling back to a specific timestamp.
+
+        Analyzes what changes need to be undone to restore state to
+        the target timestamp.
+
+        Args:
+            target_timestamp: Point in time to roll back to.
+            epic_key: Optional filter by epic key.
+            tracker_type: Optional filter by tracker type.
+
+        Returns:
+            RollbackPlan with details of what will be rolled back.
+
+        Raises:
+            RollbackError: If a valid rollback plan cannot be created.
+        """
+
+    @abstractmethod
+    def execute_rollback_plan(
+        self,
+        plan: RollbackPlan,
+        rollback_entry_id: str,
+    ) -> int:
+        """
+        Execute a rollback plan by marking changes as rolled back.
+
+        Does NOT actually undo changes in the tracker - that must be
+        done separately using the plan's change records.
+
+        Args:
+            plan: The rollback plan to execute.
+            rollback_entry_id: Entry ID for the rollback operation.
+
+        Returns:
+            Number of changes marked as rolled back.
+
+        Raises:
+            RollbackError: If execution fails.
+        """

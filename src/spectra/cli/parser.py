@@ -383,6 +383,27 @@ def _add_backup_arguments(parser: argparse.ArgumentParser) -> None:
         action="store_true",
         help="Undo last sync by restoring from most recent backup (requires --epic)",
     )
+    parser.add_argument(
+        "--rollback-to-timestamp",
+        type=str,
+        metavar="TIMESTAMP",
+        help=(
+            "Roll back to a specific point in time. "
+            "Format: ISO 8601 (e.g., '2024-01-15T10:30:00' or '2024-01-15'). "
+            "Use --list-rollback-points to see available timestamps."
+        ),
+    )
+    parser.add_argument(
+        "--list-rollback-points",
+        action="store_true",
+        help="List available rollback points (successful syncs with timestamps)",
+    )
+    parser.add_argument(
+        "--rollback-preview",
+        type=str,
+        metavar="TIMESTAMP",
+        help="Preview what would be rolled back without making changes",
+    )
 
 
 def _add_transactional_arguments(parser: argparse.ArgumentParser) -> None:
