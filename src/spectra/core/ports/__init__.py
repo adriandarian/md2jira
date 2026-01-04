@@ -83,6 +83,19 @@ from .sync_history import (
     SyncStatistics,
     VelocityMetrics,
 )
+from .websocket import (
+    BroadcastError,
+    ConnectionInfo,
+    MessageType,
+    RoomError,
+    ServerStats,
+    WebSocketError,
+    WebSocketMessage,
+    WebSocketServerPort,
+)
+from .websocket import (
+    ConnectionError as WebSocketConnectionError,
+)
 
 
 __all__ = [
@@ -148,4 +161,14 @@ __all__ = [
     "SearchResult",
     "TransientError",
     "TransitionError",
+    # WebSocket
+    "BroadcastError",
+    "ConnectionInfo",
+    "MessageType",
+    "RoomError",
+    "ServerStats",
+    "WebSocketConnectionError",
+    "WebSocketError",
+    "WebSocketMessage",
+    "WebSocketServerPort",
 ]

@@ -5,6 +5,7 @@ This module contains handlers for watch and schedule-related commands:
 - run_watch: Watch mode (auto-sync on file changes)
 - run_schedule: Scheduled sync mode
 - run_webhook: Webhook server mode
+- run_websocket: WebSocket server mode for real-time sync updates
 """
 
 import logging
@@ -26,6 +27,7 @@ __all__ = [
     "run_schedule",
     "run_watch",
     "run_webhook",
+    "run_websocket",
 ]
 
 
@@ -379,5 +381,132 @@ def run_webhook(args) -> int:
         pass
     finally:
         display.show_stop(server.stats)
+
+    return ExitCode.SUCCESS
+
+
+def run_websocket(args) -> int:
+    """
+    Run WebSocket server mode for real-time sync updates.
+
+    Starts a WebSocket server that broadcasts sync events to connected
+    clients in real-time. Useful for building dashboards, monitoring
+    tools, or integrating with external systems.
+
+    Args:
+        args: Parsed command-line arguments.
+
+    Returns:
+        Exit code.
+    """
+    import asyncio
+
+    from spectra.adapters import create_websocket_server
+    from spectra.core.domain.events import EventBus
+
+    # Setup logging
+    log_level = logging.DEBUG if getattr(args, "verbose", False) else logging.INFO
+    log_format = getattr(args, "log_format", "text")
+    setup_logging(level=log_level, log_format=log_format)
+
+    # Create console
+    console = Console(
+        color=not getattr(args, "no_color", False),
+        verbose=getattr(args, "verbose", False),
+        quiet=getattr(args, "quiet", False),
+    )
+
+    host = getattr(args, "websocket_host", "0.0.0.0")
+    port = getattr(args, "websocket_port", 8765)
+    use_aiohttp = getattr(args, "use_aiohttp", None)
+
+    # Show header
+    console.header("spectra WebSocket Server")
+    console.section("Starting WebSocket Server")
+
+    # Determine which implementation to use
+    impl_name = "aiohttp" if use_aiohttp else "simple (stdlib)"
+    if use_aiohttp is None:
+        try:
+            import aiohttp  # noqa: F401
+
+            impl_name = "aiohttp (auto-detected)"
+            use_aiohttp = True
+        except ImportError:
+            impl_name = "simple (stdlib, aiohttp not installed)"
+            use_aiohttp = False
+
+    console.info(f"Implementation: {impl_name}")
+
+    # Create WebSocket server
+    server = create_websocket_server(host=host, port=port, use_aiohttp=use_aiohttp)
+
+    # Create event bus for broadcasting (will be connected when syncs run)
+    event_bus = EventBus()
+
+    # Set up event broadcaster
+    from spectra.adapters.websocket import SyncEventBroadcaster
+
+    broadcaster = SyncEventBroadcaster(server, event_bus)
+
+    console.success(f"WebSocket server ready on ws://{host}:{port}")
+    if use_aiohttp:
+        console.info(f"Health check: http://{host}:{port}/health")
+        console.info(f"Status: http://{host}:{port}/status")
+    console.info("")
+    console.info("Clients can connect to receive real-time sync updates.")
+    console.info("Press Ctrl+C to stop.")
+    console.info("")
+
+    # Show connection info
+    console.section("Connection Info")
+    console.info("WebSocket endpoint: ws://{host}:{port}" + ("/ws" if use_aiohttp else ""))
+    console.info("")
+    console.info("Message types:")
+    console.info("  • sync:started    - Sync operation started")
+    console.info("  • sync:progress   - Sync progress update")
+    console.info("  • sync:completed  - Sync operation completed")
+    console.info("  • story:matched   - Story matched to issue")
+    console.info("  • story:updated   - Story was updated")
+    console.info("  • subtask:created - Subtask was created")
+    console.info("  • status:changed  - Status was changed")
+    console.info("")
+    console.info("Subscribe to rooms by sending:")
+    console.info('  {"type": "subscribe", "room": "epic:PROJ-100"}')
+    console.info("")
+
+    async def run_server():
+        await server.start()
+        broadcaster.start()
+
+        # Keep running until interrupted
+        try:
+            while server.is_running:
+                await asyncio.sleep(1)
+                # Log stats periodically
+                stats = server.get_stats()
+                if stats.active_connections > 0:
+                    logging.debug(
+                        f"Active connections: {stats.active_connections}, "
+                        f"Messages sent: {stats.messages_sent}"
+                    )
+        except asyncio.CancelledError:
+            pass
+        finally:
+            await server.stop()
+
+    try:
+        asyncio.run(run_server())
+    except KeyboardInterrupt:
+        console.info("")
+        console.info("Shutting down...")
+
+    # Show final stats
+    stats = server.get_stats()
+    console.section("Session Statistics")
+    console.info(f"Uptime: {stats.uptime_formatted}")
+    console.info(f"Total connections: {stats.total_connections}")
+    console.info(f"Messages sent: {stats.messages_sent}")
+    console.info(f"Messages received: {stats.messages_received}")
 
     return ExitCode.SUCCESS

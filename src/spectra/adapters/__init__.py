@@ -57,6 +57,16 @@ try:
 except ImportError:
     ASYNC_AVAILABLE = False
 
+# WebSocket (real-time sync updates)
+from .websocket import (
+    AioHttpWebSocketServer,
+    SimpleWebSocketServer,
+    SyncEventBroadcaster,
+    WebSocketBridge,
+    create_websocket_server,
+)
+
+
 __all__ = [
     "ASYNC_AVAILABLE",
     "ADFFormatter",
@@ -85,4 +95,10 @@ __all__ = [
     "MarkdownParser",
     "MemoryCache",
     "create_llm_manager",
+    # WebSocket
+    "AioHttpWebSocketServer",
+    "SimpleWebSocketServer",
+    "SyncEventBroadcaster",
+    "WebSocketBridge",
+    "create_websocket_server",
 ]

@@ -18,7 +18,7 @@ from .sync import (
     run_sync_links,
 )
 from .validation import validate_markdown
-from .watch import run_schedule, run_watch, run_webhook
+from .watch import run_schedule, run_watch, run_webhook, run_websocket
 
 
 __all__ = [
@@ -39,6 +39,7 @@ __all__ = [
     "run_attachment_sync",
     # Watch/Schedule commands
     "run_webhook",
+    "run_websocket",
     "run_schedule",
     "run_watch",
     # Pull commands

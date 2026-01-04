@@ -49,6 +49,7 @@ def create_parser() -> argparse.ArgumentParser:
     _add_watch_arguments(parser)
     _add_schedule_arguments(parser)
     _add_webhook_arguments(parser)
+    _add_websocket_arguments(parser)
     _add_notification_arguments(parser)
     _add_llm_arguments(parser)
     _add_multi_epic_arguments(parser)
@@ -787,6 +788,40 @@ def _add_webhook_arguments(parser: argparse.ArgumentParser) -> None:
         "--multi-tracker-webhook",
         action="store_true",
         help="Enable multi-tracker webhook mode (listen for multiple sources)",
+    )
+
+
+def _add_websocket_arguments(parser: argparse.ArgumentParser) -> None:
+    """Add WebSocket server arguments."""
+    parser.add_argument(
+        "--websocket",
+        action="store_true",
+        help="Start WebSocket server for real-time sync updates",
+    )
+    parser.add_argument(
+        "--websocket-host",
+        type=str,
+        default="0.0.0.0",
+        metavar="HOST",
+        help="Host to bind WebSocket server to (default: 0.0.0.0)",
+    )
+    parser.add_argument(
+        "--websocket-port",
+        type=int,
+        default=8765,
+        metavar="PORT",
+        help="Port for WebSocket server (default: 8765)",
+    )
+    parser.add_argument(
+        "--use-aiohttp",
+        action="store_true",
+        default=None,
+        help="Use aiohttp WebSocket server (auto-detected if not specified)",
+    )
+    parser.add_argument(
+        "--no-aiohttp",
+        action="store_true",
+        help="Force use of simple stdlib WebSocket server",
     )
 
 

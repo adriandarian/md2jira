@@ -1156,6 +1156,15 @@ def main() -> int:
             parser.error("--webhook requires --epic/-e to be specified")
         return run_webhook(args)
 
+    # Handle WebSocket server
+    if getattr(args, "websocket", False):
+        from .commands import run_websocket
+
+        # Handle --no-aiohttp flag
+        if getattr(args, "no_aiohttp", False):
+            args.use_aiohttp = False
+        return run_websocket(args)
+
     # Handle multi-epic sync
     if args.multi_epic or args.list_epics:
         if not args.input:

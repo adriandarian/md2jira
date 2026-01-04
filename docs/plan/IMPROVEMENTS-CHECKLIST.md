@@ -860,7 +860,7 @@ For each new tracker adapter, follow this checklist:
 - [x] **Plugin Templates** - Scaffold new plugins. Implemented `PluginScaffold` system with 5 template types (PARSER, TRACKER, FORMATTER, HOOK, COMMAND). Generates complete plugin projects: package structure, pyproject.toml with entry points, README, LICENSE, tests, docs, GitHub Actions CI, Dockerfile, plugin.json manifest. CLI: `spectra plugin scaffold` with interactive wizard. 30 unit tests passing.
 - [ ] **REST API Mode** - Run Spectra as a server
 - [ ] **GraphQL API Layer** - Add GraphQL API
-- [ ] **WebSocket Support** - Real-time sync updates
+- [x] **WebSocket Support** - Real-time sync updates. Implemented `WebSocketServerPort` interface with `SimpleWebSocketServer` (stdlib-based, RFC 6455 compliant, no dependencies) and `AioHttpWebSocketServer` (async/aiohttp for production). Features: room-based message routing, 25+ message types for sync/story/conflict events, `SyncEventBroadcaster` for EventBus integration, `WebSocketBridge` high-level interface. CLI: `spectra --websocket` with `--websocket-host`, `--websocket-port`, `--use-aiohttp` options. 82 unit tests passing.
 
 ### Reliability
 - [ ] **Rate Limiting + Retries** - Centralized backoff strategy per adapter
