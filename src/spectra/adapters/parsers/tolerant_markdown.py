@@ -1955,6 +1955,629 @@ def table_to_markdown(
 
 
 # =============================================================================
+# Code Block Parsing - Preserve syntax highlighting in fenced code blocks
+# =============================================================================
+
+
+class CodeBlockType(Enum):
+    """Type of code block."""
+
+    FENCED_BACKTICK = "fenced_backtick"  # ```language
+    FENCED_TILDE = "fenced_tilde"  # ~~~language
+    INDENTED = "indented"  # 4-space indent
+    INLINE = "inline"  # `code`
+
+
+@dataclass
+class CodeBlock:
+    """
+    A parsed code block with language and content.
+
+    Attributes:
+        content: The code content (without fencing)
+        language: Programming language identifier (e.g., 'python', 'javascript')
+        block_type: Type of code block (fenced, indented, inline)
+        raw_content: Original markdown including fencing
+        line_number: Starting line number in source
+        end_line: Ending line number in source
+        fence_char: The fence character used ('`' or '~')
+        fence_count: Number of fence characters (typically 3+)
+        info_string: Full info string after fence (language + attributes)
+        source: Source file path
+    """
+
+    content: str
+    language: str = ""
+    block_type: CodeBlockType = CodeBlockType.FENCED_BACKTICK
+    raw_content: str = ""
+    line_number: int = 0
+    end_line: int = 0
+    fence_char: str = "`"
+    fence_count: int = 3
+    info_string: str = ""
+    source: str | None = None
+
+    @property
+    def has_language(self) -> bool:
+        """Check if code block has a language specified."""
+        return bool(self.language and self.language.strip())
+
+    @property
+    def is_fenced(self) -> bool:
+        """Check if this is a fenced code block."""
+        return self.block_type in (CodeBlockType.FENCED_BACKTICK, CodeBlockType.FENCED_TILDE)
+
+    @property
+    def is_inline(self) -> bool:
+        """Check if this is an inline code span."""
+        return self.block_type == CodeBlockType.INLINE
+
+    @property
+    def line_count(self) -> int:
+        """Get number of lines in the code content."""
+        return len(self.content.split("\n"))
+
+    @property
+    def normalized_language(self) -> str:
+        """
+        Get normalized language identifier.
+
+        Common aliases are normalized:
+        - js -> javascript
+        - ts -> typescript
+        - py -> python
+        - rb -> ruby
+        - sh, bash, zsh -> shell
+        - yml -> yaml
+        - md -> markdown
+        """
+        lang = self.language.lower().strip()
+        aliases = {
+            "js": "javascript",
+            "ts": "typescript",
+            "py": "python",
+            "rb": "ruby",
+            "sh": "shell",
+            "bash": "shell",
+            "zsh": "shell",
+            "yml": "yaml",
+            "md": "markdown",
+            "c++": "cpp",
+            "c#": "csharp",
+            "f#": "fsharp",
+            "objective-c": "objc",
+            "dockerfile": "docker",
+        }
+        return aliases.get(lang, lang)
+
+    def to_markdown(self, fence_char: str | None = None, fence_count: int | None = None) -> str:
+        """
+        Convert code block back to markdown.
+
+        Args:
+            fence_char: Override fence character (default: original)
+            fence_count: Override fence count (default: original)
+
+        Returns:
+            Markdown-formatted code block
+        """
+        if self.is_inline:
+            return f"`{self.content}`"
+
+        if self.block_type == CodeBlockType.INDENTED:
+            # Indented code blocks use 4-space prefix
+            lines = self.content.split("\n")
+            return "\n".join("    " + line for line in lines)
+
+        # Fenced code blocks
+        char = fence_char or self.fence_char
+        count = fence_count or max(self.fence_count, 3)
+        fence = char * count
+
+        info = self.info_string if self.info_string else self.language
+        if info:
+            return f"{fence}{info}\n{self.content}\n{fence}"
+        return f"{fence}\n{self.content}\n{fence}"
+
+
+@dataclass
+class CodeBlockCollection:
+    """
+    Collection of code blocks extracted from content.
+
+    Attributes:
+        blocks: List of extracted code blocks
+        warnings: Any warnings during extraction
+        source: Source file path
+    """
+
+    blocks: list[CodeBlock] = field(default_factory=list)
+    warnings: list[ParseWarning] = field(default_factory=list)
+    source: str | None = None
+
+    @property
+    def count(self) -> int:
+        """Get total number of code blocks."""
+        return len(self.blocks)
+
+    @property
+    def fenced_count(self) -> int:
+        """Get count of fenced code blocks."""
+        return sum(1 for b in self.blocks if b.is_fenced)
+
+    @property
+    def languages(self) -> list[str]:
+        """Get list of unique languages used."""
+        seen = set()
+        result = []
+        for block in self.blocks:
+            lang = block.normalized_language
+            if lang and lang not in seen:
+                seen.add(lang)
+                result.append(lang)
+        return result
+
+    def by_language(self, language: str) -> list[CodeBlock]:
+        """Get all code blocks with a specific language."""
+        lang_lower = language.lower().strip()
+        return [
+            b
+            for b in self.blocks
+            if b.language.lower().strip() == lang_lower or b.normalized_language == lang_lower
+        ]
+
+    def get_block(self, index: int) -> CodeBlock | None:
+        """Get code block by index."""
+        if 0 <= index < len(self.blocks):
+            return self.blocks[index]
+        return None
+
+
+# Patterns for code block detection
+_FENCED_CODE_PATTERN = re.compile(
+    r"^(?P<indent>[ \t]*)(?P<fence>`{3,}|~{3,})(?P<info>[^\n`]*)\n"
+    r"(?P<content>.*?)"
+    r"(?:\n(?P=indent))?(?P=fence)[ \t]*$",
+    re.MULTILINE | re.DOTALL,
+)
+
+_INDENTED_CODE_PATTERN = re.compile(
+    r"(?:^|\n\n)((?:(?:^|\n)[ ]{4}[^\n]*)+)",
+    re.MULTILINE,
+)
+
+_INLINE_CODE_PATTERN = re.compile(
+    r"(?<!`)(`+)(?!`)(.+?)(?<!`)\1(?!`)",
+    re.DOTALL,
+)
+
+
+def parse_code_blocks(
+    content: str,
+    source: str | None = None,
+    include_inline: bool = False,
+    include_indented: bool = True,
+) -> tuple[CodeBlockCollection, list[ParseWarning]]:
+    """
+    Parse all code blocks from markdown content.
+
+    Supports:
+    - Fenced code blocks with backticks (```) or tildes (~~~)
+    - Language identifiers and info strings
+    - Indented code blocks (4 spaces)
+    - Inline code spans (optional)
+    - Nested fence handling (more fence chars than inner)
+
+    Args:
+        content: Markdown content to parse
+        source: Source file for error reporting
+        include_inline: Include inline `code` spans
+        include_indented: Include indented (4-space) code blocks
+
+    Returns:
+        Tuple of (CodeBlockCollection, list of warnings)
+
+    Examples:
+        >>> content = '''
+        ... ```python
+        ... def hello():
+        ...     print("Hello!")
+        ... ```
+        ... '''
+        >>> collection, warnings = parse_code_blocks(content)
+        >>> collection.count
+        1
+        >>> collection.blocks[0].language
+        'python'
+    """
+    warnings: list[ParseWarning] = []
+    blocks: list[CodeBlock] = []
+
+    if not content or not content.strip():
+        return CodeBlockCollection(blocks=[], source=source), warnings
+
+    # Track positions that are already part of a code block
+    used_ranges: list[tuple[int, int]] = []
+
+    def is_in_used_range(start: int, end: int) -> bool:
+        """Check if a range overlaps with already-used ranges."""
+        for used_start, used_end in used_ranges:
+            if start < used_end and end > used_start:
+                return True
+        return False
+
+    # Parse fenced code blocks first (highest priority)
+    for match in _FENCED_CODE_PATTERN.finditer(content):
+        start = match.start()
+        end = match.end()
+
+        if is_in_used_range(start, end):
+            continue
+
+        fence = match.group("fence")
+        fence_char = fence[0]
+        fence_count = len(fence)
+        info_string = match.group("info").strip()
+        code_content = match.group("content")
+
+        # Extract language from info string (first word)
+        language = info_string.split()[0] if info_string else ""
+
+        line_number = get_line_number(content, start)
+        end_line = get_line_number(content, end)
+
+        block_type = (
+            CodeBlockType.FENCED_BACKTICK if fence_char == "`" else CodeBlockType.FENCED_TILDE
+        )
+
+        blocks.append(
+            CodeBlock(
+                content=code_content,
+                language=language,
+                block_type=block_type,
+                raw_content=match.group(0),
+                line_number=line_number,
+                end_line=end_line,
+                fence_char=fence_char,
+                fence_count=fence_count,
+                info_string=info_string,
+                source=source,
+            )
+        )
+        used_ranges.append((start, end))
+
+        # Warn about missing language identifier
+        if not language:
+            warnings.append(
+                ParseWarning(
+                    message="Code block without language identifier",
+                    location=ParseLocation(line=line_number, source=source),
+                    suggestion="Add a language identifier after the fence (e.g., ```python)",
+                    code="CODE_BLOCK_NO_LANGUAGE",
+                )
+            )
+
+    # Parse indented code blocks (if enabled)
+    if include_indented:
+        for match in _INDENTED_CODE_PATTERN.finditer(content):
+            start = match.start()
+            end = match.end()
+
+            if is_in_used_range(start, end):
+                continue
+
+            raw_content = match.group(1)
+            # Remove 4-space indent from each line
+            lines = raw_content.split("\n")
+            code_lines = []
+            for line in lines:
+                if line.startswith("    "):
+                    code_lines.append(line[4:])
+                elif line.strip() == "":
+                    code_lines.append("")
+                else:
+                    code_lines.append(line)
+
+            code_content = "\n".join(code_lines).strip()
+
+            if code_content:
+                line_number = get_line_number(content, start)
+                end_line = get_line_number(content, end)
+
+                blocks.append(
+                    CodeBlock(
+                        content=code_content,
+                        language="",
+                        block_type=CodeBlockType.INDENTED,
+                        raw_content=raw_content,
+                        line_number=line_number,
+                        end_line=end_line,
+                        fence_char="",
+                        fence_count=0,
+                        info_string="",
+                        source=source,
+                    )
+                )
+                used_ranges.append((start, end))
+
+    # Parse inline code spans (if enabled)
+    if include_inline:
+        for match in _INLINE_CODE_PATTERN.finditer(content):
+            start = match.start()
+            end = match.end()
+
+            if is_in_used_range(start, end):
+                continue
+
+            code_content = match.group(2).strip()
+            line_number = get_line_number(content, start)
+
+            blocks.append(
+                CodeBlock(
+                    content=code_content,
+                    language="",
+                    block_type=CodeBlockType.INLINE,
+                    raw_content=match.group(0),
+                    line_number=line_number,
+                    end_line=line_number,
+                    fence_char="`",
+                    fence_count=len(match.group(1)),
+                    info_string="",
+                    source=source,
+                )
+            )
+            used_ranges.append((start, end))
+
+    # Sort blocks by line number
+    blocks.sort(key=lambda b: b.line_number)
+
+    return CodeBlockCollection(blocks=blocks, warnings=warnings, source=source), warnings
+
+
+def extract_code_blocks_from_content(
+    content: str,
+    source: str | None = None,
+    language_filter: str | None = None,
+) -> tuple[list[CodeBlock], list[ParseWarning]]:
+    """
+    Extract all fenced code blocks from content.
+
+    Args:
+        content: Markdown content to parse
+        source: Source file for error reporting
+        language_filter: Only return blocks with this language
+
+    Returns:
+        Tuple of (list of CodeBlocks, list of warnings)
+    """
+    collection, warnings = parse_code_blocks(
+        content,
+        source=source,
+        include_inline=False,
+        include_indented=False,
+    )
+
+    if language_filter:
+        blocks = collection.by_language(language_filter)
+    else:
+        blocks = collection.blocks
+
+    return blocks, warnings
+
+
+def extract_code_from_section(
+    content: str,
+    section_name: str,
+    language: str | None = None,
+    source: str | None = None,
+) -> tuple[CodeBlock | None, list[ParseWarning]]:
+    """
+    Extract first code block from a named section.
+
+    Args:
+        content: Full markdown content
+        section_name: Name of section to search (case-insensitive)
+        language: Optional language filter
+        source: Source file for error reporting
+
+    Returns:
+        Tuple of (CodeBlock or None, list of warnings)
+
+    Examples:
+        >>> content = '''
+        ... ## Examples
+        ...
+        ... ```python
+        ... print("hello")
+        ... ```
+        ... '''
+        >>> block, warnings = extract_code_from_section(content, "Examples")
+        >>> block.content
+        'print("hello")'
+    """
+    warnings: list[ParseWarning] = []
+
+    # Find section content
+    section_pattern = re.compile(
+        rf"^#+\s*{re.escape(section_name)}\s*$\n(.*?)(?=\n#|\Z)",
+        re.MULTILINE | re.DOTALL | re.IGNORECASE,
+    )
+
+    match = section_pattern.search(content)
+    if not match:
+        return None, warnings
+
+    section_content = match.group(1)
+    section_line = get_line_number(content, match.start())
+
+    blocks, block_warnings = extract_code_blocks_from_content(
+        section_content,
+        source=source,
+    )
+    warnings.extend(block_warnings)
+
+    # Adjust line numbers relative to section start
+    for block in blocks:
+        block = CodeBlock(
+            content=block.content,
+            language=block.language,
+            block_type=block.block_type,
+            raw_content=block.raw_content,
+            line_number=block.line_number + section_line - 1,
+            end_line=block.end_line + section_line - 1,
+            fence_char=block.fence_char,
+            fence_count=block.fence_count,
+            info_string=block.info_string,
+            source=source,
+        )
+
+    if language:
+        blocks = [
+            b
+            for b in blocks
+            if b.language.lower() == language.lower() or b.normalized_language == language.lower()
+        ]
+
+    return blocks[0] if blocks else None, warnings
+
+
+def preserve_code_blocks(
+    content: str,
+    placeholder_prefix: str = "___CODE_BLOCK_",
+) -> tuple[str, dict[str, CodeBlock]]:
+    """
+    Replace code blocks with placeholders for safe text processing.
+
+    This is useful when you need to process markdown content but want
+    to preserve code blocks exactly as they are (e.g., during formatting
+    or transformation operations).
+
+    Args:
+        content: Markdown content with code blocks
+        placeholder_prefix: Prefix for placeholder strings
+
+    Returns:
+        Tuple of (content with placeholders, mapping of placeholder -> CodeBlock)
+
+    Examples:
+        >>> content = '''
+        ... Some text
+        ... ```python
+        ... code here
+        ... ```
+        ... More text
+        ... '''
+        >>> processed, mapping = preserve_code_blocks(content)
+        >>> '___CODE_BLOCK_' in processed
+        True
+    """
+    mapping: dict[str, CodeBlock] = {}
+    result = content
+
+    collection, _ = parse_code_blocks(content, include_inline=False, include_indented=True)
+
+    # Process blocks in reverse order to maintain correct positions
+    sorted_blocks = sorted(collection.blocks, key=lambda b: b.line_number, reverse=True)
+
+    for i, block in enumerate(sorted_blocks):
+        placeholder = f"{placeholder_prefix}{i}___"
+        mapping[placeholder] = block
+
+        # Replace the raw content with placeholder
+        result = result.replace(block.raw_content, placeholder, 1)
+
+    return result, mapping
+
+
+def restore_code_blocks(
+    content: str,
+    mapping: dict[str, CodeBlock],
+) -> str:
+    """
+    Restore code blocks from placeholders.
+
+    Args:
+        content: Content with placeholders
+        mapping: Mapping from placeholder to CodeBlock
+
+    Returns:
+        Content with code blocks restored
+    """
+    result = content
+    for placeholder, block in mapping.items():
+        result = result.replace(placeholder, block.raw_content)
+    return result
+
+
+def code_block_to_markdown(
+    code: str,
+    language: str = "",
+    fence_char: str = "`",
+    fence_count: int = 3,
+) -> str:
+    """
+    Create a markdown code block from code content.
+
+    Args:
+        code: The code content
+        language: Programming language identifier
+        fence_char: Character to use for fence ('`' or '~')
+        fence_count: Number of fence characters (minimum 3)
+
+    Returns:
+        Markdown-formatted code block
+
+    Examples:
+        >>> code_block_to_markdown("print('hello')", "python")
+        '```python\\nprint(\\'hello\\')\\n```'
+    """
+    fence = fence_char * max(fence_count, 3)
+
+    # If code contains the fence pattern, increase fence count
+    while fence in code:
+        fence += fence_char
+
+    if language:
+        return f"{fence}{language}\n{code}\n{fence}"
+    return f"{fence}\n{code}\n{fence}"
+
+
+def get_code_block_stats(content: str) -> dict[str, int | list[str]]:
+    """
+    Get statistics about code blocks in content.
+
+    Args:
+        content: Markdown content to analyze
+
+    Returns:
+        Dictionary with stats:
+        - total: Total code block count
+        - fenced: Fenced code block count
+        - indented: Indented code block count
+        - with_language: Blocks with language specified
+        - without_language: Blocks without language
+        - languages: List of unique languages
+        - lines_of_code: Total lines of code
+    """
+    collection, _ = parse_code_blocks(content, include_inline=False, include_indented=True)
+
+    fenced = sum(1 for b in collection.blocks if b.is_fenced)
+    indented = sum(1 for b in collection.blocks if b.block_type == CodeBlockType.INDENTED)
+    with_lang = sum(1 for b in collection.blocks if b.has_language)
+    total_lines = sum(b.line_count for b in collection.blocks)
+
+    return {
+        "total": collection.count,
+        "fenced": fenced,
+        "indented": indented,
+        "with_language": with_lang,
+        "without_language": collection.count - with_lang,
+        "languages": collection.languages,
+        "lines_of_code": total_lines,
+    }
+
+
+# =============================================================================
 # Error Code Definitions
 # =============================================================================
 
@@ -1985,6 +2608,7 @@ class ParseErrorCode:
     SHORT_SUBTASK_NAME = "W008"
     NONSTANDARD_SUBTASK_CHECKBOX = "W009"
     TABLE_COLUMN_MISMATCH = "W010"
+    CODE_BLOCK_NO_LANGUAGE = "W011"
 
 
 # =============================================================================
@@ -2028,4 +2652,15 @@ __all__ = [
     "extract_tables_from_content",
     "extract_table_from_section",
     "table_to_markdown",
+    # Code Block Preservation
+    "CodeBlock",
+    "CodeBlockCollection",
+    "CodeBlockType",
+    "code_block_to_markdown",
+    "extract_code_blocks_from_content",
+    "extract_code_from_section",
+    "get_code_block_stats",
+    "parse_code_blocks",
+    "preserve_code_blocks",
+    "restore_code_blocks",
 ]
