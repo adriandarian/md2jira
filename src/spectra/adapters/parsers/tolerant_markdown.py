@@ -949,6 +949,389 @@ def _clean_description_part(text: str) -> str:
 
 
 # =============================================================================
+# Image Embedding - Extract and parse images from markdown
+# =============================================================================
+
+
+@dataclass
+class EmbeddedImage:
+    """
+    Information about an image embedded in markdown content.
+
+    Attributes:
+        src: Image source (URL or local path)
+        alt_text: Alternative text for the image
+        title: Optional title attribute
+        is_local: Whether the image is a local file (not URL)
+        line_number: Line number in source document
+        original_syntax: The original markdown syntax used
+        width: Optional width specification (if provided)
+        height: Optional height specification (if provided)
+    """
+
+    src: str
+    alt_text: str = ""
+    title: str = ""
+    is_local: bool = False
+    line_number: int = 0
+    original_syntax: str = ""
+    width: int | None = None
+    height: int | None = None
+
+    @property
+    def filename(self) -> str:
+        """Extract filename from the source path."""
+        from pathlib import Path
+        from urllib.parse import unquote, urlparse
+
+        if self.is_local:
+            return Path(self.src).name
+        parsed = urlparse(self.src)
+        return Path(unquote(parsed.path)).name or "image"
+
+    @property
+    def extension(self) -> str:
+        """Get the file extension (lowercase, without dot)."""
+        from pathlib import Path
+
+        return Path(self.filename).suffix.lower().lstrip(".")
+
+    @property
+    def is_supported_format(self) -> bool:
+        """Check if image is in a commonly supported format."""
+        supported = {"png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico", "avif"}
+        return self.extension in supported
+
+    def to_markdown(self) -> str:
+        """Convert back to markdown syntax."""
+        if self.title:
+            return f'![{self.alt_text}]({self.src} "{self.title}")'
+        return f"![{self.alt_text}]({self.src})"
+
+    def to_html(self) -> str:
+        """Convert to HTML img tag."""
+        parts = [f'<img src="{self.src}"']
+        if self.alt_text:
+            parts.append(f'alt="{self.alt_text}"')
+        if self.title:
+            parts.append(f'title="{self.title}"')
+        if self.width:
+            parts.append(f'width="{self.width}"')
+        if self.height:
+            parts.append(f'height="{self.height}"')
+        parts.append("/>")
+        return " ".join(parts)
+
+
+def parse_embedded_images(
+    content: str,
+    source: str | None = None,
+    include_remote: bool = True,
+    include_local: bool = True,
+) -> tuple[list[EmbeddedImage], list[ParseWarning]]:
+    """
+    Parse embedded images from markdown content.
+
+    Supports multiple markdown image syntaxes:
+    - Standard: ![alt](url)
+    - With title: ![alt](url "title")
+    - Reference style: ![alt][ref] with [ref]: url
+    - HTML img tags: <img src="url" alt="alt">
+    - Obsidian wikilinks: ![[image.png]] or ![[image.png|alt]]
+    - With dimensions: ![alt](url =100x200) or ![alt](url){width=100}
+
+    Args:
+        content: Markdown content to parse
+        source: Source file for error reporting
+        include_remote: Include images with http/https URLs
+        include_local: Include images with local file paths
+
+    Returns:
+        Tuple of (images, warnings) where images is list of EmbeddedImage
+
+    Examples:
+        >>> content = '''
+        ... ![Logo](./images/logo.png)
+        ... ![Banner](https://example.com/banner.jpg "Site Banner")
+        ... ![[diagram.svg|Architecture Diagram]]
+        ... '''
+        >>> images, warnings = parse_embedded_images(content)
+        >>> len(images)
+        3
+        >>> images[0].src
+        './images/logo.png'
+        >>> images[1].title
+        'Site Banner'
+    """
+    images: list[EmbeddedImage] = []
+    warnings: list[ParseWarning] = []
+    seen_sources: set[str] = set()
+
+    # Pattern 1: Standard markdown images ![alt](src) or ![alt](src "title")
+    standard_pattern = re.compile(
+        r"!\[([^\]]*)\]"  # ![alt text]
+        r"\("  # Opening paren
+        r'([^)\s"]+)'  # src (no spaces, quotes, or closing paren)
+        r'(?:\s+"([^"]*)")?'  # Optional "title"
+        r"(?:\s+=(\d+)?x(\d+)?)?"  # Optional =widthxheight
+        r"\)",  # Closing paren
+        re.MULTILINE,
+    )
+
+    for match in standard_pattern.finditer(content):
+        alt_text = match.group(1).strip()
+        src = match.group(2).strip()
+        title = match.group(3) or ""
+        width_str = match.group(4)
+        height_str = match.group(5)
+
+        if src in seen_sources:
+            continue
+
+        is_local = _is_local_path(src)
+        if (is_local and not include_local) or (not is_local and not include_remote):
+            continue
+
+        seen_sources.add(src)
+        images.append(
+            EmbeddedImage(
+                src=src,
+                alt_text=alt_text,
+                title=title,
+                is_local=is_local,
+                line_number=get_line_number(content, match.start()),
+                original_syntax=match.group(0),
+                width=int(width_str) if width_str else None,
+                height=int(height_str) if height_str else None,
+            )
+        )
+
+    # Pattern 2: Obsidian wikilink images ![[file]] or ![[file|alt]]
+    wikilink_pattern = re.compile(
+        r"!\[\["  # ![[
+        r"([^\]|]+)"  # filename
+        r"(?:\|([^\]]+))?"  # Optional |alt text
+        r"\]\]",  # ]]
+        re.MULTILINE,
+    )
+
+    for match in wikilink_pattern.finditer(content):
+        src = match.group(1).strip()
+        alt_text = match.group(2).strip() if match.group(2) else ""
+
+        if src in seen_sources:
+            continue
+
+        # Wikilinks are always local
+        if not include_local:
+            continue
+
+        seen_sources.add(src)
+        images.append(
+            EmbeddedImage(
+                src=src,
+                alt_text=alt_text or src,
+                title="",
+                is_local=True,
+                line_number=get_line_number(content, match.start()),
+                original_syntax=match.group(0),
+            )
+        )
+
+        # Warn about non-standard syntax
+        warnings.append(
+            ParseWarning(
+                message=f"Obsidian-style wikilink image: {src}",
+                location=ParseLocation(line=get_line_number(content, match.start()), source=source),
+                suggestion="Standard markdown: ![alt](path) may be more portable",
+                code="WIKILINK_IMAGE",
+            )
+        )
+
+    # Pattern 3: HTML img tags
+    html_pattern = re.compile(
+        r"<img\s+"  # <img followed by whitespace
+        r"[^>]*"  # Any attributes
+        r'src=["\']([^"\']+)["\']'  # src attribute
+        r"[^>]*"  # More attributes
+        r"/?>",  # Closing
+        re.IGNORECASE | re.MULTILINE,
+    )
+
+    alt_in_html = re.compile(r'alt=["\']([^"\']*)["\']', re.IGNORECASE)
+    title_in_html = re.compile(r'title=["\']([^"\']*)["\']', re.IGNORECASE)
+    width_in_html = re.compile(r'width=["\']?(\d+)["\']?', re.IGNORECASE)
+    height_in_html = re.compile(r'height=["\']?(\d+)["\']?', re.IGNORECASE)
+
+    for match in html_pattern.finditer(content):
+        src = match.group(1).strip()
+        full_tag = match.group(0)
+
+        if src in seen_sources:
+            continue
+
+        is_local = _is_local_path(src)
+        if (is_local and not include_local) or (not is_local and not include_remote):
+            continue
+
+        # Extract other attributes
+        alt_match = alt_in_html.search(full_tag)
+        title_match = title_in_html.search(full_tag)
+        width_match = width_in_html.search(full_tag)
+        height_match = height_in_html.search(full_tag)
+
+        seen_sources.add(src)
+        images.append(
+            EmbeddedImage(
+                src=src,
+                alt_text=alt_match.group(1) if alt_match else "",
+                title=title_match.group(1) if title_match else "",
+                is_local=is_local,
+                line_number=get_line_number(content, match.start()),
+                original_syntax=full_tag,
+                width=int(width_match.group(1)) if width_match else None,
+                height=int(height_match.group(1)) if height_match else None,
+            )
+        )
+
+        # Warn about HTML in markdown
+        warnings.append(
+            ParseWarning(
+                message="HTML img tag found in markdown",
+                location=ParseLocation(line=get_line_number(content, match.start()), source=source),
+                suggestion="Consider using markdown syntax: ![alt](src)",
+                code="HTML_IMAGE_TAG",
+            )
+        )
+
+    # Pattern 4: Reference-style images ![alt][ref] with [ref]: url
+    # First, collect all reference definitions
+    ref_definitions: dict[str, tuple[str, str]] = {}
+    ref_def_pattern = re.compile(
+        r"^\[([^\]]+)\]:\s*"  # [ref]:
+        r"(\S+)"  # url
+        r'(?:\s+"([^"]*)")?',  # Optional "title"
+        re.MULTILINE,
+    )
+
+    for match in ref_def_pattern.finditer(content):
+        ref_id = match.group(1).lower()
+        url = match.group(2)
+        title = match.group(3) or ""
+        ref_definitions[ref_id] = (url, title)
+
+    # Now find reference-style images
+    ref_image_pattern = re.compile(
+        r"!\[([^\]]*)\]"  # ![alt]
+        r"\[([^\]]*)\]",  # [ref]
+        re.MULTILINE,
+    )
+
+    for match in ref_image_pattern.finditer(content):
+        alt_text = match.group(1).strip()
+        ref_id = match.group(2).strip().lower() or alt_text.lower()
+
+        if ref_id not in ref_definitions:
+            # Reference not found - this might be a broken reference
+            warnings.append(
+                ParseWarning(
+                    message=f"Image reference not found: [{ref_id}]",
+                    location=ParseLocation(
+                        line=get_line_number(content, match.start()), source=source
+                    ),
+                    suggestion=f"Add a reference definition: [{ref_id}]: image-url",
+                    code="MISSING_IMAGE_REFERENCE",
+                )
+            )
+            continue
+
+        src, title = ref_definitions[ref_id]
+        if src in seen_sources:
+            continue
+
+        is_local = _is_local_path(src)
+        if (is_local and not include_local) or (not is_local and not include_remote):
+            continue
+
+        seen_sources.add(src)
+        images.append(
+            EmbeddedImage(
+                src=src,
+                alt_text=alt_text,
+                title=title,
+                is_local=is_local,
+                line_number=get_line_number(content, match.start()),
+                original_syntax=match.group(0),
+            )
+        )
+
+    # Validate images and add warnings for potential issues
+    for img in images:
+        # Warn about missing alt text (accessibility)
+        if not img.alt_text:
+            warnings.append(
+                ParseWarning(
+                    message=f"Image missing alt text: {img.src}",
+                    location=ParseLocation(line=img.line_number, source=source),
+                    suggestion="Add descriptive alt text for accessibility",
+                    code="MISSING_ALT_TEXT",
+                )
+            )
+
+        # Warn about unsupported formats
+        if not img.is_supported_format and img.extension:
+            warnings.append(
+                ParseWarning(
+                    message=f"Potentially unsupported image format: .{img.extension}",
+                    location=ParseLocation(line=img.line_number, source=source),
+                    suggestion="Common formats: png, jpg, gif, svg, webp",
+                    code="UNSUPPORTED_IMAGE_FORMAT",
+                )
+            )
+
+    return images, warnings
+
+
+def _is_local_path(path: str) -> bool:
+    """Check if a path is local (not a URL)."""
+    return not path.startswith(("http://", "https://", "ftp://", "data:", "//"))
+
+
+def extract_images_from_section(
+    content: str,
+    section_name: str,
+    source: str | None = None,
+) -> tuple[list[EmbeddedImage], list[ParseWarning]]:
+    """
+    Extract images from a specific markdown section.
+
+    Args:
+        content: Full markdown content
+        section_name: Name of section to extract from (e.g., "Description", "Technical Notes")
+        source: Source file for error reporting
+
+    Returns:
+        Tuple of (images, warnings) for images found in the section
+    """
+    # Build pattern parts - avoid f-string issues with braces
+    section_start = r"#{2,4}\s*" + re.escape(section_name) + r"\s*\n"
+    section_body = r"([\s\S]*?)"
+    section_end = r"(?=\n#{2,4}|\Z)"
+
+    section_pattern = re.compile(
+        section_start + section_body + section_end,
+        re.IGNORECASE,
+    )
+
+    match = section_pattern.search(content)
+    if not match:
+        return [], []
+
+    section_content = match.group(1)
+    return parse_embedded_images(section_content, source)
+
+
+# =============================================================================
 # Error Code Definitions
 # =============================================================================
 
@@ -1009,4 +1392,8 @@ __all__ = [
     "parse_checkboxes_tolerant",
     "parse_description_tolerant",
     "parse_inline_subtasks",
+    # Image Embedding
+    "EmbeddedImage",
+    "parse_embedded_images",
+    "extract_images_from_section",
 ]

@@ -127,6 +127,7 @@ from .streaming import (
 
 # Tolerant parsing utilities
 from .tolerant_markdown import (
+    EmbeddedImage,
     InlineSubtaskInfo,
     ParseErrorCode,
     ParseErrorInfo,
@@ -138,6 +139,7 @@ from .tolerant_markdown import (
     TolerantFieldExtractor,
     TolerantPatterns,
     TolerantSectionExtractor,
+    extract_images_from_section,
     get_column_number,
     get_context_lines,
     get_line_content,
@@ -145,6 +147,7 @@ from .tolerant_markdown import (
     location_from_match,
     parse_checkboxes_tolerant,
     parse_description_tolerant,
+    parse_embedded_images,
     parse_inline_subtasks,
 )
 from .toml_parser import TomlParser
@@ -164,6 +167,8 @@ __all__ = [
     # Round-trip editing exports
     "EditOperation",
     "EditType",
+    # Image embedding exports
+    "EmbeddedImage",
     # Schema validation exports
     "EpicSchema",
     "ExcelParser",
@@ -236,6 +241,7 @@ __all__ = [
     "create_validator",
     "estimate_file_stories",
     "extract_html_comment_frontmatter",
+    "extract_images_from_section",
     "extract_inline_frontmatter",
     "extract_yaml_frontmatter",
     "get_column_number",
@@ -259,6 +265,7 @@ __all__ = [
     "parse_datetime",
     "parse_description_from_frontmatter",
     "parse_description_tolerant",
+    "parse_embedded_images",
     "parse_epic_from_frontmatter",
     "parse_inline_subtasks",
     "parse_story_from_frontmatter",
