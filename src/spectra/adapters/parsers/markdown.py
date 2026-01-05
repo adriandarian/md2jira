@@ -43,6 +43,7 @@ from .tolerant_markdown import (
     location_from_match,
     parse_checkboxes_tolerant,
     parse_description_tolerant,
+    parse_inline_subtasks,
 )
 
 
@@ -1358,14 +1359,21 @@ class MarkdownParser(DocumentParserPort):
         return AcceptanceCriteria.from_list(items, checked)
 
     def _extract_subtasks(self, content: str) -> list[Subtask]:
-        """Extract subtasks from table.
+        """Extract subtasks from table or inline checkboxes.
 
-        Supports multiple table formats:
-        - Format A: | # | Subtask | Description | SP | Status |
-        - Format B: | ID | Task | Status | Deliverable |
-        - Format C: | ID | Task | Status | Notes |
+        Supports multiple formats:
+        - Table Format A: | # | Subtask | Description | SP | Status |
+        - Table Format B: | ID | Task | Status | Deliverable |
+        - Table Format C: | ID | Task | Status | Notes |
+        - Inline Format: - [ ] Task name or - [x] Completed task
+
+        Inline checkbox format supports:
+        - [ ] Task name
+        - [x] Completed task (status = Done)
+        - [ ] Task name (2 SP) - with story points
+        - [ ] Task name - description text
         """
-        subtasks = []
+        subtasks: list[Subtask] = []
 
         # Try different header levels (h4, h3, h2)
         section = None
@@ -1380,6 +1388,28 @@ class MarkdownParser(DocumentParserPort):
             return subtasks
 
         section_content = section.group(1)
+
+        # First, try to extract from table formats
+        table_subtasks = self._extract_subtasks_from_table(section_content)
+        if table_subtasks:
+            return table_subtasks
+
+        # If no table subtasks found, try inline checkbox format
+        inline_subtasks = self._extract_subtasks_from_checkboxes(section_content)
+        if inline_subtasks:
+            return inline_subtasks
+
+        return subtasks
+
+    def _extract_subtasks_from_table(self, section_content: str) -> list[Subtask]:
+        """Extract subtasks from table format.
+
+        Supports:
+        - Format A: | # | Subtask | Description | SP | Status |
+        - Format B: | ID | Task | Status | Est. |
+        - Format C: | ID | Task | Status | Notes |
+        """
+        subtasks: list[Subtask] = []
 
         # Format A: | # | Subtask | Description | SP | Status |
         pattern_a = r"\|\s*(\d+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*(\d+)\s*\|\s*([^|]+)\s*\|"
@@ -1436,6 +1466,36 @@ class MarkdownParser(DocumentParserPort):
                         )
                     )
             return subtasks
+
+        return subtasks
+
+    def _extract_subtasks_from_checkboxes(self, section_content: str) -> list[Subtask]:
+        """Extract subtasks from inline checkbox format.
+
+        Supports:
+        - [ ] Task name
+        - [x] Completed task
+        - [ ] Task name (2 SP)
+        - [ ] Task name - description text
+        - [ ] **Bold task name**
+        """
+        subtasks: list[Subtask] = []
+
+        inline_subtask_infos, _warnings = parse_inline_subtasks(section_content)
+
+        for idx, info in enumerate(inline_subtask_infos, start=1):
+            # Map checkbox status to Status enum
+            status = Status.DONE if info.checked else Status.PLANNED
+
+            subtasks.append(
+                Subtask(
+                    number=idx,
+                    name=info.name,
+                    description=info.description,
+                    story_points=info.story_points,
+                    status=status,
+                )
+            )
 
         return subtasks
 

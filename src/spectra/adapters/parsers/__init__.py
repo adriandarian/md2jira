@@ -29,6 +29,30 @@ from .confluence_parser import ConfluenceParser
 from .csv_parser import CsvParser
 from .diagram_parser import DiagramParser
 from .excel_parser import ExcelParser
+
+# Frontmatter parsing
+from .frontmatter import (
+    FieldMapping,
+    FrontmatterConfig,
+    FrontmatterFormat,
+    FrontmatterParser,
+    FrontmatterParseResult,
+    FrontmatterSpan,
+    MergeStrategy,
+    create_frontmatter_parser,
+    create_markdown_with_frontmatter,
+    extract_html_comment_frontmatter,
+    extract_inline_frontmatter,
+    extract_yaml_frontmatter,
+    get_frontmatter,
+    has_frontmatter,
+    parse_acceptance_criteria_from_frontmatter,
+    parse_description_from_frontmatter,
+    parse_epic_from_frontmatter,
+    parse_story_from_frontmatter,
+    parse_subtasks_from_frontmatter,
+    strip_frontmatter,
+)
 from .google_docs_parser import GoogleDocsParser
 from .google_sheets_parser import GoogleSheetsParser
 from .graphql_parser import GraphQLParser
@@ -103,6 +127,7 @@ from .streaming import (
 
 # Tolerant parsing utilities
 from .tolerant_markdown import (
+    InlineSubtaskInfo,
     ParseErrorCode,
     ParseErrorInfo,
     ParseIssue,
@@ -120,6 +145,7 @@ from .tolerant_markdown import (
     location_from_match,
     parse_checkboxes_tolerant,
     parse_description_tolerant,
+    parse_inline_subtasks,
 )
 from .toml_parser import TomlParser
 from .toon_parser import ToonParser
@@ -141,15 +167,25 @@ __all__ = [
     # Schema validation exports
     "EpicSchema",
     "ExcelParser",
+    # Frontmatter exports
+    "FieldMapping",
     "FieldSchema",
     "FieldSpan",
     "FieldType",
+    "FrontmatterConfig",
+    "FrontmatterFormat",
+    "FrontmatterParseResult",
+    "FrontmatterParser",
+    "FrontmatterSpan",
     "GoogleDocsParser",
     "GoogleSheetsParser",
     "GraphQLParser",
+    # Inline subtask parsing
+    "InlineSubtaskInfo",
     "JsonParser",
     "MarkdownParser",
     "MemoryMappedParser",
+    "MergeStrategy",
     "NotionParser",
     "NotionParserPlugin",
     "ObsidianParser",
@@ -180,10 +216,10 @@ __all__ = [
     "StreamingMarkdownParser",
     "StreamingStats",
     "SubtaskSchema",
-    "TomlParser",
     "TolerantFieldExtractor",
     "TolerantPatterns",
     "TolerantSectionExtractor",
+    "TomlParser",
     "ToonParser",
     "ValidatingParser",
     "ValidationError",
@@ -194,14 +230,21 @@ __all__ = [
     "YamlParser",
     "YamlParserPlugin",
     "batch_update_stories",
+    "create_frontmatter_parser",
+    "create_markdown_with_frontmatter",
     "create_schema",
     "create_validator",
     "estimate_file_stories",
+    "extract_html_comment_frontmatter",
+    "extract_inline_frontmatter",
+    "extract_yaml_frontmatter",
     "get_column_number",
     "get_context_lines",
     "get_file_stats",
+    "get_frontmatter",
     "get_line_content",
     "get_line_number",
+    "has_frontmatter",
     "location_from_match",
     "matches_pattern",
     "max_length",
@@ -210,12 +253,19 @@ __all__ = [
     "min_value",
     "not_empty",
     "one_of",
+    "parse_acceptance_criteria_from_frontmatter",
     "parse_blockquote_comments",
     "parse_checkboxes_tolerant",
     "parse_datetime",
+    "parse_description_from_frontmatter",
     "parse_description_tolerant",
+    "parse_epic_from_frontmatter",
+    "parse_inline_subtasks",
+    "parse_story_from_frontmatter",
+    "parse_subtasks_from_frontmatter",
     "stream_stories_from_directory",
     "stream_stories_from_file",
+    "strip_frontmatter",
     "update_story_in_file",
     "valid_priority",
     "valid_status",

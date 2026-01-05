@@ -689,6 +689,161 @@ def parse_checkboxes_tolerant(
 
 
 # =============================================================================
+# Inline Subtask Parsing (Checkboxes as Subtasks)
+# =============================================================================
+
+
+@dataclass
+class InlineSubtaskInfo:
+    """
+    Information about a subtask parsed from an inline checkbox.
+
+    Attributes:
+        name: The subtask name/title
+        checked: Whether the checkbox is checked
+        description: Optional description extracted from the line
+        line_number: Line number in the source document
+        story_points: Estimated story points (default 1)
+    """
+
+    name: str
+    checked: bool
+    description: str = ""
+    line_number: int = 0
+    story_points: int = 1
+
+
+def parse_inline_subtasks(
+    content: str,
+    source: str | None = None,
+) -> tuple[list[InlineSubtaskInfo], list[ParseWarning]]:
+    """
+    Parse checkboxes as inline subtasks with tolerance for formatting variants.
+
+    This function extracts subtask information from markdown checkbox lists.
+    It supports various checkbox formats and extracts additional metadata
+    when available (e.g., story points in parentheses).
+
+    Supported formats:
+    - [ ] Task name
+    - [x] Completed task
+    - [ ] Task name (2 SP)
+    - [ ] Task name - description text
+    - [ ] Task name: description text
+    - [ ] **Task name** with bold formatting
+    - [ ] `Task name` with code formatting
+
+    Args:
+        content: Content containing checkbox subtasks
+        source: Source file for error reporting
+
+    Returns:
+        Tuple of (subtasks, warnings) where subtasks is list of InlineSubtaskInfo
+
+    Examples:
+        >>> content = '''
+        ... - [ ] Implement feature
+        ... - [x] Write tests (3 SP)
+        ... - [ ] Update docs - Add API reference
+        ... '''
+        >>> subtasks, warnings = parse_inline_subtasks(content)
+        >>> len(subtasks)
+        3
+        >>> subtasks[0].name
+        'Implement feature'
+        >>> subtasks[1].checked
+        True
+        >>> subtasks[1].story_points
+        3
+    """
+    subtasks: list[InlineSubtaskInfo] = []
+    warnings: list[ParseWarning] = []
+
+    # Pattern for checkbox detection with optional metadata
+    # Matches: - [ ] name, - [x] name, * [ ] name, + [ ] name
+    checkbox_pattern = re.compile(
+        r"^[\s]*[-*+]\s*\[([xX\s]?)\]\s*(.+?)$",
+        re.MULTILINE,
+    )
+
+    # Pattern to extract story points from text like "(2 SP)" or "(3 points)"
+    sp_pattern = re.compile(
+        r"\s*\((\d+)\s*(?:SP|sp|pts?|points?|story\s*points?)\)\s*$",
+        re.IGNORECASE,
+    )
+
+    # Pattern to extract description after separator (- or :)
+    desc_pattern = re.compile(
+        r"^(.+?)(?:\s*[-–—:]\s+(.+))?$",
+    )
+
+    for match in checkbox_pattern.finditer(content):
+        checkbox_char = match.group(1).strip().lower()
+        full_text = match.group(2).strip()
+        checked = checkbox_char == "x"
+        line_number = get_line_number(content, match.start())
+
+        # Extract story points if present
+        story_points = 1
+        sp_match = sp_pattern.search(full_text)
+        if sp_match:
+            story_points = int(sp_match.group(1))
+            full_text = full_text[: sp_match.start()].strip()
+
+        # Remove markdown formatting (bold, code, etc.)
+        name = full_text
+        name = re.sub(r"\*\*(.+?)\*\*", r"\1", name)  # Remove bold
+        name = re.sub(r"\*(.+?)\*", r"\1", name)  # Remove italic
+        name = re.sub(r"`(.+?)`", r"\1", name)  # Remove code
+        name = re.sub(r"~~(.+?)~~", r"\1", name)  # Remove strikethrough
+
+        # Extract description if separator found
+        description = ""
+        desc_match = desc_pattern.match(name)
+        if desc_match and desc_match.group(2):
+            name = desc_match.group(1).strip()
+            description = desc_match.group(2).strip()
+
+        # Skip empty or very short names
+        if len(name) < 2:
+            location = location_from_match(content, match, source)
+            warnings.append(
+                ParseWarning(
+                    message=f"Skipped checkbox with very short name: '{name}'",
+                    location=location,
+                    suggestion="Provide a descriptive subtask name",
+                    code="SHORT_SUBTASK_NAME",
+                )
+            )
+            continue
+
+        subtasks.append(
+            InlineSubtaskInfo(
+                name=name,
+                checked=checked,
+                description=description,
+                line_number=line_number,
+                story_points=story_points,
+            )
+        )
+
+        # Warn about non-standard formatting
+        original = match.group(0)
+        if "* [" in original or "+ [" in original:
+            location = location_from_match(content, match, source)
+            warnings.append(
+                ParseWarning(
+                    message="Non-standard checkbox format for subtask",
+                    location=location,
+                    suggestion="Use '- [ ]' or '- [x]' for subtask checkboxes",
+                    code="NONSTANDARD_SUBTASK_CHECKBOX",
+                )
+            )
+
+    return subtasks, warnings
+
+
+# =============================================================================
 # Tolerant Description Parsing
 # =============================================================================
 
@@ -821,6 +976,8 @@ class ParseErrorCode:
     INCOMPLETE_DESCRIPTION = "W005"
     EMPTY_CHECKBOX = "W006"
     NONSTANDARD_CHECKBOX = "W007"
+    SHORT_SUBTASK_NAME = "W008"
+    NONSTANDARD_SUBTASK_CHECKBOX = "W009"
 
 
 # =============================================================================
@@ -831,6 +988,7 @@ __all__ = [
     # Error codes
     "ParseErrorCode",
     # Core types
+    "InlineSubtaskInfo",
     "ParseErrorInfo",
     "ParseIssue",
     "ParseLocation",
@@ -850,4 +1008,5 @@ __all__ = [
     "location_from_match",
     "parse_checkboxes_tolerant",
     "parse_description_tolerant",
+    "parse_inline_subtasks",
 ]

@@ -883,8 +883,8 @@ For each new tracker adapter, follow this checklist:
 - [x] **Stronger Markdown Parsing** - Tolerate formatting variants; precise parse errors ✅ **COMPLETED**
 - [x] **Round-trip Edits** - Modify source markdown while preserving formatting ✅ **COMPLETED** - Implemented `RoundtripParser` for span-tracking parse, `RoundtripEditor` for surgical edits. Supports field updates, title changes, AC toggling, and batch updates. 43 unit tests passing.
 - [x] **Schema Validation** - Optional strict mode for required fields ✅ **COMPLETED** - Implemented `SchemaValidator` with configurable validation modes (lenient, normal, strict). Supports `FieldSchema`, `StorySchema`, `SubtaskSchema`, `EpicSchema` with built-in validators (min/max length/value, patterns, required fields). Includes `ValidatingParser` wrapper, `SchemaPreset` for domain-specific validation (Agile, Kanban, QA, Documentation). 74 unit tests passing.
-- [ ] **Extensible Frontmatter** - YAML frontmatter as alternative to tables
-- [ ] **Inline Task References** - Parse `[ ]` checkboxes as subtasks
+- [x] **Extensible Frontmatter** - YAML frontmatter as alternative to tables ✅ **COMPLETED** - Implemented `FrontmatterParser` with configurable formats (YAML `---`, HTML comment `<!-- yaml -->`). Supports single-story and multi-story frontmatter, extensible field mappings with aliases and transformers, `MergeStrategy` for combining frontmatter with inline content. Includes `create_markdown_with_frontmatter()` factory for MarkdownParser fallback integration. Utility functions: `has_frontmatter()`, `get_frontmatter()`, `strip_frontmatter()`. 90 unit tests passing.
+- [x] **Inline Task References** - Parse `[ ]` checkboxes as subtasks ✅ **COMPLETED** - Implemented `parse_inline_subtasks()` function in `tolerant_markdown.py` with `InlineSubtaskInfo` dataclass. Supports checked/unchecked checkboxes, story points extraction `(N SP)`, description extraction via separators (- or :), markdown formatting cleanup (bold, italic, code, strikethrough). Integrated into `MarkdownParser._extract_subtasks()` as fallback when no table format found. 32 unit tests passing.
 - [ ] **Image Embedding** - Handle images in descriptions
 - [ ] **Better Table Parsing** - Improved table support in descriptions
 - [ ] **Code Block Preservation** - Preserve syntax highlighting
@@ -944,28 +944,4 @@ For each new tracker adapter, follow this checklist:
 **Total: 190+ improvement opportunities** | **Completed: 31+ (including GitLab, Monday.com, Trello, Shortcut, ClickUp, Bitbucket, YouTrack, Plane.so, and Pivotal Tracker adapters)**
 
 ---
-
-## 🎯 Recommended Priority Order
-
-### Phase 1: Quick Wins (1-2 weeks)
-1. Custom ID separators
-2. Universal `#123` support
-3. Better error messages
-4. Configuration validation
-5. Documentation updates
-
-### Phase 2: High Impact (1-2 months)
-1. Integration tests for all trackers ✅
-2. Asana adapter parity verification ✅
-3. GitLab Issues Adapter ✅ **COMPLETED**
-4. Trello Adapter ✅ **COMPLETED**
-5. Incremental sync optimization
-6. Interactive TUI dashboard
-
-### Phase 3: Major Features (3-6 months)
-1. Additional tracker adapters (Monday.com ✅, Shortcut ✅, ClickUp ✅, Bitbucket ✅, YouTrack ✅, Plane.so ✅, Pivotal Tracker ✅)
-2. AI/ML features (story generation, quality scoring)
-3. Bidirectional sync with conflict resolution
-4. JetBrains IDE plugin
-5. Enterprise features (SSO, RBAC)
 
