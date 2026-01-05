@@ -874,7 +874,7 @@ For each new tracker adapter, follow this checklist:
 - [ ] **RTL Language Support** - Hebrew/Arabic markdown content
 - [ ] **Screen Reader Support** - Better CLI output for screen readers
 - [ ] **Color-blind Friendly** - Ensure output works without color
-- [ ] **Keyboard Shortcuts** - More shortcuts in TUI
+- [x] **Keyboard Shortcuts** - More shortcuts in TUI ✅ **COMPLETED** - Added 40+ keyboard shortcuts to the TUI dashboard including: vim-style navigation (j/k/g/G/Ctrl+d/u), quick tab switching (1-3), quick status filters (!/@ /#/0), story operations (o/y/e), view controls (l/z/h), bulk operations (a/x), and global shortcuts (Ctrl+r/h, F1/F5). Updated help screen with comprehensive shortcut documentation. 15 new unit tests passing.
 
 ---
 

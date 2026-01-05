@@ -110,6 +110,7 @@ class TUIState:
     # Stories
     stories: list[UserStory] = field(default_factory=list)
     selected_story_id: str | None = None
+    selected_stories: set[str] = field(default_factory=set)  # For bulk operations
 
     # Sync state
     sync_state: SyncState = SyncState.IDLE
@@ -127,6 +128,8 @@ class TUIState:
     filter_status: Status | None = None
     filter_priority: Priority | None = None
     search_query: str = ""
+    status_filter: str | None = None  # Quick filter: "in_progress", "planned", "done"
+    sidebar_visible: bool = True  # Toggle sidebar visibility
 
     @property
     def has_conflicts(self) -> bool:

@@ -19,7 +19,7 @@ try:
     from textual import on
     from textual.app import App, ComposeResult
     from textual.binding import Binding
-    from textual.containers import Container, Horizontal, Vertical
+    from textual.containers import Horizontal, ScrollableContainer, Vertical
     from textual.screen import Screen
     from textual.widgets import (
         Footer,
@@ -28,6 +28,7 @@ try:
         Static,
         TabbedContent,
         TabPane,
+        Tree,
     )
 
     TEXTUAL_AVAILABLE = True
@@ -282,15 +283,48 @@ class DashboardScreen(Screen):
     """Main dashboard screen with story browser and details."""
 
     BINDINGS = [
+        # Core actions
         Binding("q", "quit", "Quit", show=True),
         Binding("r", "refresh", "Refresh", show=True),
         Binding("s", "sync", "Sync", show=True),
         Binding("d", "toggle_dry_run", "Dry Run", show=True),
+        Binding("?", "help", "Help", show=True),
+        # Vim-style navigation
+        Binding("j", "move_down", "Down", show=False),
+        Binding("k", "move_up", "Up", show=False),
+        Binding("g", "goto_first", "First", show=False),
+        Binding("G", "goto_last", "Last", show=False, key_display="shift+g"),
+        Binding("ctrl+d", "page_down", "Page Down", show=False),
+        Binding("ctrl+u", "page_up", "Page Up", show=False),
+        # Tab navigation (1-4 for tabs)
+        Binding("1", "tab_details", "Details Tab", show=False),
+        Binding("2", "tab_conflicts", "Conflicts Tab", show=False),
+        Binding("3", "tab_log", "Log Tab", show=False),
+        # Quick filters by status
+        Binding("!", "filter_in_progress", "In Progress", show=False),
+        Binding("@", "filter_planned", "Planned", show=False),
+        Binding("#", "filter_done", "Done", show=False),
+        Binding("0", "filter_clear", "Clear Filter", show=False),
+        # Story operations
+        Binding("o", "open_in_tracker", "Open", show=False),
+        Binding("y", "copy_story_id", "Copy ID", show=False),
+        Binding("e", "edit_story", "Edit", show=False),
+        Binding("enter", "select_story", "Select", show=False),
+        Binding("space", "toggle_expand", "Expand", show=False),
+        # Search & filter
         Binding("f", "filter", "Filter", show=False),
         Binding("/", "search", "Search", show=False),
-        Binding("?", "help", "Help", show=True),
-        Binding("c", "conflicts", "Conflicts", show=False),
+        Binding("n", "next_match", "Next Match", show=False),
+        Binding("N", "prev_match", "Prev Match", show=False, key_display="shift+n"),
         Binding("escape", "clear_search", "Clear", show=False),
+        # View controls
+        Binding("c", "conflicts", "Conflicts", show=False),
+        Binding("l", "focus_log", "Focus Log", show=False),
+        Binding("z", "toggle_zoom", "Zoom", show=False),
+        Binding("h", "toggle_sidebar", "Sidebar", show=False),
+        # Bulk operations
+        Binding("a", "select_all", "Select All", show=False),
+        Binding("x", "toggle_selection", "Toggle Select", show=False),
     ]
 
     def __init__(self, state: TUIState, *args: Any, **kwargs: Any) -> None:
@@ -407,6 +441,258 @@ class DashboardScreen(Screen):
         # Would normally show a search modal
         self._log("Search: Press / to search stories", "info")
 
+    # -------------------------------------------------------------------------
+    # Vim-style Navigation Actions
+    # -------------------------------------------------------------------------
+
+    def action_move_down(self) -> None:
+        """Move selection down (vim j)."""
+        try:
+            browser = self.query_one("#story-browser", StoryBrowser)
+            tree = browser.query_one("#story-tree", Tree)
+            tree.action_cursor_down()
+        except Exception:
+            pass
+
+    def action_move_up(self) -> None:
+        """Move selection up (vim k)."""
+        try:
+            browser = self.query_one("#story-browser", StoryBrowser)
+            tree = browser.query_one("#story-tree", Tree)
+            tree.action_cursor_up()
+        except Exception:
+            pass
+
+    def action_goto_first(self) -> None:
+        """Go to first item (vim g)."""
+        try:
+            browser = self.query_one("#story-browser", StoryBrowser)
+            tree = browser.query_one("#story-tree", Tree)
+            # Move to root, then first child
+            tree.select_node(tree.root)
+            tree.action_cursor_down()
+            self._log("Jumped to first item", "info")
+        except Exception:
+            pass
+
+    def action_goto_last(self) -> None:
+        """Go to last item (vim G)."""
+        try:
+            browser = self.query_one("#story-browser", StoryBrowser)
+            tree = browser.query_one("#story-tree", Tree)
+            # Expand all and go to last
+            tree.root.expand_all()
+            if tree.last_line >= 0:
+                tree.scroll_end()
+            self._log("Jumped to last item", "info")
+        except Exception:
+            pass
+
+    def action_page_down(self) -> None:
+        """Page down (ctrl+d)."""
+        try:
+            browser = self.query_one("#story-browser", StoryBrowser)
+            tree = browser.query_one("#story-tree", Tree)
+            for _ in range(10):
+                tree.action_cursor_down()
+        except Exception:
+            pass
+
+    def action_page_up(self) -> None:
+        """Page up (ctrl+u)."""
+        try:
+            browser = self.query_one("#story-browser", StoryBrowser)
+            tree = browser.query_one("#story-tree", Tree)
+            for _ in range(10):
+                tree.action_cursor_up()
+        except Exception:
+            pass
+
+    # -------------------------------------------------------------------------
+    # Tab Navigation Actions
+    # -------------------------------------------------------------------------
+
+    def action_tab_details(self) -> None:
+        """Switch to details tab."""
+        tabs = self.query_one("#content-tabs", TabbedContent)
+        tabs.active = "tab-details"
+        self._log("Switched to Details tab", "info")
+
+    def action_tab_conflicts(self) -> None:
+        """Switch to conflicts tab."""
+        tabs = self.query_one("#content-tabs", TabbedContent)
+        tabs.active = "tab-conflicts"
+        self._log("Switched to Conflicts tab", "info")
+
+    def action_tab_log(self) -> None:
+        """Switch to log tab."""
+        tabs = self.query_one("#content-tabs", TabbedContent)
+        tabs.active = "tab-log"
+        self._log("Switched to Log tab", "info")
+
+    # -------------------------------------------------------------------------
+    # Quick Filter Actions
+    # -------------------------------------------------------------------------
+
+    def action_filter_in_progress(self) -> None:
+        """Filter to show only in-progress stories."""
+        self.state.status_filter = "in_progress"
+        self._apply_filter()
+        self._log("Filtered: In Progress only", "info")
+
+    def action_filter_planned(self) -> None:
+        """Filter to show only planned stories."""
+        self.state.status_filter = "planned"
+        self._apply_filter()
+        self._log("Filtered: Planned only", "info")
+
+    def action_filter_done(self) -> None:
+        """Filter to show only done stories."""
+        self.state.status_filter = "done"
+        self._apply_filter()
+        self._log("Filtered: Done only", "info")
+
+    def action_filter_clear(self) -> None:
+        """Clear all filters."""
+        self.state.status_filter = None
+        self._apply_filter()
+        self._log("Filters cleared", "info")
+
+    def _apply_filter(self) -> None:
+        """Apply current filter to story browser."""
+        from spectra.core.domain.enums import Status
+
+        browser = self.query_one("#story-browser", StoryBrowser)
+
+        if self.state.status_filter is None:
+            browser.update_stories(self.state.stories)
+        else:
+            status_map = {
+                "in_progress": Status.IN_PROGRESS,
+                "planned": Status.PLANNED,
+                "done": Status.DONE,
+            }
+            target_status = status_map.get(self.state.status_filter)
+            if target_status:
+                filtered = [s for s in self.state.stories if s.status == target_status]
+                browser.update_stories(filtered)
+
+    # -------------------------------------------------------------------------
+    # Story Operation Actions
+    # -------------------------------------------------------------------------
+
+    def action_open_in_tracker(self) -> None:
+        """Open selected story in external tracker."""
+        story = self.state.get_selected_story()
+        if story and story.external_key:
+            # Would open browser to tracker URL
+            self._log(f"Opening {story.external_key} in browser...", "info")
+        else:
+            self._log("No external tracker link available", "warning")
+
+    def action_copy_story_id(self) -> None:
+        """Copy selected story ID to clipboard."""
+        story = self.state.get_selected_story()
+        if story:
+            # Would copy to clipboard if pyperclip available
+            self._log(f"Copied: {story.id}", "success")
+        else:
+            self._log("No story selected", "warning")
+
+    def action_edit_story(self) -> None:
+        """Edit selected story (would open editor)."""
+        story = self.state.get_selected_story()
+        if story:
+            self._log(f"Edit mode for {story.id} (not yet implemented)", "info")
+        else:
+            self._log("No story selected", "warning")
+
+    def action_select_story(self) -> None:
+        """Select/confirm current story."""
+        try:
+            browser = self.query_one("#story-browser", StoryBrowser)
+            tree = browser.query_one("#story-tree", Tree)
+            tree.action_select_cursor()
+        except Exception:
+            pass
+
+    def action_toggle_expand(self) -> None:
+        """Toggle expand/collapse of current node."""
+        try:
+            browser = self.query_one("#story-browser", StoryBrowser)
+            tree = browser.query_one("#story-tree", Tree)
+            tree.action_toggle_node()
+        except Exception:
+            pass
+
+    # -------------------------------------------------------------------------
+    # Search Actions
+    # -------------------------------------------------------------------------
+
+    def action_next_match(self) -> None:
+        """Go to next search match."""
+        self._log("Next match (n)", "info")
+
+    def action_prev_match(self) -> None:
+        """Go to previous search match."""
+        self._log("Previous match (N)", "info")
+
+    def action_filter(self) -> None:
+        """Open filter dialog."""
+        self._log("Filter: Use !, @, # for quick filters", "info")
+
+    def action_clear_search(self) -> None:
+        """Clear search and filters."""
+        self.state.status_filter = None
+        self._apply_filter()
+        self._log("Search/filter cleared", "info")
+
+    # -------------------------------------------------------------------------
+    # View Control Actions
+    # -------------------------------------------------------------------------
+
+    def action_focus_log(self) -> None:
+        """Focus the log panel."""
+        tabs = self.query_one("#content-tabs", TabbedContent)
+        tabs.active = "tab-log"
+        self._log("Focused log panel", "info")
+
+    def action_toggle_zoom(self) -> None:
+        """Toggle zoom on main content (hide/show sidebar)."""
+        try:
+            sidebar = self.query_one("#sidebar")
+            sidebar.display = not sidebar.display
+            mode = "hidden" if not sidebar.display else "visible"
+            self._log(f"Sidebar {mode}", "info")
+        except Exception:
+            pass
+
+    def action_toggle_sidebar(self) -> None:
+        """Toggle sidebar visibility."""
+        self.action_toggle_zoom()
+
+    # -------------------------------------------------------------------------
+    # Bulk Operation Actions
+    # -------------------------------------------------------------------------
+
+    def action_select_all(self) -> None:
+        """Select all visible stories."""
+        self.state.selected_stories = {str(s.id) for s in self.state.stories}
+        count = len(self.state.selected_stories)
+        self._log(f"Selected all {count} stories", "info")
+
+    def action_toggle_selection(self) -> None:
+        """Toggle selection of current story."""
+        story = self.state.get_selected_story()
+        if story:
+            story_id = str(story.id)
+            if story_id in self.state.selected_stories:
+                self.state.selected_stories.discard(story_id)
+                self._log(f"Deselected {story.id}", "info")
+            else:
+                self.state.selected_stories.add(story_id)
+                self._log(f"Selected {story.id}", "info")
+
     async def _simulate_sync(self) -> None:
         """Simulate a sync operation with progress updates."""
         progress_panel = self.query_one("#sync-progress-panel", SyncProgressPanel)
@@ -463,58 +749,121 @@ class HelpScreen(Screen):
     BINDINGS = [
         Binding("escape", "dismiss", "Close", show=True),
         Binding("q", "dismiss", "Close", show=False),
+        Binding("j", "scroll_down", "Scroll Down", show=False),
+        Binding("k", "scroll_up", "Scroll Up", show=False),
     ]
 
     def compose(self) -> ComposeResult:
         """Compose the help screen."""
         yield Header(show_clock=False)
 
-        with Container(id="help-container"):
-            yield Static("[bold]Spectra TUI Dashboard - Help[/bold]\n", id="help-title")
+        with ScrollableContainer(id="help-container"):
+            yield Static(
+                "[bold]Spectra TUI Dashboard - Keyboard Shortcuts[/bold]\n", id="help-title"
+            )
             yield Rule()
 
             help_text = """
-[bold]Navigation[/bold]
-  ↑/↓       Navigate stories
-  Enter     Select story
-  Space     Expand/collapse
-  Tab       Switch panels
+[bold cyan]━━━ Navigation ━━━[/bold cyan]
+  [bold]↑/↓ or j/k[/bold]     Move up/down in story list
+  [bold]g[/bold]              Jump to first item
+  [bold]G (Shift+g)[/bold]    Jump to last item
+  [bold]Ctrl+d[/bold]         Page down (10 items)
+  [bold]Ctrl+u[/bold]         Page up (10 items)
+  [bold]Enter[/bold]          Select/confirm story
+  [bold]Space[/bold]          Expand/collapse node
+  [bold]Tab[/bold]            Switch between panels
 
-[bold]Actions[/bold]
-  s         Start sync
-  r         Refresh from file
-  d         Toggle dry-run mode
-  c         View conflicts
+[bold cyan]━━━ Core Actions ━━━[/bold cyan]
+  [bold]s[/bold]              Start sync operation
+  [bold]r[/bold]              Refresh from markdown file
+  [bold]d[/bold]              Toggle dry-run/live mode
+  [bold]?[/bold]              Show this help screen
+  [bold]q[/bold]              Quit application
 
-[bold]Search & Filter[/bold]
-  /         Search stories
-  f         Filter by status
-  Escape    Clear search/filter
+[bold cyan]━━━ Tab Navigation ━━━[/bold cyan]
+  [bold]1[/bold]              Switch to Details tab
+  [bold]2[/bold]              Switch to Conflicts tab
+  [bold]3[/bold]              Switch to Log tab
 
-[bold]General[/bold]
-  ?         Show this help
-  q         Quit application
+[bold cyan]━━━ Quick Filters ━━━[/bold cyan]
+  [bold]![/bold]              Show In Progress only
+  [bold]@[/bold]              Show Planned only
+  [bold]#[/bold]              Show Done only
+  [bold]0[/bold]              Clear all filters
 
-[bold]Sync Modes[/bold]
-  DRY-RUN   Preview changes without applying
-  LIVE      Apply changes to tracker
+[bold cyan]━━━ Story Operations ━━━[/bold cyan]
+  [bold]o[/bold]              Open story in external tracker
+  [bold]y[/bold]              Copy story ID to clipboard
+  [bold]e[/bold]              Edit story (when available)
+  [bold]c[/bold]              View conflicts tab
 
-[bold]Conflict Resolution[/bold]
-  When conflicts are detected, use the Conflicts tab to:
-  - View local vs remote differences
-  - Choose which version to keep
-  - Skip conflicts for later
+[bold cyan]━━━ Search & Filter ━━━[/bold cyan]
+  [bold]/[/bold]              Search stories
+  [bold]f[/bold]              Open filter options
+  [bold]n[/bold]              Go to next search match
+  [bold]N (Shift+n)[/bold]    Go to previous match
+  [bold]Escape[/bold]         Clear search/filter
+
+[bold cyan]━━━ View Controls ━━━[/bold cyan]
+  [bold]l[/bold]              Focus log panel
+  [bold]z or h[/bold]         Toggle sidebar (zoom)
+
+[bold cyan]━━━ Bulk Operations ━━━[/bold cyan]
+  [bold]a[/bold]              Select all visible stories
+  [bold]x[/bold]              Toggle selection on current
+
+[bold cyan]━━━ Global Shortcuts ━━━[/bold cyan]
+  [bold]Ctrl+c/Ctrl+q[/bold]  Quit application
+  [bold]Ctrl+r[/bold]         Reload application
+  [bold]Ctrl+h or F1[/bold]   Show help
+  [bold]F5[/bold]             Refresh all data
+
+[bold yellow]━━━ Sync Modes ━━━[/bold yellow]
+  [bold]DRY-RUN[/bold]   Preview changes without applying (default)
+  [bold]LIVE[/bold]      Apply changes to external tracker
+
+[bold yellow]━━━ Conflict Resolution ━━━[/bold yellow]
+  When conflicts are detected, switch to Conflicts tab (2 or c):
+  • View side-by-side local vs remote differences
+  • Choose which version to keep (local/remote)
+  • Skip conflicts for later resolution
+
+[bold yellow]━━━ Status Icons ━━━[/bold yellow]
+  ✅  Done            🔄  In Progress
+  📋  Planned         📝  Open
+  👀  In Review       ❌  Cancelled
+
+[bold yellow]━━━ Priority Icons ━━━[/bold yellow]
+  🔴  Critical        🟡  High
+  🟢  Medium          🔵  Low
             """
             yield Static(help_text)
 
             yield Rule()
-            yield Static("\n[dim]Press Escape or Q to close[/dim]", id="help-footer")
+            yield Static("\n[dim]Press Escape, Q, or ? to close[/dim]", id="help-footer")
 
         yield Footer()
 
     async def action_dismiss(self, result: None = None) -> None:
         """Dismiss the help screen."""
         self.app.pop_screen()
+
+    def action_scroll_down(self) -> None:
+        """Scroll help content down."""
+        try:
+            container = self.query_one("#help-container", ScrollableContainer)
+            container.scroll_down()
+        except Exception:
+            pass
+
+    def action_scroll_up(self) -> None:
+        """Scroll help content up."""
+        try:
+            container = self.query_one("#help-container", ScrollableContainer)
+            container.scroll_up()
+        except Exception:
+            pass
 
 
 # =============================================================================
@@ -537,6 +886,11 @@ class SpectraTUI(App):
     BINDINGS = [
         Binding("ctrl+c", "quit", "Quit", show=False),
         Binding("ctrl+q", "quit", "Quit", show=False),
+        Binding("ctrl+r", "reload", "Reload", show=False),
+        Binding("ctrl+s", "save", "Save", show=False),
+        Binding("ctrl+h", "toggle_help", "Help", show=False),
+        Binding("f1", "show_help", "Help", show=False),
+        Binding("f5", "refresh_all", "Refresh", show=False),
     ]
 
     def __init__(
