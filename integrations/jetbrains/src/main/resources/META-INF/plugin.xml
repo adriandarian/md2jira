@@ -1,0 +1,172 @@
+<idea-plugin>
+    <id>dev.spectra.plugin</id>
+    <name>Spectra</name>
+    <vendor email="support@spectra.dev" url="https://spectra.dev">Spectra</vendor>
+
+    <description><![CDATA[
+        IDE integration for Spectra markdown-based user story management.
+
+        <h3>Features</h3>
+        <ul>
+            <li>Syntax highlighting for Spectra markdown</li>
+            <li>Code completion for status, priority, and tracker IDs</li>
+            <li>Quick navigation to epic/story definitions</li>
+            <li>Real-time validation inspections</li>
+            <li>Quick fixes for common issues</li>
+            <li>Tool window with sync status and stories</li>
+        </ul>
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>org.intellij.plugins.markdown</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Settings -->
+        <applicationConfigurable
+            parentId="tools"
+            instance="dev.spectra.plugin.settings.SpectraSettingsConfigurable"
+            id="dev.spectra.plugin.settings"
+            displayName="Spectra"/>
+
+        <applicationService
+            serviceImplementation="dev.spectra.plugin.settings.SpectraSettings"/>
+
+        <!-- Completion -->
+        <completion.contributor
+            language="Markdown"
+            implementationClass="dev.spectra.plugin.completion.SpectraCompletionContributor"/>
+
+        <!-- Inspections -->
+        <localInspection
+            language="Markdown"
+            groupPath="Spectra"
+            groupBundle="messages.SpectraBundle"
+            groupKey="inspection.group.name"
+            shortName="SpectraMissingStatus"
+            bundle="messages.SpectraBundle"
+            key="inspection.missing.status.name"
+            level="WARNING"
+            enabledByDefault="true"
+            implementationClass="dev.spectra.plugin.inspections.MissingStatusInspection"/>
+
+        <localInspection
+            language="Markdown"
+            groupPath="Spectra"
+            groupBundle="messages.SpectraBundle"
+            groupKey="inspection.group.name"
+            shortName="SpectraInvalidHeader"
+            bundle="messages.SpectraBundle"
+            key="inspection.invalid.header.name"
+            level="ERROR"
+            enabledByDefault="true"
+            implementationClass="dev.spectra.plugin.inspections.InvalidHeaderInspection"/>
+
+        <!-- Annotator -->
+        <annotator
+            language="Markdown"
+            implementationClass="dev.spectra.plugin.highlighting.SpectraAnnotator"/>
+
+        <!-- Line Marker (gutter icons) -->
+        <codeInsight.lineMarkerProvider
+            language="Markdown"
+            implementationClass="dev.spectra.plugin.navigation.SpectraLineMarkerProvider"/>
+
+        <!-- Reference Contributor -->
+        <psi.referenceContributor
+            language="Markdown"
+            implementation="dev.spectra.plugin.navigation.SpectraReferenceContributor"/>
+
+        <!-- Tool Window -->
+        <toolWindow
+            id="Spectra"
+            anchor="right"
+            icon="/icons/spectra-toolwindow.svg"
+            factoryClass="dev.spectra.plugin.toolwindow.SpectraToolWindowFactory"/>
+
+        <!-- Status Bar Widget -->
+        <statusBarWidgetFactory
+            id="SpectraSyncStatus"
+            implementation="dev.spectra.plugin.statusbar.SpectraSyncStatusWidgetFactory"/>
+
+        <!-- Live Templates -->
+        <defaultLiveTemplates file="/liveTemplates/Spectra.xml"/>
+        <liveTemplateContext
+            contextId="MARKDOWN"
+            implementation="dev.spectra.plugin.templates.SpectraMarkdownContext"/>
+
+        <!-- File Type -->
+        <fileType
+            name="Spectra Markdown"
+            implementationClass="dev.spectra.plugin.filetype.SpectraFileType"
+            fieldName="INSTANCE"
+            language="Markdown"
+            patterns="*.spectra.md"/>
+
+        <!-- Notifications -->
+        <notificationGroup
+            id="Spectra Notifications"
+            displayType="BALLOON"/>
+
+        <!-- Documentation Provider -->
+        <lang.documentationProvider
+            language="Markdown"
+            implementationClass="dev.spectra.plugin.documentation.SpectraDocumentationProvider"/>
+    </extensions>
+
+    <actions>
+        <group id="Spectra.MainMenu" text="Spectra" description="Spectra actions">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+
+            <action id="Spectra.Validate"
+                class="dev.spectra.plugin.actions.ValidateAction"
+                text="Validate File"
+                description="Validate current Spectra markdown file"
+                icon="/icons/validate.svg">
+                <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift V"/>
+            </action>
+
+            <action id="Spectra.Sync"
+                class="dev.spectra.plugin.actions.SyncAction"
+                text="Sync to Tracker"
+                description="Sync current file to issue tracker"
+                icon="/icons/sync.svg">
+                <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift S"/>
+            </action>
+
+            <action id="Spectra.Preview"
+                class="dev.spectra.plugin.actions.PreviewAction"
+                text="Preview Changes"
+                description="Preview changes before sync (like Terraform plan)"
+                icon="/icons/preview.svg">
+                <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift P"/>
+            </action>
+
+            <separator/>
+
+            <action id="Spectra.CreateStory"
+                class="dev.spectra.plugin.actions.CreateStoryAction"
+                text="Create Story"
+                description="Create a new story at cursor position"
+                icon="/icons/add-story.svg"/>
+
+            <action id="Spectra.CreateEpic"
+                class="dev.spectra.plugin.actions.CreateEpicAction"
+                text="Create Epic"
+                description="Create a new epic"
+                icon="/icons/add-epic.svg"/>
+        </group>
+
+        <group id="Spectra.EditorPopup" text="Spectra">
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+
+            <reference ref="Spectra.Validate"/>
+            <reference ref="Spectra.Sync"/>
+            <separator/>
+            <action id="Spectra.OpenInTracker"
+                class="dev.spectra.plugin.actions.OpenInTrackerAction"
+                text="Open in Tracker"
+                description="Open story in issue tracker"
+                icon="/icons/external-link.svg"/>
+        </group>
+    </actions>
+</idea-plugin>

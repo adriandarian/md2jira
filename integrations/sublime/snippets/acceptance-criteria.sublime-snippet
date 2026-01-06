@@ -1,0 +1,12 @@
+<snippet>
+  <content><![CDATA[
+### Acceptance Criteria
+- [ ] ${1:First criterion}
+- [ ] ${2:Second criterion}
+- [ ] ${3:Third criterion}
+
+]]></content>
+  <tabTrigger>ac</tabTrigger>
+  <scope>source.spectra, text.html.markdown</scope>
+  <description>Acceptance Criteria Section</description>
+</snippet>

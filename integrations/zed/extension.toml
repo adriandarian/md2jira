@@ -1,0 +1,11 @@
+id = "spectra"
+name = "Spectra"
+description = "Language support for Spectra markdown user stories"
+version = "0.1.0"
+schema_version = 1
+authors = ["Spectra Contributors"]
+repository = "https://github.com/spectra/spectra"
+
+[language_servers.spectra]
+name = "Spectra"
+language = "Spectra Markdown"

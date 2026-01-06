@@ -760,12 +760,12 @@ For each new tracker adapter, follow this checklist:
 - [x] **Settings UI** - Configure spectra via VS Code settings ✅ **COMPLETED** - Comprehensive settings with tracker type, validation, AI, sync options
 
 ### New IDE Plugins
-- [ ] **JetBrains (IntelliJ, PyCharm)** - IDE integration
-- [ ] **Zed** - Modern editor plugin
-- [ ] **Helix** - Vim-like modal editor plugin
-- [ ] **Emacs (LSP)** - Emacs integration
-- [ ] **Sublime Text** - Sublime integration
-- [ ] **LSP (Language Server Protocol)** - Universal editor support
+- [x] **JetBrains (IntelliJ, PyCharm)** - IDE integration ✅ **COMPLETED** - Full Kotlin plugin with settings, completion, inspections, actions (validate/sync), tool window, live templates, and status bar widget
+- [x] **Zed** - Modern editor plugin ✅ **COMPLETED** - Rust extension with LSP integration, tree-sitter highlighting, and configuration support
+- [x] **Helix** - Vim-like modal editor plugin ✅ **COMPLETED** - Full configuration with languages.toml, config.toml (keybindings), and query files for highlighting/textobjects
+- [x] **Emacs (LSP)** - Emacs integration ✅ **COMPLETED** - Complete package with lsp-mode and eglot support, spectra-mode major mode, interactive commands, and hydra menu
+- [x] **Sublime Text** - Sublime integration ✅ **COMPLETED** - Full package with syntax highlighting, LSP config, build system, commands, keybindings, and snippets
+- [x] **LSP (Language Server Protocol)** - Universal editor support ✅ **COMPLETED** - Python-based LSP server using pygls with diagnostics, hover, completions, go-to-definition, document symbols, code actions, document links, and formatting
 
 ---
 

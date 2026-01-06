@@ -1,0 +1,47 @@
+# Helix configuration with Spectra key bindings
+# Merge with ~/.config/helix/config.toml
+
+theme = "catppuccin_mocha"
+
+[editor]
+line-number = "relative"
+mouse = true
+auto-completion = true
+auto-info = true
+true-color = true
+
+[editor.cursor-shape]
+insert = "bar"
+normal = "block"
+select = "underline"
+
+[editor.lsp]
+display-messages = true
+display-inlay-hints = true
+auto-signature-help = true
+
+[editor.statusline]
+left = ["mode", "spinner", "file-name", "diagnostics"]
+right = ["selections", "position", "position-percentage", "file-encoding"]
+
+# Spectra-specific key bindings
+[keys.normal]
+# space + s = spectra commands
+"<space>s" = { v = ":sh spectra --validate --markdown %", s = ":sh spectra --sync --markdown %", p = ":sh spectra plan --markdown %" }
+
+[keys.normal.space.s]
+v = ":sh spectra --validate --markdown %"
+s = ":sh spectra --sync --markdown %"
+p = ":sh spectra plan --markdown %"
+d = ":sh spectra diff --markdown %"
+i = ":sh spectra import"
+e = ":sh spectra export --markdown % --format html"
+
+[keys.normal.space]
+# LSP actions (already defaults, listed for reference)
+a = "code_action"
+r = "rename_symbol"
+d = "diagnostics_picker"
+D = "workspace_diagnostics_picker"
+k = "hover"
+f = "format"

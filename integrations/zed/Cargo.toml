@@ -1,0 +1,18 @@
+[package]
+name = "spectra-zed"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Zed extension for Spectra markdown user stories"
+repository = "https://github.com/spectra/spectra"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+zed_extension_api = "0.0.6"
+
+[profile.release]
+lto = true
+opt-level = "z"
+strip = true

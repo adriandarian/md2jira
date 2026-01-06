@@ -1,0 +1,14 @@
+[
+  { "caption": "Spectra: Validate", "command": "spectra_validate" },
+  { "caption": "Spectra: Sync", "command": "spectra_sync" },
+  { "caption": "Spectra: Plan (Preview Changes)", "command": "spectra_plan" },
+  { "caption": "Spectra: Diff", "command": "spectra_diff" },
+  { "caption": "Spectra: Import from Tracker", "command": "spectra_import" },
+  { "caption": "Spectra: Export", "command": "spectra_export" },
+  { "caption": "Spectra: Stats", "command": "spectra_stats" },
+  { "caption": "Spectra: Doctor", "command": "spectra_doctor" },
+  { "caption": "Spectra: Open in Tracker", "command": "spectra_open_in_tracker" },
+  { "caption": "Spectra: New Story", "command": "spectra_new_story" },
+  { "caption": "Spectra: New Epic", "command": "spectra_new_epic" },
+  { "caption": "Spectra: New Subtask", "command": "spectra_new_subtask" }
+]

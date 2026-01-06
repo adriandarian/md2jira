@@ -1,0 +1,11 @@
+<snippet>
+  <content><![CDATA[
+# Epic: ${1:Epic Title}
+
+${2:Epic description}
+
+]]></content>
+  <tabTrigger>epic</tabTrigger>
+  <scope>source.spectra, text.html.markdown</scope>
+  <description>New Spectra Epic</description>
+</snippet>

@@ -1,0 +1,20 @@
+<snippet>
+  <content><![CDATA[
+## Story: ${1:Story Title}
+**Status**: ${2:Todo}
+**Priority**: ${3:Medium}
+**Points**: ${4:3}
+
+### Description
+
+${5:Story description}
+
+### Acceptance Criteria
+- [ ] ${6:First criterion}
+- [ ] ${7:Second criterion}
+
+]]></content>
+  <tabTrigger>story</tabTrigger>
+  <scope>source.spectra, text.html.markdown</scope>
+  <description>New Spectra Story</description>
+</snippet>

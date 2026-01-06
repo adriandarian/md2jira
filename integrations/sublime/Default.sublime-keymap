@@ -1,0 +1,8 @@
+[
+  { "keys": ["ctrl+shift+v"], "command": "spectra_validate", "context": [{ "key": "selector", "operand": "source.spectra, text.html.markdown" }] },
+  { "keys": ["ctrl+shift+s"], "command": "spectra_sync", "context": [{ "key": "selector", "operand": "source.spectra, text.html.markdown" }] },
+  { "keys": ["ctrl+shift+p"], "command": "spectra_plan", "context": [{ "key": "selector", "operand": "source.spectra, text.html.markdown" }] },
+  { "keys": ["ctrl+shift+d"], "command": "spectra_diff", "context": [{ "key": "selector", "operand": "source.spectra, text.html.markdown" }] },
+  { "keys": ["ctrl+shift+o"], "command": "spectra_open_in_tracker", "context": [{ "key": "selector", "operand": "source.spectra, text.html.markdown" }] },
+  { "keys": ["ctrl+shift+n"], "command": "spectra_new_story", "context": [{ "key": "selector", "operand": "source.spectra, text.html.markdown" }] }
+]

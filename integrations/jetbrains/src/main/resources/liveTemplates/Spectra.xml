@@ -1,0 +1,56 @@
+<templateSet group="Spectra">
+    <template name="epic" value="# Epic: $TITLE$&#10;&#10;$DESCRIPTION$&#10;&#10;" description="Create a new epic" toReformat="false" toShortenFQNames="true">
+        <variable name="TITLE" expression="" defaultValue="&quot;Epic Title&quot;" alwaysStopAt="true"/>
+        <variable name="DESCRIPTION" expression="" defaultValue="&quot;Epic description&quot;" alwaysStopAt="true"/>
+        <context>
+            <option name="MARKDOWN" value="true"/>
+        </context>
+    </template>
+
+    <template name="story" value="## Story: $TITLE$&#10;**Status**: $STATUS$&#10;**Priority**: $PRIORITY$&#10;**Points**: $POINTS$&#10;&#10;$DESCRIPTION$&#10;&#10;### Acceptance Criteria&#10;- [ ] $AC1$&#10;" description="Create a new story" toReformat="false" toShortenFQNames="true">
+        <variable name="TITLE" expression="" defaultValue="&quot;Story Title&quot;" alwaysStopAt="true"/>
+        <variable name="STATUS" expression="enum(&quot;Todo&quot;, &quot;In Progress&quot;, &quot;In Review&quot;, &quot;Done&quot;)" defaultValue="&quot;Todo&quot;" alwaysStopAt="true"/>
+        <variable name="PRIORITY" expression="enum(&quot;High&quot;, &quot;Medium&quot;, &quot;Low&quot;)" defaultValue="&quot;Medium&quot;" alwaysStopAt="true"/>
+        <variable name="POINTS" expression="enum(&quot;1&quot;, &quot;2&quot;, &quot;3&quot;, &quot;5&quot;, &quot;8&quot;, &quot;13&quot;)" defaultValue="&quot;3&quot;" alwaysStopAt="true"/>
+        <variable name="DESCRIPTION" expression="" defaultValue="&quot;Story description&quot;" alwaysStopAt="true"/>
+        <variable name="AC1" expression="" defaultValue="&quot;Acceptance criteria&quot;" alwaysStopAt="true"/>
+        <context>
+            <option name="MARKDOWN" value="true"/>
+        </context>
+    </template>
+
+    <template name="task" value="## Subtask: $TITLE$&#10;**Status**: $STATUS$&#10;&#10;$DESCRIPTION$&#10;" description="Create a new subtask" toReformat="false" toShortenFQNames="true">
+        <variable name="TITLE" expression="" defaultValue="&quot;Subtask Title&quot;" alwaysStopAt="true"/>
+        <variable name="STATUS" expression="enum(&quot;Todo&quot;, &quot;In Progress&quot;, &quot;Done&quot;)" defaultValue="&quot;Todo&quot;" alwaysStopAt="true"/>
+        <variable name="DESCRIPTION" expression="" defaultValue="&quot;Subtask description&quot;" alwaysStopAt="true"/>
+        <context>
+            <option name="MARKDOWN" value="true"/>
+        </context>
+    </template>
+
+    <template name="ac" value="### Acceptance Criteria&#10;- [ ] $AC1$&#10;- [ ] $AC2$&#10;- [ ] $AC3$&#10;" description="Add acceptance criteria section" toReformat="false" toShortenFQNames="true">
+        <variable name="AC1" expression="" defaultValue="&quot;First criterion&quot;" alwaysStopAt="true"/>
+        <variable name="AC2" expression="" defaultValue="&quot;Second criterion&quot;" alwaysStopAt="true"/>
+        <variable name="AC3" expression="" defaultValue="&quot;Third criterion&quot;" alwaysStopAt="true"/>
+        <context>
+            <option name="MARKDOWN" value="true"/>
+        </context>
+    </template>
+
+    <template name="status" value="**Status**: $STATUS$" description="Add status field" toReformat="false" toShortenFQNames="true">
+        <variable name="STATUS" expression="enum(&quot;Todo&quot;, &quot;In Progress&quot;, &quot;In Review&quot;, &quot;Done&quot;, &quot;Blocked&quot;)" defaultValue="&quot;Todo&quot;" alwaysStopAt="true"/>
+        <context>
+            <option name="MARKDOWN" value="true"/>
+        </context>
+    </template>
+
+    <template name="meta" value="**Status**: $STATUS$&#10;**Priority**: $PRIORITY$&#10;**Points**: $POINTS$&#10;**Assignee**: $ASSIGNEE$&#10;" description="Add metadata fields" toReformat="false" toShortenFQNames="true">
+        <variable name="STATUS" expression="enum(&quot;Todo&quot;, &quot;In Progress&quot;, &quot;In Review&quot;, &quot;Done&quot;)" defaultValue="&quot;Todo&quot;" alwaysStopAt="true"/>
+        <variable name="PRIORITY" expression="enum(&quot;High&quot;, &quot;Medium&quot;, &quot;Low&quot;)" defaultValue="&quot;Medium&quot;" alwaysStopAt="true"/>
+        <variable name="POINTS" expression="enum(&quot;1&quot;, &quot;2&quot;, &quot;3&quot;, &quot;5&quot;, &quot;8&quot;)" defaultValue="&quot;3&quot;" alwaysStopAt="true"/>
+        <variable name="ASSIGNEE" expression="" defaultValue="&quot;@username&quot;" alwaysStopAt="true"/>
+        <context>
+            <option name="MARKDOWN" value="true"/>
+        </context>
+    </template>
+</templateSet>

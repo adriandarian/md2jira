@@ -1,0 +1,135 @@
+%YAML 1.2
+---
+# Spectra Markdown Syntax Definition for Sublime Text
+name: Spectra
+file_extensions:
+  - spectra.md
+first_line_match: '^#\s*Epic:'
+scope: source.spectra
+
+variables:
+  status_values: 'Todo|In Progress|In Review|Done|Blocked|Cancelled'
+  priority_values: 'Critical|High|Medium|Low'
+  tracker_id: '[A-Z][A-Z0-9]*-[0-9]+'
+  github_id: '#[0-9]+'
+
+contexts:
+  main:
+    - include: epic-header
+    - include: story-header
+    - include: subtask-header
+    - include: ac-header
+    - include: metadata
+    - include: tracker-ids
+    - include: markdown
+
+  epic-header:
+    - match: '^(#)\s*(Epic:)\s*(.+)$'
+      captures:
+        1: punctuation.definition.heading.markdown
+        2: keyword.control.spectra
+        3: entity.name.section.spectra markup.heading.1.markdown
+
+  story-header:
+    - match: '^(##)\s*(Story:)\s*(.+?)(\s*\[({{tracker_id}})\])?$'
+      captures:
+        1: punctuation.definition.heading.markdown
+        2: keyword.control.spectra
+        3: entity.name.function.spectra markup.heading.2.markdown
+        4: meta.brackets.spectra
+        5: constant.other.spectra
+
+  subtask-header:
+    - match: '^(##)\s*(Subtask:)\s*(.+?)(\s*\[({{tracker_id}})\])?$'
+      captures:
+        1: punctuation.definition.heading.markdown
+        2: keyword.control.spectra
+        3: entity.name.type.spectra markup.heading.2.markdown
+        4: meta.brackets.spectra
+        5: constant.other.spectra
+
+  ac-header:
+    - match: '^(###)\s*(Acceptance Criteria)\s*$'
+      captures:
+        1: punctuation.definition.heading.markdown
+        2: keyword.other.spectra markup.heading.3.markdown
+
+  metadata:
+    - match: '^\*\*(Status)\*\*:\s*'
+      captures:
+        1: support.type.spectra
+      push: status-value
+    - match: '^\*\*(Priority)\*\*:\s*'
+      captures:
+        1: support.type.spectra
+      push: priority-value
+    - match: '^\*\*(Points)\*\*:\s*'
+      captures:
+        1: support.type.spectra
+      push: points-value
+    - match: '^\*\*(Assignee|Labels|Sprint)\*\*:\s*'
+      captures:
+        1: support.type.spectra
+      push: metadata-value
+
+  status-value:
+    - match: '({{status_values}})'
+      scope: string.other.spectra
+    - match: '$'
+      pop: true
+
+  priority-value:
+    - match: '({{priority_values}})'
+      scope: support.constant.spectra
+    - match: '$'
+      pop: true
+
+  points-value:
+    - match: '\d+'
+      scope: constant.numeric.spectra
+    - match: '$'
+      pop: true
+
+  metadata-value:
+    - match: '.+'
+      scope: string.unquoted.spectra
+    - match: '$'
+      pop: true
+
+  tracker-ids:
+    - match: '\b({{tracker_id}})\b'
+      scope: constant.other.spectra
+    - match: '({{github_id}})'
+      scope: constant.other.spectra
+
+  markdown:
+    # Include standard markdown patterns
+    - include: scope:text.html.markdown
+
+    # Task list items
+    - match: '^\s*-\s*\[\s*\]'
+      scope: markup.list.unnumbered.markdown punctuation.definition.list_item.markdown
+    - match: '^\s*-\s*\[x\]'
+      scope: markup.list.unnumbered.markdown punctuation.definition.list_item.markdown string.other.spectra
+
+    # Bold (metadata field names)
+    - match: '\*\*([^*]+)\*\*'
+      captures:
+        1: markup.bold.markdown
+
+    # Links
+    - match: '\[([^\]]+)\]\(([^)]+)\)'
+      captures:
+        1: string.other.link.title.markdown
+        2: markup.underline.link.markdown
+
+    # Code spans
+    - match: '`[^`]+`'
+      scope: markup.raw.inline.markdown
+
+    # Fenced code blocks
+    - match: '^```\w*$'
+      push:
+        - meta_scope: markup.raw.block.markdown
+        - match: '^```$'
+          pop: true

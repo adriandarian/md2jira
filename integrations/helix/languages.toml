@@ -1,0 +1,41 @@
+# Spectra LSP configuration for Helix
+# Copy this file to ~/.config/helix/languages.toml or merge with existing
+
+# Define Spectra language server
+[language-server.spectra-lsp]
+command = "spectra-lsp"
+args = ["--stdio"]
+
+# LSP initialization options
+[language-server.spectra-lsp.config]
+spectra.tracker.type = "jira"
+spectra.tracker.url = ""
+spectra.tracker.projectKey = ""
+spectra.validation.validateOnSave = true
+spectra.validation.validateOnType = true
+spectra.diagnostics.showWarnings = true
+spectra.diagnostics.showHints = true
+spectra.hover.cacheTimeout = 60
+
+# Spectra-specific markdown files
+[[language]]
+name = "spectra"
+scope = "source.spectra"
+injection-regex = "spectra"
+file-types = [
+  { glob = "*.spectra.md" },
+  { glob = "user-stories.md" },
+  { glob = "backlog.md" },
+  { glob = "requirements.md" },
+]
+roots = ["spectra.yaml", "spectra.toml", ".spectra", "pyproject.toml"]
+language-servers = ["spectra-lsp"]
+indent = { tab-width = 2, unit = "  " }
+grammar = "markdown"
+comment-token = "<!--"
+block-comment-tokens = { start = "<!--", end = "-->" }
+
+# Add spectra-lsp to regular markdown files as well
+[[language]]
+name = "markdown"
+language-servers = ["marksman", "spectra-lsp"]

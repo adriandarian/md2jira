@@ -1,0 +1,12 @@
+<snippet>
+  <content><![CDATA[
+## Subtask: ${1:Subtask Title}
+**Status**: ${2:Todo}
+
+${3:Subtask description}
+
+]]></content>
+  <tabTrigger>task</tabTrigger>
+  <scope>source.spectra, text.html.markdown</scope>
+  <description>New Spectra Subtask</description>
+</snippet>

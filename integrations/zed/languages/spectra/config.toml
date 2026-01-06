@@ -1,0 +1,5 @@
+name = "Spectra Markdown"
+grammar = "markdown"
+path_suffixes = ["spectra.md"]
+line_comments = ["<!-- ", " -->"]
+block_comment = ["<!--", "-->"]

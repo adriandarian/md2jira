@@ -1,0 +1,9 @@
+{
+  "spectra_cli_path": "spectra",
+  "validate_on_save": true,
+  "show_status": true,
+  "format_on_save": false,
+  "tracker_type": "jira",
+  "tracker_url": "",
+  "project_key": ""
+}
