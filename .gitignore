@@ -80,6 +80,8 @@ node_modules/
 !package.json
 !package-lock.json
 !tsconfig.json
+!vercel.json
+!docs/vercel.json
 
 # Backups
 backup_*.json
