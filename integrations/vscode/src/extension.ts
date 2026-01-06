@@ -1,7 +1,7 @@
 /**
  * spectra VS Code Extension
  *
- * Provides integration with spectra CLI for syncing markdown with Jira.
+ * Provides integration with spectra CLI for syncing markdown with issue trackers.
  */
 
 import * as vscode from 'vscode';
@@ -13,6 +13,10 @@ import { StoryCodeLensProvider } from './providers/codeLens';
 import { StoryDecorationProvider } from './providers/decorations';
 import { StoryTreeDataProvider } from './providers/treeView';
 import { DiagnosticsProvider } from './providers/diagnostics';
+import { SpectraCodeActionProvider } from './providers/codeActions';
+import { SpectraHoverProvider, clearIssueCache } from './providers/hover';
+import { SpectraDefinitionProvider, SpectraDocumentLinkProvider } from './providers/definition';
+import { SpectraSidebarProvider, SpectraDashboardPanel } from './providers/sidebar';
 
 // Types
 interface Story {
@@ -39,6 +43,7 @@ interface SpectraResult {
 let statusBarItem: vscode.StatusBarItem;
 let outputChannel: vscode.OutputChannel;
 let diagnosticsProvider: DiagnosticsProvider;
+let sidebarProvider: SpectraSidebarProvider;
 
 /**
  * Extension activation
@@ -60,6 +65,13 @@ export function activate(context: vscode.ExtensionContext) {
     // Create diagnostics provider
     diagnosticsProvider = new DiagnosticsProvider();
     context.subscriptions.push(diagnosticsProvider);
+
+    // Create sidebar provider
+    sidebarProvider = new SpectraSidebarProvider();
+    context.subscriptions.push(sidebarProvider);
+    context.subscriptions.push(
+        vscode.window.registerTreeDataProvider('spectraSidebar', sidebarProvider)
+    );
 
     // Register commands
     registerCommands(context);
@@ -244,24 +256,283 @@ function registerCommands(context: vscode.ExtensionContext) {
             if (!editor) return;
 
             const config = vscode.workspace.getConfiguration('spectra');
-            const jiraUrl = config.get<string>('jiraUrl');
+            const trackerUrl = config.get<string>('trackerUrl') || config.get<string>('jiraUrl');
 
-            if (!jiraUrl) {
+            if (!trackerUrl) {
                 const url = await vscode.window.showInputBox({
-                    prompt: 'Enter your Jira URL',
+                    prompt: 'Enter your tracker URL',
                     placeHolder: 'https://your-org.atlassian.net'
                 });
                 if (url) {
-                    await config.update('jiraUrl', url, vscode.ConfigurationTarget.Global);
+                    await config.update('trackerUrl', url, vscode.ConfigurationTarget.Global);
                 }
                 return;
             }
 
             const story = getStoryAtLine(editor.document, editor.selection.active.line);
             if (story) {
-                const issueUrl = `${jiraUrl}/browse/${story.id}`;
+                const issueUrl = buildTrackerUrl(trackerUrl, story.id);
                 vscode.env.openExternal(vscode.Uri.parse(issueUrl));
             }
+        })
+    );
+
+    // Copy story ID with argument (for hover links)
+    context.subscriptions.push(
+        vscode.commands.registerCommand('spectra.copyStoryIdArg', async (storyId: string) => {
+            await vscode.env.clipboard.writeText(storyId);
+            vscode.window.showInformationMessage(`Copied: ${storyId}`);
+        })
+    );
+
+    // Open epic in tracker
+    context.subscriptions.push(
+        vscode.commands.registerCommand('spectra.openEpicInTracker', async (epicId: string) => {
+            const config = vscode.workspace.getConfiguration('spectra');
+            const trackerUrl = config.get<string>('trackerUrl') || config.get<string>('jiraUrl');
+
+            if (!trackerUrl) {
+                vscode.window.showWarningMessage('Configure tracker URL in settings');
+                return;
+            }
+
+            const issueUrl = buildTrackerUrl(trackerUrl, epicId);
+            vscode.env.openExternal(vscode.Uri.parse(issueUrl));
+        })
+    );
+
+    // Create story in tracker
+    context.subscriptions.push(
+        vscode.commands.registerCommand('spectra.createStoryInTracker', async (
+            title: string,
+            line: number,
+            type: 'epic' | 'story' | 'subtask'
+        ) => {
+            const config = vscode.workspace.getConfiguration('spectra');
+            const projectKey = config.get<string>('projectKey');
+
+            if (!projectKey) {
+                const key = await vscode.window.showInputBox({
+                    prompt: 'Enter project key',
+                    placeHolder: 'PROJ'
+                });
+                if (key) {
+                    await config.update('projectKey', key, vscode.ConfigurationTarget.Global);
+                }
+                return;
+            }
+
+            // Run spectra CLI to create the issue
+            const args = ['issue', 'create', '--type', type, '--title', title, '--project', projectKey];
+
+            const result = await runSpectra(args);
+            if (result.code === 0) {
+                // Parse the created issue ID from output
+                const match = result.stdout.match(/([A-Z]+-\d+)/);
+                if (match) {
+                    const issueId = match[1];
+
+                    // Update the markdown file with the new ID
+                    const editor = vscode.window.activeTextEditor;
+                    if (editor) {
+                        const lineText = editor.document.lineAt(line).text;
+                        let newLineText: string;
+
+                        if (type === 'epic') {
+                            newLineText = lineText.replace(/^(#\s+)/, `$1🚀 ${issueId}: `);
+                        } else if (type === 'subtask') {
+                            newLineText = lineText.replace(/^(####\s+)/, `$1${issueId}: `);
+                        } else {
+                            newLineText = lineText.replace(/^(###\s+)/, `$1📋 ${issueId}: `);
+                        }
+
+                        await editor.edit(editBuilder => {
+                            const lineRange = editor.document.lineAt(line).range;
+                            editBuilder.replace(lineRange, newLineText);
+                        });
+
+                        vscode.window.showInformationMessage(`Created ${issueId} in tracker`);
+                    }
+                }
+            } else {
+                vscode.window.showErrorMessage(`Failed to create ${type}: ${result.stderr}`);
+            }
+        })
+    );
+
+    // Generate story ID locally
+    context.subscriptions.push(
+        vscode.commands.registerCommand('spectra.generateStoryId', async (line: number) => {
+            const config = vscode.workspace.getConfiguration('spectra');
+            const projectKey = config.get<string>('projectKey') || 'US';
+
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) return;
+
+            // Find the next available story number
+            const stories = parseStories(editor.document);
+            let maxNum = 0;
+            for (const story of stories) {
+                const match = story.id.match(/\d+$/);
+                if (match) {
+                    const num = parseInt(match[0], 10);
+                    if (num > maxNum) maxNum = num;
+                }
+            }
+
+            const newId = `${projectKey}-${String(maxNum + 1).padStart(3, '0')}`;
+            const lineText = editor.document.lineAt(line).text;
+            const newLineText = lineText.replace(/^(###\s+)/, `$1📋 ${newId}: `);
+
+            await editor.edit(editBuilder => {
+                const lineRange = editor.document.lineAt(line).range;
+                editBuilder.replace(lineRange, newLineText);
+            });
+        })
+    );
+
+    // Update story status
+    context.subscriptions.push(
+        vscode.commands.registerCommand('spectra.updateStoryStatus', async (storyId: string, line: number) => {
+            const status = await vscode.window.showQuickPick([
+                { label: '📋 To Do', value: 'todo', emoji: '📋' },
+                { label: '🔄 In Progress', value: 'in_progress', emoji: '🔄' },
+                { label: '👀 In Review', value: 'review', emoji: '👀' },
+                { label: '✅ Done', value: 'done', emoji: '✅' },
+                { label: '⏸️ Blocked', value: 'blocked', emoji: '⏸️' },
+            ], { placeHolder: 'Select new status' });
+
+            if (!status) return;
+
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) return;
+
+            const lineText = editor.document.lineAt(line).text;
+            // Replace existing emoji with new one
+            const newLineText = lineText.replace(/^(###\s+)[📋✅🔄⏸️👀]*\s*/, `$1${status.emoji} `);
+
+            await editor.edit(editBuilder => {
+                const lineRange = editor.document.lineAt(line).range;
+                editBuilder.replace(lineRange, newLineText);
+            });
+
+            // Optionally sync to tracker
+            const config = vscode.workspace.getConfiguration('spectra');
+            if (config.get<boolean>('autoSync')) {
+                await runSpectra(['issue', 'update', storyId, '--status', status.value]);
+            }
+        })
+    );
+
+    // Sync single story
+    context.subscriptions.push(
+        vscode.commands.registerCommand('spectra.syncSingleStory', async (storyId: string) => {
+            const result = await runSpectra(['issue', 'sync', storyId]);
+            if (result.code === 0) {
+                vscode.window.showInformationMessage(`Synced ${storyId}`);
+            } else {
+                vscode.window.showErrorMessage(`Failed to sync ${storyId}`);
+            }
+        })
+    );
+
+    // Generate acceptance criteria with AI
+    context.subscriptions.push(
+        vscode.commands.registerCommand('spectra.generateAcceptanceCriteria', async (line: number) => {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) return;
+
+            // Find the story title from the previous lines
+            let storyTitle = '';
+            for (let i = line - 1; i >= 0; i--) {
+                const text = editor.document.lineAt(i).text;
+                const match = text.match(/^###\s+[📋✅🔄⏸️]*\s*(?:[A-Z]+-\d+)?:?\s*(.+)/);
+                if (match) {
+                    storyTitle = match[1].trim();
+                    break;
+                }
+            }
+
+            if (!storyTitle) {
+                vscode.window.showWarningMessage('Could not find story title');
+                return;
+            }
+
+            vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: 'Generating acceptance criteria...',
+                cancellable: false
+            }, async () => {
+                const result = await runSpectra(['ai', 'generate-ac', '--title', storyTitle, '--format', 'markdown']);
+
+                if (result.code === 0 && result.stdout) {
+                    // Insert the generated AC after the current line
+                    await editor.edit(editBuilder => {
+                        const position = new vscode.Position(line + 1, 0);
+                        editBuilder.insert(position, result.stdout + '\n');
+                    });
+                } else {
+                    vscode.window.showErrorMessage('Failed to generate acceptance criteria');
+                }
+            });
+        })
+    );
+
+    // Estimate story points with AI
+    context.subscriptions.push(
+        vscode.commands.registerCommand('spectra.estimateStoryPoints', async (line: number) => {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) return;
+
+            // Get story context
+            const lineText = editor.document.lineAt(line).text;
+
+            vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: 'Estimating story points...',
+                cancellable: false
+            }, async () => {
+                const result = await runSpectra(['ai', 'estimate', '--context', lineText]);
+
+                if (result.code === 0) {
+                    const match = result.stdout.match(/(\d+)/);
+                    if (match) {
+                        const points = match[1];
+                        const newLineText = lineText.replace(/Story Points:\s*(\?|TBD)/i, `Story Points: ${points}`);
+
+                        await editor.edit(editBuilder => {
+                            const lineRange = editor.document.lineAt(line).range;
+                            editBuilder.replace(lineRange, newLineText);
+                        });
+
+                        vscode.window.showInformationMessage(`Estimated: ${points} story points`);
+                    }
+                } else {
+                    vscode.window.showErrorMessage('Failed to estimate story points');
+                }
+            });
+        })
+    );
+
+    // Refresh sidebar
+    context.subscriptions.push(
+        vscode.commands.registerCommand('spectra.refreshSidebar', () => {
+            sidebarProvider.refresh();
+        })
+    );
+
+    // Refresh issue cache
+    context.subscriptions.push(
+        vscode.commands.registerCommand('spectra.refreshIssueCache', (issueId?: string) => {
+            clearIssueCache(issueId);
+            vscode.window.showInformationMessage('Issue cache cleared');
+        })
+    );
+
+    // Open settings
+    context.subscriptions.push(
+        vscode.commands.registerCommand('spectra.openSettings', () => {
+            vscode.commands.executeCommand('workbench.action.openSettings', 'spectra');
         })
     );
 }
@@ -271,18 +542,19 @@ function registerCommands(context: vscode.ExtensionContext) {
  */
 function registerProviders(context: vscode.ExtensionContext) {
     const config = vscode.workspace.getConfiguration('spectra');
+    const markdownSelector = { language: 'markdown', scheme: 'file' };
 
     // CodeLens provider
     if (config.get<boolean>('showCodeLens')) {
         context.subscriptions.push(
             vscode.languages.registerCodeLensProvider(
-                { language: 'markdown' },
+                markdownSelector,
                 new StoryCodeLensProvider()
             )
         );
     }
 
-    // Tree view provider
+    // Tree view provider (explorer sidebar)
     const treeDataProvider = new StoryTreeDataProvider();
     context.subscriptions.push(
         vscode.window.registerTreeDataProvider('spectraStories', treeDataProvider)
@@ -292,6 +564,45 @@ function registerProviders(context: vscode.ExtensionContext) {
     if (config.get<boolean>('showStoryDecorations')) {
         const decorationProvider = new StoryDecorationProvider();
         context.subscriptions.push(decorationProvider);
+    }
+
+    // Code Actions provider (Quick Actions)
+    context.subscriptions.push(
+        vscode.languages.registerCodeActionsProvider(
+            markdownSelector,
+            new SpectraCodeActionProvider(),
+            {
+                providedCodeActionKinds: SpectraCodeActionProvider.providedCodeActionKinds
+            }
+        )
+    );
+
+    // Hover provider (Hover Previews)
+    if (config.get<boolean>('showHoverPreviews', true)) {
+        context.subscriptions.push(
+            vscode.languages.registerHoverProvider(
+                markdownSelector,
+                new SpectraHoverProvider()
+            )
+        );
+    }
+
+    // Definition provider (Go to Tracker - Cmd+Click)
+    if (config.get<boolean>('enableGoToTracker', true)) {
+        context.subscriptions.push(
+            vscode.languages.registerDefinitionProvider(
+                markdownSelector,
+                new SpectraDefinitionProvider()
+            )
+        );
+
+        // Document link provider (clickable links)
+        context.subscriptions.push(
+            vscode.languages.registerDocumentLinkProvider(
+                markdownSelector,
+                new SpectraDocumentLinkProvider()
+            )
+        );
     }
 }
 
@@ -568,6 +879,70 @@ function escapeHtml(text: string): string {
         .replace(/'/g, '&#039;');
 }
 
-// Export for testing
-export { parseStories, detectEpic, getStoryAtLine };
+/**
+ * Build tracker URL for an issue ID
+ */
+function buildTrackerUrl(baseUrl: string, issueId: string): string {
+    const url = baseUrl.replace(/\/$/, '');
 
+    // Detect tracker type and build appropriate URL
+    if (url.includes('atlassian.net') || url.includes('jira')) {
+        return `${url}/browse/${issueId}`;
+    }
+    if (url.includes('github.com')) {
+        const issueNum = issueId.replace(/[A-Z]+-/, '');
+        return `${url}/issues/${issueNum}`;
+    }
+    if (url.includes('gitlab')) {
+        const issueNum = issueId.replace(/[A-Z]+-/, '');
+        return `${url}/-/issues/${issueNum}`;
+    }
+    if (url.includes('linear.app')) {
+        return `${url}/issue/${issueId}`;
+    }
+    if (url.includes('shortcut.com') || url.includes('clubhouse.io')) {
+        const storyNum = issueId.replace(/[A-Z]+-/, '');
+        return `${url}/story/${storyNum}`;
+    }
+    if (url.includes('youtrack')) {
+        return `${url}/issue/${issueId}`;
+    }
+    if (url.includes('azure') || url.includes('dev.azure.com')) {
+        const workItemId = issueId.replace(/[A-Z]+-/, '');
+        return `${url}/_workitems/edit/${workItemId}`;
+    }
+    if (url.includes('trello.com')) {
+        return `${url}/c/${issueId}`;
+    }
+    if (url.includes('asana.com')) {
+        const taskId = issueId.replace(/[A-Z]+-/, '');
+        return `${url}/0/0/${taskId}`;
+    }
+    if (url.includes('monday.com')) {
+        const pulseId = issueId.replace(/[A-Z]+-/, '');
+        return `${url}/boards/pulse/${pulseId}`;
+    }
+    if (url.includes('clickup.com')) {
+        const taskId = issueId.replace(/[A-Z]+-/, '');
+        return `${url}/t/${taskId}`;
+    }
+    if (url.includes('notion.so')) {
+        return `${url}/${issueId}`;
+    }
+    if (url.includes('plane.so') || url.includes('plane')) {
+        return `${url}/issues/${issueId}`;
+    }
+    if (url.includes('pivotaltracker.com')) {
+        const storyId = issueId.replace(/[A-Z]+-/, '');
+        return `${url}/story/show/${storyId}`;
+    }
+    if (url.includes('basecamp.com')) {
+        return `${url}/todos/${issueId}`;
+    }
+
+    // Default: assume Jira-like browse URL
+    return `${url}/browse/${issueId}`;
+}
+
+// Export for testing
+export { parseStories, detectEpic, getStoryAtLine, buildTrackerUrl };

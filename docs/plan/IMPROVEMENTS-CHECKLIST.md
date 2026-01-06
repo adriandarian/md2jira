@@ -752,12 +752,12 @@ For each new tracker adapter, follow this checklist:
 ## 🟠 IDE Integrations
 
 ### VS Code Extension Enhancements
-- [ ] **Quick Actions** - Create story in tracker from cursor position
-- [ ] **Sidebar Panel** - Show sync status, recent changes
-- [ ] **Hover Previews** - Show tracker issue details on hover
-- [ ] **Go to Tracker** - Cmd+Click on issue ID opens in browser
-- [ ] **Problem Matcher** - Show validation errors in Problems panel
-- [ ] **Settings UI** - Configure spectra via VS Code settings
+- [x] **Quick Actions** - Create story in tracker from cursor position ✅ **COMPLETED** - Code Actions provider with create/sync/update actions
+- [x] **Sidebar Panel** - Show sync status, recent changes ✅ **COMPLETED** - Full sidebar with sync status, stories list, and recent changes
+- [x] **Hover Previews** - Show tracker issue details on hover ✅ **COMPLETED** - Hover provider with cached issue details, status, priority, assignee
+- [x] **Go to Tracker** - Cmd+Click on issue ID opens in browser ✅ **COMPLETED** - Definition provider + Document links for all supported trackers
+- [x] **Problem Matcher** - Show validation errors in Problems panel ✅ **COMPLETED** - Three problem matcher patterns for different output formats
+- [x] **Settings UI** - Configure spectra via VS Code settings ✅ **COMPLETED** - Comprehensive settings with tracker type, validation, AI, sync options
 
 ### New IDE Plugins
 - [ ] **JetBrains (IntelliJ, PyCharm)** - IDE integration

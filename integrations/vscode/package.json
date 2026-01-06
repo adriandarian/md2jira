@@ -1,8 +1,8 @@
 {
   "name": "spectra",
   "displayName": "spectra",
-  "description": "Sync markdown documentation with Jira - validate, preview, and sync stories directly from VS Code",
-  "version": "1.0.0",
+  "description": "Sync markdown documentation with issue trackers (Jira, GitHub, Linear, etc.) - validate, preview, and sync stories directly from VS Code",
+  "version": "1.1.0",
   "publisher": "spectra",
   "repository": {
     "type": "git",
@@ -18,14 +18,19 @@
   ],
   "keywords": [
     "jira",
+    "github",
+    "linear",
+    "gitlab",
     "markdown",
     "sync",
     "agile",
-    "documentation"
+    "documentation",
+    "issue-tracker"
   ],
   "activationEvents": [
     "onLanguage:markdown",
-    "workspaceContains:**/*.md"
+    "workspaceContains:**/*.md",
+    "onView:spectraSidebar"
   ],
   "main": "./out/extension.js",
   "icon": "media/icon.png",
@@ -39,15 +44,21 @@
       },
       {
         "command": "spectra.sync",
-        "title": "Sync to Jira (Dry Run)",
+        "title": "Sync to Tracker (Dry Run)",
         "category": "spectra",
         "icon": "$(sync)"
       },
       {
         "command": "spectra.syncExecute",
-        "title": "Sync to Jira (Execute)",
+        "title": "Sync to Tracker (Execute)",
         "category": "spectra",
         "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "spectra.syncSingleStory",
+        "title": "Sync Single Story",
+        "category": "spectra",
+        "icon": "$(sync)"
       },
       {
         "command": "spectra.dashboard",
@@ -63,7 +74,7 @@
       },
       {
         "command": "spectra.generate",
-        "title": "Generate Template from Jira",
+        "title": "Generate Template from Tracker",
         "category": "spectra",
         "icon": "$(file-add)"
       },
@@ -79,10 +90,66 @@
         "category": "spectra"
       },
       {
+        "command": "spectra.copyStoryIdArg",
+        "title": "Copy Story ID (with argument)",
+        "category": "spectra"
+      },
+      {
         "command": "spectra.openInJira",
-        "title": "Open in Jira",
+        "title": "Open in Tracker",
         "category": "spectra",
         "icon": "$(link-external)"
+      },
+      {
+        "command": "spectra.openEpicInTracker",
+        "title": "Open Epic in Tracker",
+        "category": "spectra",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "spectra.createStoryInTracker",
+        "title": "Create Story in Tracker",
+        "category": "spectra",
+        "icon": "$(add)"
+      },
+      {
+        "command": "spectra.generateStoryId",
+        "title": "Generate Story ID",
+        "category": "spectra"
+      },
+      {
+        "command": "spectra.updateStoryStatus",
+        "title": "Update Story Status",
+        "category": "spectra"
+      },
+      {
+        "command": "spectra.generateAcceptanceCriteria",
+        "title": "Generate Acceptance Criteria with AI",
+        "category": "spectra",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "spectra.estimateStoryPoints",
+        "title": "Estimate Story Points with AI",
+        "category": "spectra",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "spectra.refreshSidebar",
+        "title": "Refresh Sidebar",
+        "category": "spectra",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "spectra.refreshIssueCache",
+        "title": "Refresh Issue Cache",
+        "category": "spectra"
+      },
+      {
+        "command": "spectra.openSettings",
+        "title": "Open Settings",
+        "category": "spectra",
+        "icon": "$(settings-gear)"
       }
     ],
     "menus": {
@@ -131,32 +198,146 @@
         "spectra.executable": {
           "type": "string",
           "default": "spectra",
-          "description": "Path to spectra executable"
+          "description": "Path to spectra executable",
+          "order": 1
+        },
+        "spectra.trackerType": {
+          "type": "string",
+          "default": "jira",
+          "enum": ["jira", "github", "gitlab", "linear", "azure", "trello", "asana", "clickup", "monday", "shortcut", "youtrack", "plane", "pivotal", "basecamp", "notion"],
+          "enumDescriptions": [
+            "Atlassian Jira",
+            "GitHub Issues",
+            "GitLab Issues",
+            "Linear",
+            "Azure DevOps",
+            "Trello",
+            "Asana",
+            "ClickUp",
+            "Monday.com",
+            "Shortcut (formerly Clubhouse)",
+            "JetBrains YouTrack",
+            "Plane.so",
+            "Pivotal Tracker",
+            "Basecamp",
+            "Notion"
+          ],
+          "description": "Type of issue tracker to sync with",
+          "order": 2
+        },
+        "spectra.trackerUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Tracker instance URL (e.g., https://your-org.atlassian.net for Jira, or https://github.com/owner/repo for GitHub)",
+          "order": 3
         },
         "spectra.jiraUrl": {
           "type": "string",
           "default": "",
-          "description": "Jira instance URL (e.g., https://your-org.atlassian.net)"
+          "description": "Jira instance URL (deprecated: use trackerUrl instead)",
+          "deprecationMessage": "Use spectra.trackerUrl instead",
+          "order": 4
+        },
+        "spectra.projectKey": {
+          "type": "string",
+          "default": "",
+          "description": "Default project key for new issues (e.g., PROJ)",
+          "order": 5
+        },
+        "spectra.defaultEpic": {
+          "type": "string",
+          "default": "",
+          "description": "Default epic key for new stories",
+          "order": 6
         },
         "spectra.autoValidate": {
           "type": "boolean",
           "default": true,
-          "description": "Automatically validate markdown on save"
+          "description": "Automatically validate markdown on save",
+          "order": 10
+        },
+        "spectra.autoSync": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically sync to tracker on save (dry-run only)",
+          "order": 11
         },
         "spectra.showStoryDecorations": {
           "type": "boolean",
           "default": true,
-          "description": "Show inline decorations for stories"
+          "description": "Show inline decorations for stories",
+          "order": 20
         },
         "spectra.showCodeLens": {
           "type": "boolean",
           "default": true,
-          "description": "Show CodeLens above stories"
+          "description": "Show CodeLens actions above stories",
+          "order": 21
         },
         "spectra.showStatusBar": {
           "type": "boolean",
           "default": true,
-          "description": "Show story count in status bar"
+          "description": "Show story count in status bar",
+          "order": 22
+        },
+        "spectra.showHoverPreviews": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show tracker issue details when hovering over story IDs",
+          "order": 23
+        },
+        "spectra.enableGoToTracker": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Cmd+Click on issue IDs to open in browser",
+          "order": 24
+        },
+        "spectra.showSidebar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show spectra sidebar panel",
+          "order": 25
+        },
+        "spectra.validation.strictMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable strict validation mode (treat warnings as errors)",
+          "order": 30
+        },
+        "spectra.validation.requiredFields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["story_points", "acceptance_criteria", "priority", "assignee"]
+          },
+          "default": ["acceptance_criteria"],
+          "description": "Required fields for stories",
+          "order": 31
+        },
+        "spectra.ai.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable AI features (requires spectra AI configuration)",
+          "order": 40
+        },
+        "spectra.ai.provider": {
+          "type": "string",
+          "default": "openai",
+          "enum": ["openai", "anthropic", "google", "local"],
+          "description": "AI provider for story generation and estimation",
+          "order": 41
+        },
+        "spectra.sync.confirmBeforeExecute": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show confirmation dialog before executing sync",
+          "order": 50
+        },
+        "spectra.sync.dryRunByDefault": {
+          "type": "boolean",
+          "default": true,
+          "description": "Default to dry-run mode for sync operations",
+          "order": 51
         }
       }
     },
@@ -208,8 +389,74 @@
           "when": "resourceLangId == markdown",
           "icon": "$(list-unordered)"
         }
+      ],
+      "spectra": [
+        {
+          "id": "spectraSidebar",
+          "name": "Spectra",
+          "icon": "$(list-unordered)"
+        }
       ]
-    }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "spectra",
+          "title": "Spectra",
+          "icon": "$(list-unordered)"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "spectraSidebar",
+        "contents": "No spectra stories found.\n[Open a Markdown File](command:workbench.action.files.openFile)\n[Run Setup Wizard](command:spectra.init)"
+      }
+    ],
+    "problemMatchers": [
+      {
+        "name": "spectra",
+        "owner": "spectra",
+        "fileLocation": ["relative", "${workspaceFolder}"],
+        "pattern": [
+          {
+            "regexp": "^(.+):(\\d+):(\\d+):\\s+(error|warning|info):\\s+(.+)$",
+            "file": 1,
+            "line": 2,
+            "column": 3,
+            "severity": 4,
+            "message": 5
+          }
+        ]
+      },
+      {
+        "name": "spectra-validation",
+        "owner": "spectra",
+        "fileLocation": ["relative", "${workspaceFolder}"],
+        "pattern": [
+          {
+            "regexp": "^\\[(ERR|WARN|INFO)-(\\d+)\\]\\s+(.+):(\\d+):\\s+(.+)$",
+            "severity": 1,
+            "code": 2,
+            "file": 3,
+            "line": 4,
+            "message": 5
+          }
+        ]
+      },
+      {
+        "name": "spectra-simple",
+        "owner": "spectra",
+        "fileLocation": ["relative", "${workspaceFolder}"],
+        "pattern": [
+          {
+            "regexp": "^Line\\s+(\\d+):\\s+(.+)$",
+            "line": 1,
+            "message": 2
+          }
+        ]
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
