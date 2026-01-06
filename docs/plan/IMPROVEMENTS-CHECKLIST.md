@@ -777,7 +777,7 @@ For each new tracker adapter, follow this checklist:
 - [ ] **Audit Logging** - SOC2/HIPAA compliance logs
 - [ ] **Compliance Reports** - Generate compliance reports
 - [ ] **Encryption at Rest** - Encrypt cached data
-- [ ] **Secret Management Integration** - HashiCorp Vault, AWS Secrets Manager, 1Password, Doppler
+- [x] **Secret Management Integration** - HashiCorp Vault, AWS Secrets Manager, 1Password, Doppler ✅ **COMPLETED** - Implemented `SecretManagerPort` interface with adapters for HashiCorp Vault (KV v1/v2, AppRole/K8s auth), AWS Secrets Manager (versioning, rotation), 1Password (CLI-based, service accounts), and Doppler (projects/configs). Features: auto-detection, composite manager with fallback, secret references (`vault://path#key@version`), config resolution. 115 unit tests passing.
 - [x] **Secrets Hygiene** - Prevent tokens in logs/backups, redact sensitive fields ✅ **COMPLETED** - Implemented `SecretRedactor` (pattern-based + key-based detection, thread-safe), `RedactingFilter` for logging, `BackupSanitizer` for backup files. 73 unit tests passing.
 
 ### Scalability

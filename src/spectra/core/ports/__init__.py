@@ -137,6 +137,27 @@ from .rest_api import (
 from .rest_api import (
     ValidationError as RestValidationError,
 )
+from .secret_manager import (
+    AccessDeniedError as SecretAccessDeniedError,
+)
+from .secret_manager import (
+    AuthenticationError as SecretAuthenticationError,
+)
+from .secret_manager import (
+    CompositeSecretManager,
+    Secret,
+    SecretBackend,
+    SecretManagerError,
+    SecretManagerInfo,
+    SecretManagerPort,
+    SecretMetadata,
+    SecretNotFoundError,
+    SecretReference,
+    SecretVersionError,
+)
+from .secret_manager import (
+    ConnectionError as SecretConnectionError,
+)
 from .state_store import (
     ConnectionError as StateConnectionError,
 )
@@ -310,4 +331,18 @@ __all__ = [
     "is_retryable_exception",
     "is_retryable_status_code",
     "parse_retry_after",
+    # Secret Manager
+    "CompositeSecretManager",
+    "Secret",
+    "SecretAccessDeniedError",
+    "SecretAuthenticationError",
+    "SecretBackend",
+    "SecretConnectionError",
+    "SecretManagerError",
+    "SecretManagerInfo",
+    "SecretManagerPort",
+    "SecretMetadata",
+    "SecretNotFoundError",
+    "SecretReference",
+    "SecretVersionError",
 ]
