@@ -94,7 +94,7 @@ npm install
 npm run dev
 ```
 
-Visit http://localhost:5173 to preview.
+Visit `http://localhost:5173` to preview.
 
 ## Build Locally
 
