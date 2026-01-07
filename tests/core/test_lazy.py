@@ -202,14 +202,20 @@ class TestFieldCache:
 
     def test_lru_eviction(self):
         """Test LRU eviction when max size reached."""
+        import time
+
         cache = FieldCache(max_size=3, default_ttl=None)
 
         cache.set("key1", "value1")
+        time.sleep(0.01)  # Ensure distinct timestamps
         cache.set("key2", "value2")
+        time.sleep(0.01)
         cache.set("key3", "value3")
+        time.sleep(0.01)
 
         # Access key1 to make it recently used
         cache.get("key1")
+        time.sleep(0.01)
 
         # Add key4, should evict key2 (least recently used)
         cache.set("key4", "value4")

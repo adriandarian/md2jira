@@ -704,7 +704,7 @@ class TestRunReport:
 
         assert result == ExitCode.SUCCESS
         assert output_file.exists()
-        content = output_file.read_text()
+        content = output_file.read_text(encoding="utf-8")
         assert "Progress Report" in content
 
     @patch("spectra.adapters.parsers.MarkdownParser")
@@ -813,6 +813,6 @@ class TestRunReport:
         )
 
         assert result == ExitCode.SUCCESS
-        content = output_file.read_text()
+        content = output_file.read_text(encoding="utf-8")
         # Should not contain ANSI escape codes
         assert "\x1b[" not in content

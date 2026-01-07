@@ -150,9 +150,10 @@ class TestGitHubRateLimiter:
         limiter._tokens = 0.0
 
         # Simulate time passing by calling refill
+        # Use longer sleep for Windows timer resolution (~15ms)
         import time
 
-        time.sleep(0.01)
+        time.sleep(0.05)
         limiter._refill_tokens()
 
         assert limiter._tokens > 0

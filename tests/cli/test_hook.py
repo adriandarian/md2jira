@@ -1,6 +1,7 @@
 """Tests for Hook Command - Pre-commit hook integration."""
 
 import stat
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -89,9 +90,10 @@ class TestInstallHook:
         assert hook_path.exists()
         assert "spectra" in hook_path.read_text(encoding="utf-8")
 
-        # Check executable
-        mode = hook_path.stat().st_mode
-        assert mode & stat.S_IXUSR
+        # Check executable (skip on Windows - no Unix permissions)
+        if sys.platform != "win32":
+            mode = hook_path.stat().st_mode
+            assert mode & stat.S_IXUSR
 
     def test_backs_up_existing_hook(self, tmp_path: Path):
         """Test backing up existing hook."""
