@@ -180,7 +180,7 @@ class TestRoundtripParser:
     def test_parse_with_spans_from_file(self, parser, tmp_path, sample_markdown):
         """Test parsing from file path."""
         md_file = tmp_path / "test.md"
-        md_file.write_text(sample_markdown)
+        md_file.write_text(sample_markdown, encoding="utf-8")
 
         result = parser.parse_with_spans(md_file)
 
@@ -463,7 +463,7 @@ class TestHighLevelAPI:
         """)
 
         md_file = tmp_path / "epic.md"
-        md_file.write_text(content)
+        md_file.write_text(content, encoding="utf-8")
         return md_file
 
     def test_update_story_in_file_status(self, sample_file):

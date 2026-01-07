@@ -105,7 +105,7 @@ def sample_markdown_file(tmp_path):
         **So that** it works
     """)
     md_file = tmp_path / "test.md"
-    md_file.write_text(md_content)
+    md_file.write_text(md_content, encoding="utf-8")
     return md_file
 
 

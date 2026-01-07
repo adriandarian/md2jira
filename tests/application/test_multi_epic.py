@@ -529,7 +529,7 @@ class TestMultiEpicSyncOrchestrator:
     def test_sync_empty_file(self, mock_tracker, mock_formatter, config, tmp_path):
         """Test syncing empty file."""
         md_file = tmp_path / "empty.md"
-        md_file.write_text("# Empty Project\n\nNo epics here.")
+        md_file.write_text("# Empty Project\n\nNo epics here.", encoding="utf-8")
 
         orchestrator = MultiEpicSyncOrchestrator(
             tracker=mock_tracker,

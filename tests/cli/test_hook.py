@@ -87,7 +87,7 @@ class TestInstallHook:
         assert result is True
         hook_path = hooks_dir / "pre-commit"
         assert hook_path.exists()
-        assert "spectra" in hook_path.read_text()
+        assert "spectra" in hook_path.read_text(encoding="utf-8")
 
         # Check executable
         mode = hook_path.stat().st_mode
@@ -99,14 +99,14 @@ class TestInstallHook:
         hooks_dir.mkdir()
 
         existing_hook = hooks_dir / "pre-commit"
-        existing_hook.write_text("#!/bin/sh\necho 'old hook'")
+        existing_hook.write_text("#!/bin/sh\necho 'old hook'", encoding="utf-8")
 
         result = install_hook(hooks_dir, "pre-commit", PRE_COMMIT_SCRIPT)
 
         assert result is True
         backup_path = hooks_dir / "pre-commit.backup"
         assert backup_path.exists()
-        assert "old hook" in backup_path.read_text()
+        assert "old hook" in backup_path.read_text(encoding="utf-8")
 
     def test_installs_pre_push_hook(self, tmp_path: Path):
         """Test installing pre-push hook."""
@@ -118,7 +118,7 @@ class TestInstallHook:
         assert result is True
         hook_path = hooks_dir / "pre-push"
         assert hook_path.exists()
-        assert "spectra" in hook_path.read_text()
+        assert "spectra" in hook_path.read_text(encoding="utf-8")
 
 
 class TestUninstallHook:
@@ -130,7 +130,7 @@ class TestUninstallHook:
         hooks_dir.mkdir()
 
         hook_path = hooks_dir / "pre-commit"
-        hook_path.write_text(PRE_COMMIT_SCRIPT)
+        hook_path.write_text(PRE_COMMIT_SCRIPT, encoding="utf-8")
 
         result = uninstall_hook(hooks_dir, "pre-commit")
 
@@ -143,7 +143,7 @@ class TestUninstallHook:
         hooks_dir.mkdir()
 
         hook_path = hooks_dir / "pre-commit"
-        hook_path.write_text("#!/bin/sh\necho 'other hook'")
+        hook_path.write_text("#!/bin/sh\necho 'other hook'", encoding="utf-8")
 
         result = uninstall_hook(hooks_dir, "pre-commit")
 
@@ -165,7 +165,7 @@ class TestUninstallHook:
         hooks_dir.mkdir()
 
         hook_path = hooks_dir / "pre-commit"
-        hook_path.write_text(PRE_COMMIT_SCRIPT)
+        hook_path.write_text(PRE_COMMIT_SCRIPT, encoding="utf-8")
 
         backup_path = hooks_dir / "pre-commit.backup"
         backup_path.write_text("#!/bin/sh\necho 'backup hook'")
@@ -174,7 +174,7 @@ class TestUninstallHook:
 
         assert result is True
         assert hook_path.exists()
-        assert "backup hook" in hook_path.read_text()
+        assert "backup hook" in hook_path.read_text(encoding="utf-8")
 
 
 class TestRunHookInstall:
@@ -255,7 +255,7 @@ class TestRunHookInstall:
 
         # Pre-install a spectra hook
         hook_path = hooks_dir / "pre-commit"
-        hook_path.write_text(PRE_COMMIT_SCRIPT)
+        hook_path.write_text(PRE_COMMIT_SCRIPT, encoding="utf-8")
 
         console = MagicMock(spec=Console)
 
@@ -275,7 +275,7 @@ class TestRunHookInstall:
 
         # Pre-install a different hook
         hook_path = hooks_dir / "pre-commit"
-        hook_path.write_text("#!/bin/sh\necho 'other hook'")
+        hook_path.write_text("#!/bin/sh\necho 'other hook'", encoding="utf-8")
 
         console = MagicMock(spec=Console)
 
@@ -294,7 +294,7 @@ class TestRunHookInstall:
 
         # Pre-install a different hook
         hook_path = hooks_dir / "pre-commit"
-        hook_path.write_text("#!/bin/sh\necho 'other hook'")
+        hook_path.write_text("#!/bin/sh\necho 'other hook'", encoding="utf-8")
 
         console = MagicMock(spec=Console)
 
@@ -302,7 +302,7 @@ class TestRunHookInstall:
             result = run_hook_install(console, hook_type="pre-commit", force=True)
 
         assert result == ExitCode.SUCCESS
-        assert "spectra" in hook_path.read_text()
+        assert "spectra" in hook_path.read_text(encoding="utf-8")
 
 
 class TestRunHookUninstall:
@@ -314,7 +314,7 @@ class TestRunHookUninstall:
         hooks_dir.mkdir()
 
         hook_path = hooks_dir / "pre-commit"
-        hook_path.write_text(PRE_COMMIT_SCRIPT)
+        hook_path.write_text(PRE_COMMIT_SCRIPT, encoding="utf-8")
 
         console = MagicMock(spec=Console)
 
@@ -329,8 +329,8 @@ class TestRunHookUninstall:
         hooks_dir = tmp_path / "hooks"
         hooks_dir.mkdir()
 
-        (hooks_dir / "pre-commit").write_text(PRE_COMMIT_SCRIPT)
-        (hooks_dir / "pre-push").write_text(PRE_PUSH_SCRIPT)
+        (hooks_dir / "pre-commit").write_text(PRE_COMMIT_SCRIPT, encoding="utf-8")
+        (hooks_dir / "pre-push").write_text(PRE_PUSH_SCRIPT, encoding="utf-8")
 
         console = MagicMock(spec=Console)
 
@@ -360,7 +360,7 @@ class TestRunHookStatus:
         hooks_dir = tmp_path / "hooks"
         hooks_dir.mkdir()
 
-        (hooks_dir / "pre-commit").write_text(PRE_COMMIT_SCRIPT)
+        (hooks_dir / "pre-commit").write_text(PRE_COMMIT_SCRIPT, encoding="utf-8")
 
         console = MagicMock(spec=Console)
 
@@ -375,7 +375,7 @@ class TestRunHookStatus:
         hooks_dir = tmp_path / "hooks"
         hooks_dir.mkdir()
 
-        (hooks_dir / "pre-commit").write_text("#!/bin/sh\necho 'other'")
+        (hooks_dir / "pre-commit").write_text("#!/bin/sh\necho 'other'", encoding="utf-8")
 
         console = MagicMock(spec=Console)
 

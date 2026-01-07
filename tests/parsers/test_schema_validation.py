@@ -727,9 +727,9 @@ class TestValidatingParser:
 
         # Create actual test files
         md_file = tmp_path / "test.md"
-        md_file.write_text("# Test")
+        md_file.write_text("# Test", encoding="utf-8")
         yaml_file = tmp_path / "test.yaml"
-        yaml_file.write_text("key: value")
+        yaml_file.write_text("key: value", encoding="utf-8")
 
         assert validating.can_parse(md_file)
         assert not validating.can_parse(yaml_file)
@@ -756,7 +756,7 @@ class TestValidatingParser:
 **So that** I benefit
 """
         md_file = tmp_path / "valid.md"
-        md_file.write_text(content)
+        md_file.write_text(content, encoding="utf-8")
 
         parser = MarkdownParser()
         validating = ValidatingParser(parser, mode=ValidationMode.NORMAL)
@@ -781,7 +781,7 @@ class TestValidatingParser:
 | **Story Points** | 5 |
 """
         md_file = tmp_path / "invalid.md"
-        md_file.write_text(content)
+        md_file.write_text(content, encoding="utf-8")
 
         parser = MarkdownParser()
         validating = ValidatingParser(
@@ -809,7 +809,7 @@ class TestValidatingParser:
 | **Story Points** | 5 |
 """
         md_file = tmp_path / "invalid.md"
-        md_file.write_text(content)
+        md_file.write_text(content, encoding="utf-8")
 
         parser = MarkdownParser()
         validating = ValidatingParser(

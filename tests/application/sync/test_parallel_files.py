@@ -275,7 +275,8 @@ class TestParallelFileProcessor:
             **As a** user
             **I want** something
             **So that** benefit
-            """)
+            """),
+            encoding="utf-8",
         )
 
         callbacks_received = []
@@ -350,9 +351,9 @@ class TestParallelFileProcessorDirectory:
     def test_process_directory_with_files(self, mock_deps, tmp_path):
         """Test processing a directory with files."""
         # Create test files
-        (tmp_path / "file1.md").write_text("# File 1")
-        (tmp_path / "file2.md").write_text("# File 2")
-        (tmp_path / "file3.txt").write_text("Not markdown")
+        (tmp_path / "file1.md").write_text("# File 1", encoding="utf-8")
+        (tmp_path / "file2.md").write_text("# File 2", encoding="utf-8")
+        (tmp_path / "file3.txt").write_text("Not markdown", encoding="utf-8")
 
         processor = ParallelFileProcessor(**mock_deps)
 
@@ -370,8 +371,8 @@ class TestParallelFileProcessorDirectory:
         # Create nested structure
         subdir = tmp_path / "subdir"
         subdir.mkdir()
-        (tmp_path / "file1.md").write_text("# File 1")
-        (subdir / "file2.md").write_text("# File 2")
+        (tmp_path / "file1.md").write_text("# File 1", encoding="utf-8")
+        (subdir / "file2.md").write_text("# File 2", encoding="utf-8")
 
         processor = ParallelFileProcessor(**mock_deps)
 
@@ -409,7 +410,7 @@ class TestFactoryFunctions:
     def test_process_files_parallel(self, tmp_path):
         """Test convenience function."""
         test_file = tmp_path / "test.md"
-        test_file.write_text("# Test")
+        test_file.write_text("# Test", encoding="utf-8")
 
         tracker = MagicMock()
         parser = MagicMock()
@@ -479,8 +480,8 @@ class TestParallelFilesIntegration:
         # Create test files
         file1 = tmp_path / "epic1.md"
         file2 = tmp_path / "epic2.md"
-        file1.write_text(sample_epic_content)
-        file2.write_text(sample_epic_content)
+        file1.write_text(sample_epic_content, encoding="utf-8")
+        file2.write_text(sample_epic_content, encoding="utf-8")
 
         mock_config = MagicMock(dry_run=True)
 

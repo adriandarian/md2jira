@@ -1131,7 +1131,7 @@ class TestCleanupItem:
             reason="Size limit",
         )
         data = item.to_dict()
-        assert data["path"] == "/test/file.json"
+        assert data["path"] == str(Path("/test/file.json"))
         assert data["data_type"] == "cache"
         assert data["size_bytes"] == 2048
         assert data["age_days"] == 3.14  # Rounded

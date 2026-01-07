@@ -329,7 +329,7 @@ class TestFileUpdate:
 | **Story Points** | 3 |
 """
         md_file = tmp_path / "EPIC.md"
-        md_file.write_text(content)
+        md_file.write_text(content, encoding="utf-8")
 
         stories = [
             UserStory(
@@ -351,7 +351,7 @@ class TestFileUpdate:
         assert result.success
         assert result.stories_updated == 2
 
-        updated_content = md_file.read_text()
+        updated_content = md_file.read_text(encoding="utf-8")
         assert "PROJ-100" in updated_content
         assert "PROJ-101" in updated_content
 
@@ -367,7 +367,7 @@ class TestFileUpdate:
 ### 🔧 US-002: Unsynced Story
 """
         md_file = tmp_path / "EPIC.md"
-        md_file.write_text(content)
+        md_file.write_text(content, encoding="utf-8")
 
         stories = [
             UserStory(
@@ -400,7 +400,7 @@ class TestFileUpdate:
 | **Story Points** | 5 |
 """
         md_file = tmp_path / "EPIC.md"
-        md_file.write_text(original_content)
+        md_file.write_text(original_content, encoding="utf-8")
 
         stories = [
             UserStory(
@@ -415,7 +415,7 @@ class TestFileUpdate:
         assert result.success
         assert result.stories_updated == 1
         # File should not be modified
-        assert md_file.read_text() == original_content
+        assert md_file.read_text(encoding="utf-8") == original_content
 
     def test_update_file_not_found(self, tmp_path) -> None:
         """Test handling of non-existent file."""
@@ -675,7 +675,7 @@ class TestConflictDetection:
 Some content.
 """
         md_file = tmp_path / "EPIC.md"
-        md_file.write_text(content)
+        md_file.write_text(content, encoding="utf-8")
 
         story = UserStory(id=StoryId("US-001"), title="Test Story")
         # Compute the actual hash for this story
@@ -688,7 +688,7 @@ Some content.
 
 Some content.
 """
-        md_file.write_text(content_with_hash)
+        md_file.write_text(content_with_hash, encoding="utf-8")
 
         conflicts = detect_sync_conflicts(md_file, [story])
 
@@ -704,7 +704,7 @@ Some content.
 Some content.
 """
         md_file = tmp_path / "EPIC.md"
-        md_file.write_text(content)
+        md_file.write_text(content, encoding="utf-8")
 
         # Story with different content than what was hashed
         story = UserStory(id=StoryId("US-001"), title="Modified Title")
@@ -755,7 +755,7 @@ class TestFileUpdateWithEpicKey:
 | **Story Points** | 5 |
 """
         md_file = tmp_path / "EPIC.md"
-        md_file.write_text(content)
+        md_file.write_text(content, encoding="utf-8")
 
         stories = [
             UserStory(
@@ -771,7 +771,7 @@ class TestFileUpdateWithEpicKey:
         assert result.epic_updated
         assert result.stories_updated == 1
 
-        updated_content = md_file.read_text()
+        updated_content = md_file.read_text(encoding="utf-8")
         assert "PROJ-100" in updated_content
         assert "PROJ-101" in updated_content
         assert "> **Epic Tracker:**" in updated_content

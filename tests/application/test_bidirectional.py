@@ -105,7 +105,7 @@ def sample_markdown(tmp_path):
 ---
 """
     md_file = tmp_path / "EPIC.md"
-    md_file.write_text(content)
+    md_file.write_text(content, encoding="utf-8")
     return str(md_file)
 
 
@@ -522,7 +522,7 @@ class TestBidirectionalSyncIntegration:
 ---
 """
         md_file = tmp_path / "EPIC.md"
-        md_file.write_text(md_content)
+        md_file.write_text(md_content, encoding="utf-8")
 
         # Mock tracker returning the story with updated status
         mock_tracker.get_epic_children.return_value = [
@@ -570,7 +570,7 @@ class TestBidirectionalSyncIntegration:
 ---
 """
         md_file = tmp_path / "EPIC.md"
-        md_file.write_text(md_content)
+        md_file.write_text(md_content, encoding="utf-8")
 
         mock_tracker.get_epic_children.return_value = []
 

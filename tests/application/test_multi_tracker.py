@@ -81,7 +81,7 @@ def sample_markdown(tmp_path):
 ---
 """
     md_file = tmp_path / "EPIC.md"
-    md_file.write_text(content)
+    md_file.write_text(content, encoding="utf-8")
     return str(md_file)
 
 

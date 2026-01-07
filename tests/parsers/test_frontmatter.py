@@ -754,7 +754,7 @@ class TestFrontmatterParser:
     def test_can_parse_file(self, parser: FrontmatterParser, tmp_path: Path) -> None:
         """Test can_parse with file path."""
         file = tmp_path / "test.md"
-        file.write_text("---\nid: US-001\n---\nContent")
+        file.write_text("---\nid: US-001\n---\nContent", encoding="utf-8")
         assert parser.can_parse(file)
 
     def test_parse_stories_single(self, parser: FrontmatterParser) -> None:
@@ -833,7 +833,8 @@ class TestFrontmatterParser:
                 ---
 
                 # Content
-            """).strip()
+            """).strip(),
+            encoding="utf-8",
         )
 
         stories = parser.parse_stories(file)
@@ -1275,7 +1276,7 @@ class TestFrontmatterIntegration:
         """).strip()
 
         file = tmp_path / "epic.md"
-        file.write_text(content)
+        file.write_text(content, encoding="utf-8")
 
         # Parse with frontmatter parser
         parser = FrontmatterParser()

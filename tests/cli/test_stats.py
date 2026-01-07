@@ -185,7 +185,8 @@ class TestCollectStatsFromFile:
 | **Story Points** | 3 |
 | **Priority** | 🟢 Medium |
 | **Status** | 🔄 In Progress |
-"""
+""",
+            encoding="utf-8",
         )
 
         stats = collect_stats_from_file(str(md_file))
@@ -218,7 +219,8 @@ class TestCollectStatsFromFile:
 |---|---------|--------|
 | 1 | Task 1 | Done |
 | 2 | Task 2 | Todo |
-"""
+""",
+            encoding="utf-8",
         )
 
         stats = collect_stats_from_file(str(md_file))
@@ -240,7 +242,8 @@ class TestCollectStatsFromDirectory:
 |-------|-------|
 | **Story Points** | 5 |
 | **Status** | ✅ Done |
-"""
+""",
+            encoding="utf-8",
         )
         (tmp_path / "story2.md").write_text(
             """
@@ -250,7 +253,8 @@ class TestCollectStatsFromDirectory:
 |-------|-------|
 | **Story Points** | 3 |
 | **Status** | 📋 Planned |
-"""
+""",
+            encoding="utf-8",
         )
 
         stats = collect_stats_from_directory(str(tmp_path))
@@ -277,7 +281,8 @@ class TestRunStats:
 |-------|-------|
 | **Story Points** | 5 |
 | **Status** | ✅ Done |
-"""
+""",
+            encoding="utf-8",
         )
 
         console = MagicMock(spec=Console)
@@ -296,7 +301,8 @@ class TestRunStats:
 |-------|-------|
 | **Story Points** | 5 |
 | **Status** | ✅ Done |
-"""
+""",
+            encoding="utf-8",
         )
 
         console = MagicMock(spec=Console)
@@ -334,7 +340,8 @@ class TestRunStats:
 |-------|-------|
 | **Story Points** | 5 |
 | **Status** | ✅ Done |
-"""
+""",
+            encoding="utf-8",
         )
 
         console = MagicMock(spec=Console)
@@ -374,7 +381,8 @@ class TestRunStats:
 |-------|-------|
 | **Story Points** | 3 |
 | **Status** | ✅ Done |
-"""
+""",
+            encoding="utf-8",
         )
 
         console = MagicMock(spec=Console)

@@ -254,7 +254,7 @@ class TestValidationWorkflow:
         """)
 
         md_file = tmp_path / "valid.md"
-        md_file.write_text(content)
+        md_file.write_text(content, encoding="utf-8")
 
         parser = MarkdownParser()
         stories = parser.parse_stories(md_file)
@@ -339,7 +339,7 @@ class TestMultiFileWorkflow:
                 **So that** I can test multi-file
             """)
             file_path = tmp_path / f"epic_{i}.md"
-            file_path.write_text(content)
+            file_path.write_text(content, encoding="utf-8")
             files.append(file_path)
 
         # Parse all files
@@ -363,7 +363,7 @@ class TestMultiFileWorkflow:
 
         for i in range(5):
             content = f"### DOC-{i:03d}: Doc Story {i}\n\n**As a** user\n**I want** doc {i}\n**So that** docs work"
-            (docs_dir / f"story_{i}.md").write_text(content)
+            (docs_dir / f"story_{i}.md").write_text(content, encoding="utf-8")
 
         # Scan directory
         md_files = list(docs_dir.glob("*.md"))
@@ -404,7 +404,7 @@ class TestErrorRecoveryWorkflow:
         """)
 
         md_file = tmp_path / "mixed.md"
-        md_file.write_text(content)
+        md_file.write_text(content, encoding="utf-8")
 
         parser = MarkdownParser()
         stories = parser.parse_stories(md_file)
