@@ -36,7 +36,7 @@ jobs:
       tag: ${{ steps.version.outputs.tag }}
       prerelease: ${{ steps.version.outputs.prerelease }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -79,7 +79,7 @@ jobs:
           fi
 
       - name: 🐍 Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -99,10 +99,10 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: 🐍 Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -122,13 +122,13 @@ jobs:
         run: twine check dist/*.whl dist/*.tar.gz
 
       - name: 📤 Upload Python Dist
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: python-dist
           path: dist/
 
       - name: 📤 Upload Shell Completions
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: completions
           path: packaging/completions/
@@ -141,12 +141,12 @@ jobs:
     needs: [validate, build]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: 📥 Download Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: artifacts/
 
@@ -229,7 +229,7 @@ jobs:
           git push origin "${{ needs.validate.outputs.tag }}"
 
       - name: 🚀 Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         if: ${{ !inputs.dry_run }}
         with:
           tag_name: ${{ needs.validate.outputs.tag }}
@@ -256,7 +256,7 @@ jobs:
       url: https://pypi.org/project/spectryn/
     steps:
       - name: 📥 Download Python Dist
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: python-dist
           path: dist/
@@ -277,7 +277,7 @@ jobs:
     needs: [validate, github-release]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: 🔐 Login to Docker Hub
         uses: docker/login-action@v3
@@ -306,7 +306,7 @@ jobs:
             type=raw,value=latest,enable=${{ needs.validate.outputs.prerelease == 'false' }}
 
       - name: 🏗️ Build and Push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         if: ${{ !inputs.dry_run }}
         with:
           context: .
@@ -323,10 +323,10 @@ jobs:
     needs: [validate, github-release]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: 📦 Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: 'npm'
@@ -342,7 +342,7 @@ jobs:
 
       - name: 🚀 Deploy to GitHub Pages
         if: ${{ !inputs.dry_run }}
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: docs/.vitepress/dist
@@ -359,10 +359,10 @@ jobs:
       run:
         working-directory: integrations/vscode
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: 📦 Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
 
@@ -389,7 +389,7 @@ jobs:
         continue-on-error: true  # Optional: publish if token exists
 
       - name: 📤 Upload Extension
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: vscode-extension
           path: integrations/vscode/*.vsix
@@ -402,7 +402,7 @@ jobs:
     needs: [validate, publish-pypi]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: 📝 Update Formula
         run: |
@@ -436,7 +436,7 @@ jobs:
     needs: [validate, github-release]
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: 🔧 Update Package Version
         shell: pwsh
@@ -473,10 +473,10 @@ jobs:
     needs: [validate, github-release]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: 🐍 Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
@@ -525,7 +525,7 @@ jobs:
           dpkg-deb --build $PKG_DIR
 
       - name: 📤 Upload Debian Package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: debian-package
           path: "*.deb"
@@ -539,7 +539,7 @@ jobs:
     runs-on: ubuntu-latest
     container: fedora:latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: 📦 Install Build Dependencies
         run: |
@@ -566,7 +566,7 @@ jobs:
           rpmbuild -ba ~/rpmbuild/SPECS/spectryn.spec || echo "RPM build skipped - source not available yet"
 
       - name: 📤 Upload RPM Package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: rpm-package
           path: ~/rpmbuild/RPMS/**/*.rpm
