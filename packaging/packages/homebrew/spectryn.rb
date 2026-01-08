@@ -13,41 +13,41 @@ class Spectra < Formula
 
   desc "Production-grade CLI tool for synchronizing markdown documentation with Jira"
   homepage "https://github.com/adriandarian/spectra"
-  url "https://github.com/adriandarian/spectra/archive/refs/tags/v2.0.0.tar.gz"
-  sha256 "PLACEHOLDER_SHA256_HASH"
+  url "https://github.com/adriandarian/spectryn/archive/refs/tags/v1.0.0.tar.gz"
+  sha256 "20f47c5f0e1c280877e26678c5464f6872f6e96287369b5e674306e19050f5d4"
   license "MIT"
   head "https://github.com/adriandarian/spectra.git", branch: "main"
 
   depends_on "python@3.12"
 
   resource "certifi" do
-    url "https://files.pythonhosted.org/packages/certifi/certifi-2024.2.2.tar.gz"
-    sha256 "PLACEHOLDER_CERTIFI_SHA256"
+    url "https://github.com/adriandarian/spectryn/archive/refs/tags/v1.0.0.tar.gz"
+    sha256 "20f47c5f0e1c280877e26678c5464f6872f6e96287369b5e674306e19050f5d4"
   end
 
   resource "charset-normalizer" do
-    url "https://files.pythonhosted.org/packages/charset-normalizer/charset_normalizer-3.3.2.tar.gz"
-    sha256 "PLACEHOLDER_CHARSET_SHA256"
+    url "https://github.com/adriandarian/spectryn/archive/refs/tags/v1.0.0.tar.gz"
+    sha256 "20f47c5f0e1c280877e26678c5464f6872f6e96287369b5e674306e19050f5d4"
   end
 
   resource "idna" do
-    url "https://files.pythonhosted.org/packages/idna/idna-3.6.tar.gz"
-    sha256 "PLACEHOLDER_IDNA_SHA256"
+    url "https://github.com/adriandarian/spectryn/archive/refs/tags/v1.0.0.tar.gz"
+    sha256 "20f47c5f0e1c280877e26678c5464f6872f6e96287369b5e674306e19050f5d4"
   end
 
   resource "pyyaml" do
-    url "https://files.pythonhosted.org/packages/pyyaml/pyyaml-6.0.1.tar.gz"
-    sha256 "PLACEHOLDER_PYYAML_SHA256"
+    url "https://github.com/adriandarian/spectryn/archive/refs/tags/v1.0.0.tar.gz"
+    sha256 "20f47c5f0e1c280877e26678c5464f6872f6e96287369b5e674306e19050f5d4"
   end
 
   resource "requests" do
-    url "https://files.pythonhosted.org/packages/requests/requests-2.31.0.tar.gz"
-    sha256 "PLACEHOLDER_REQUESTS_SHA256"
+    url "https://github.com/adriandarian/spectryn/archive/refs/tags/v1.0.0.tar.gz"
+    sha256 "20f47c5f0e1c280877e26678c5464f6872f6e96287369b5e674306e19050f5d4"
   end
 
   resource "urllib3" do
-    url "https://files.pythonhosted.org/packages/urllib3/urllib3-2.2.1.tar.gz"
-    sha256 "PLACEHOLDER_URLLIB3_SHA256"
+    url "https://github.com/adriandarian/spectryn/archive/refs/tags/v1.0.0.tar.gz"
+    sha256 "20f47c5f0e1c280877e26678c5464f6872f6e96287369b5e674306e19050f5d4"
   end
 
   def install
