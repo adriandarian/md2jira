@@ -193,7 +193,7 @@ jobs:
           ```
 
           ### VS Code Extension
-          
+
           Download the `.vsix` file from the assets below and install manually:
           ```bash
           code --install-extension spectryn-${{ needs.validate.outputs.version }}.vsix

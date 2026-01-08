@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Chocolatey package specification for spectryn
-  
+
   To build and test locally:
     choco pack
     choco install spectryn -s .
-  
+
   To push to Chocolatey community repository:
     choco push spectryn.2.0.0.nupkg -source https://push.chocolatey.org/
 -->

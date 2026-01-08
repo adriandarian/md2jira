@@ -219,7 +219,7 @@ After syncing, check your Jira epic:
     - Description updated ✓
     - 3 subtasks created ✓
     └── **PROJ-125**: Install deps
-    └── **PROJ-126**: Configure env  
+    └── **PROJ-126**: Configure env
     └── **PROJ-127**: Verify setup
 
 </div>
